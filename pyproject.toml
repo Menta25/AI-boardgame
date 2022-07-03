@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "AI-boardgame"
+description = "A thesis project about using a robotic arm, computer vision and reinforcement learning to play a boardgame"
+version = "0.0.1"
+authors = [{name = "Deák Árpád", email = "cryso.dk.rp@gmail.com"}]
+urls = {"https://github.com/Menta25/AI-boardgame" = "GitHub"}
+requires-python = ">=3.8"
+readme = "README.md"
+keywords = ["AI", "reinforcement learning", "computer vision", "robotic arm", "machine learning", "boardgame"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "opencv-python"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false

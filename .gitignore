@@ -1,0 +1,7 @@
+# Virtual environment
+.venv
+
+# Pacakage
+build
+dist
+*.egg-info
