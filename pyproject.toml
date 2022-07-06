@@ -15,7 +15,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "opencv-python"
+    "numpy",
+    "opencv-contrib-python"
 ]
 
 [tool.setuptools.packages.find]
