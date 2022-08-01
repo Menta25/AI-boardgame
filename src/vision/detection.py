@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 as cv
 
-from datatypes.board import Board
+from model.board import Board
 
 
 def detectBoard(image: np.ndarray) -> Board:
