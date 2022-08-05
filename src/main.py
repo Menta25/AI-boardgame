@@ -1,28 +1,34 @@
+import logging
 import cv2 as cv
+import numpy as np
+from typing import Iterator
 from pathlib import Path
+from dataclasses import dataclass
 
-from cv2 import undistort
+from vision.camera import RobotCamera, Resolution
 
-from vision.camera import RobotCamera, Helper, Resolution
+
+logging.basicConfig(level=logging.DEBUG)
+
+@dataclass
+class Helper:
+    path: Path
+
+    def images(self) -> Iterator[np.ndarray]:
+        imageFiles = self.path.glob("*.jpg")
+        for imageFile in imageFiles:
+            yield cv.imread(imageFile.as_posix())
 
 
 def main() -> None:
-    print("Reading images")
+    logging.info("Reading images")
     helper = Helper(Path("../img/calib"))
 
-    print("Init camera")
-    cam = RobotCamera(Resolution(1599,1200))
-    print("Calibrating camera")
-    cam.calibrate(helper.images(), (9,6))
-    print("Calibration finished")
+    cam = RobotCamera(Resolution(3648, 2736))
+    cam.calibrate(helper.images(), (8,6))
 
-    print("Undistorting image")
-    distortedBoardImage = cv.imread("../img/test3_1599x1200.jpg")  # NOTE: Different camera
+    distortedBoardImage = cv.imread("../img/test3.jpg")
     undistortedBoardImage = cam.undistort(distortedBoardImage)
-    cv.imshow("asd", undistortedBoardImage)
-    cv.waitKey(0)
-    cv.destroyAllWindows()
-
     xiangqiBoard = cam.detectBoard(undistortedBoardImage)
     cv.imshow("board", cv.resize(xiangqiBoard.flatten(10, [255, 255, 255]), (500, 500)))
     cv.waitKey(0)
