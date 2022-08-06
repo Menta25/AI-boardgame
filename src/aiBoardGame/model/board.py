@@ -48,7 +48,7 @@ class Board:
         return self.data[col, row]
 
     def flatten(self, gridSize: int = 0, gridValue: Union[int, Sequence[Numeric]] = np.array([255, 255, 255])) -> np.ndarray:
-        """Flatten the board representation to a one dimensional ndarray"""
+        """Flatten the board representation to a three dimensional ndarray"""
         flattenedBoard = self.data.reshape([self.rows * self.tileHeight, self.cols * self.tileWidth, -1])
         if gridSize > 0:
             verticalGridLines = np.repeat(np.arange(self.tileWidth, flattenedBoard.shape[1], step=self.tileWidth), gridSize, axis=0)
