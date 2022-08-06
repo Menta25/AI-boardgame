@@ -4,7 +4,7 @@ import cv2 as cv
 from dataclasses import dataclass, field
 from typing import ClassVar, Tuple, NamedTuple, Optional, Iterable
 
-from model.board import Board
+from aiBoardGame.model.board import Board
 
 
 _cameraLogger = logging.getLogger(__name__)
