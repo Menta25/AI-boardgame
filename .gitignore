@@ -12,3 +12,6 @@ dist
 
 # Cache
 *__pycache__
+
+# Other
+*.npz

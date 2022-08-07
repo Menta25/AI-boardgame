@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+from turtle import circle
 import numpy as np
+import cv2 as cv
 from typing import Union, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 _boardLogger = logging.getLogger(__name__)
 
@@ -12,11 +14,17 @@ Numeric = Union[int, float, complex, np.number]
 
 @dataclass(repr=False, eq=False, frozen=True)
 class Board:
-    """A game board represented by a ndarray with [rows, cols, tileHeight, tileWidth, ...] dimensions"""
+    """A game board represented by a ndarray"""
     data: np.ndarray
+    rows: int = 10
+    cols: int = 9
+    tileWidth: int = field(init=False)
+    tileHeight: int = field(init=False)
 
     def __post_init__(self) -> None:
-        _boardLogger.debug(f"Created Board(rows={self.rows}; cols={self.cols}; tileSize={self.tileWidth}x{self.tileHeight})")
+        object.__setattr__(self, "tileWidth", int(self.data.shape[1] / self.cols))
+        object.__setattr__(self, "tileHeight", int(self.data.shape[0] / self.rows))
+        _boardLogger.debug(f"Create Board(rows={self.rows}; cols={self.cols}; tileSize={self.tileWidth}x{self.tileHeight}) from {self.data.shape} array")
 
     @classmethod
     def create(cls, ndarray: np.ndarray, rows: int = 10, cols: int = 9) -> Board:
@@ -25,34 +33,38 @@ class Board:
         boardWidth = ndarray.shape[1]
         tileHeight = int(boardHeight / rows)
         tileWidth = int(boardWidth / cols)
-        return Board(data=ndarray.reshape([cols, rows, tileHeight, tileWidth, 3]))
+        board = ndarray.reshape(-1, cols, tileWidth, 3).swapaxes(0, 1).reshape(cols, rows, tileHeight, tileWidth, 3)
+        return Board(data=board)
 
     @property
-    def cols(self) -> int:
-        return self.data.shape[0]
-
-    @property
-    def rows(self) -> int:
-        return self.data.shape[1]
-
-    @property
-    def tileHeight(self) -> int:
-        return self.data.shape[2]
-
-    @property
-    def tileWidth(self) -> int:
-        return self.data.shape[3]
+    def tiles(self) -> np.ndarray:
+        return self.data.reshape(-1, self.cols, self.tileWidth, 3).swapaxes(0, 1).reshape(self.cols, self.rows, self.tileHeight, self.tileWidth, 3)
 
     def tile(self, row: int, col: int) -> np.ndarray:
         """Return the given tile's ndarray representation"""
-        return self.data[col, row]
+        startY = row*self.tileHeight
+        startX = col*self.tileWidth
+        return self.data[startY:startY+self.tileHeight, startX:startX+self.tileWidth]
 
-    def flatten(self, gridSize: int = 0, gridValue: Union[int, Sequence[Numeric]] = np.array([255, 255, 255])) -> np.ndarray:
-        """Flatten the board representation to a three dimensional ndarray"""
-        flattenedBoard = self.data.reshape([self.rows * self.tileHeight, self.cols * self.tileWidth, -1])
-        if gridSize > 0:
-            verticalGridLines = np.repeat(np.arange(self.tileWidth, flattenedBoard.shape[1], step=self.tileWidth), gridSize, axis=0)
-            horizontalGridLines = np.repeat(np.arange(self.tileHeight, flattenedBoard.shape[0], step=self.tileHeight), gridSize, axis=0)
-            flattenedBoard = np.insert(flattenedBoard, verticalGridLines, gridValue, axis=1)
-            flattenedBoard = np.insert(flattenedBoard, horizontalGridLines, gridValue, axis=0)
-        return flattenedBoard
+    def withGrid(self, borderWidth: int, borderValue: Union[int, Sequence[Numeric]] = np.array([255, 255, 255])) -> np.ndarray:
+        boardWithGrid = self.data.copy()
+        verticalGridLines = np.repeat(np.arange(self.tileWidth, self.data.shape[1], step=self.tileWidth), borderWidth, axis=0)
+        horizontalGridLines = np.repeat(np.arange(self.tileHeight, self.data.shape[0], step=self.tileHeight), borderWidth, axis=0)
+        boardWithGrid = np.insert(boardWithGrid, verticalGridLines, borderValue, axis=1)
+        boardWithGrid = np.insert(boardWithGrid, horizontalGridLines, borderValue, axis=0)
+        return boardWithGrid
+
+
+    def pieces(self) -> np.ndarray:
+        blurredBoard = cv.medianBlur(self.data, 5)
+        grayBlurredBoard = cv.cvtColor(blurredBoard, cv.COLOR_BGR2GRAY)
+
+        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.2, minDist=self.tileWidth*3/4, param1=60, param2=50, minRadius=int(self.tileWidth/3), maxRadius=int(self.tileWidth/2.5))
+
+        if pieces is None:
+            print("No piece found")
+            return
+
+        pieces = np.uint16(np.around(pieces))
+
+        return pieces[0,:]

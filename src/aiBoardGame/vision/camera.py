@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+from pathlib import Path
 import numpy as np
 import cv2 as cv
 from dataclasses import dataclass, field
@@ -39,10 +42,10 @@ class CalibrationError(CameraError):
 class Camera:
     """Class for handling camera input"""
     resolution: Resolution
-    _matrix: Optional[np.ndarray] = field(init=False, default=None)
+    _intrinsicMatrix: Optional[np.ndarray] = field(init=False, default=None)
     _distortionCoefficients: Optional[np.ndarray] = field(init=False, default=None)
 
-    _newMatrix: Optional[np.ndarray] = field(init=False, default=None)
+    _newIntrinsicMatrix: Optional[np.ndarray] = field(init=False, default=None)
     _regionOfInterest: Optional[Tuple[float, float, float, float]] = field(init=False, default=None)
 
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
@@ -54,9 +57,9 @@ class Camera:
     @property
     def isCalibrated(self) -> bool:
         """Check if camera has been calibrated yet"""
-        return self._matrix is not None and \
+        return self._intrinsicMatrix is not None and \
                self._distortionCoefficients is not None and \
-               self._newMatrix is not None and \
+               self._newIntrinsicMatrix is not None and \
                self._regionOfInterest is not None
 
     @property
@@ -68,7 +71,7 @@ class Camera:
         """
         if not self.isCalibrated:
             raise CalibrationError("Camera is not calibrated yet")
-        return FocalLength(self._matrix[0][0], self._matrix[1][1])
+        return FocalLength(self._intrinsicMatrix[0][0], self._intrinsicMatrix[1][1])
 
     def calibrate(self, images: Iterable[np.ndarray], checkerBoardShape: Tuple[int, int] = (8,8)) -> None:
         """
@@ -107,24 +110,47 @@ class Camera:
         if not 0 <= reprojectionError <= 1:
             raise CalibrationError(f"Reprojection error should be between 0.0 and 1.0 pixel, was {reprojectionError} pixel")
 
-        self._matrix = cameraMatrix
+        self._intrinsicMatrix = cameraMatrix
         self._distortionCoefficients = distortionCoefficients
-        _cameraLogger.debug(f"Camera matrix:\n{self._matrix}")
+        _cameraLogger.debug(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
         _cameraLogger.debug(f"Distortion coefficients: {self._distortionCoefficients}")
 
-        self._newMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
-        _cameraLogger.debug(f"New camera matrix:\n{self._newMatrix}")
+        self._newIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
+        _cameraLogger.debug(f"New intrinsic matrix:\n{self._newIntrinsicMatrix}")
         _cameraLogger.debug(f"Region of intereset: {self._regionOfInterest}")
 
         _cameraLogger.debug("Calibration finished")
 
+    def saveParameters(self, filePath: Path) -> None:
+        _cameraLogger.debug(f"Saving camera parameters to {filePath}")
+        parameters = {
+            "intrinsicMatrix": self._intrinsicMatrix,
+            "distortionCoefficients": self._distortionCoefficients,
+            "newIntrinsicMatrix": self._newIntrinsicMatrix,
+            "regionOfInterest": self._regionOfInterest
+        }
+        np.savez(filePath, **parameters)
+
+    def loadParameters(self, filePath: Path) -> None:
+        _cameraLogger.debug(f"Load camera parameters from {filePath}")
+        with np.load(filePath, mmap_mode="r") as parameters:
+            self._intrinsicMatrix = parameters["intrinsicMatrix"]
+            self._distortionCoefficients = parameters["distortionCoefficients"]
+            self._newIntrinsicMatrix = parameters["newIntrinsicMatrix"]
+            self._regionOfInterest = parameters["regionOfInterest"]
+
+    @classmethod
+    def fromSavedParameters(cls, resolution: Resolution, parameterFilePath: Path) -> Camera:
+        camera = cls(resolution)
+        camera.loadParameters(parameterFilePath)
+        return camera
         
     def undistort(self, image: np.ndarray) -> np.ndarray:
         """Undistort given image with camera matrices and distortion coefficients"""
         if not self.isCalibrated:
             raise CalibrationError("Camera is not calibrated yet")
         _cameraLogger.debug("[Undistort image]")
-        undistortedImage = cv.undistort(image, self._matrix, self._distortionCoefficients, None, self._newMatrix)
+        undistortedImage = cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._newIntrinsicMatrix)
         x, y, width, height = self._regionOfInterest
         _cameraLogger.debug(f"Finished undistorting")
         return undistortedImage[y:y+height, x:x+width]
@@ -164,24 +190,15 @@ class RobotCamera(Camera):
 
         _cameraLogger.debug("Transforming detected board image")
         board = np.array([markers[i][0][(i+2) % 4] for i in range(4)])
+        newHeight = min(width, height)
+        newHeight -= newHeight % self._boardRows
+        newWidth = int(newHeight * self._boardCols / self._boardRows)
+        newWidth -= newWidth % self._boardCols
         mat = cv.getPerspectiveTransform(board, np.float32([
             [0, 0],
-            [width, 0],
-            [width, height],
-            [0, height]
+            [newWidth, 0],
+            [newWidth, newHeight],
+            [0, newHeight]
         ]))
-        warpedBoard = cv.warpPerspective(image, mat, (width, height), flags=cv.INTER_LINEAR)
-        paddedWarpedBoard = np.pad(warpedBoard, pad_width=self._getPaddings(width, height, self._boardRows, self._boardCols), mode="symmetric")
-        _cameraLogger.debug(f"Transformed image size: {paddedWarpedBoard.shape[1::-1]}")
-        _cameraLogger.debug("Creating Board from transformed image")
-        return Board.create(paddedWarpedBoard, rows=self._boardRows, cols=self._boardCols)
-
-    @staticmethod
-    def _getPaddings(width: int, height: int, rows: int, cols: int) -> Tuple[Tuple[int, int], Tuple[int, int]]:
-        """Calculate padding widths based on row and column count"""
-        padWidth = cols - width % cols
-        padWidth = (padWidth // 2, padWidth - padWidth // 2)
-        padHeight = rows - height % rows
-        padHeight = (padHeight // 2, padHeight - padHeight // 2)
-        return padHeight, padWidth, (0,0)
-            
+        warpedBoard = cv.warpPerspective(image, mat, (newWidth, newHeight), flags=cv.INTER_LINEAR)
+        return Board(warpedBoard, rows=self._boardRows, cols=self._boardCols)
