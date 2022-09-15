@@ -15,7 +15,8 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "opencv-contrib-python"
+    "opencv-contrib-python",
+    "uArm-Python-SDK @ git+https://github.com/uArm-Developer/uArm-Python-SDK.git@2.0"
 ]
 
 [project.urls]

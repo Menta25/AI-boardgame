@@ -9,32 +9,17 @@ from aiBoardGame.model.board import Board
 from aiBoardGame.vision.camera import RobotCamera, Resolution
 
 
-logging.basicConfig(level=logging.DEBUG)
-
-@dataclass
-class Helper:
-    path: Path
-
-    def images(self) -> Iterator[np.ndarray]:
-        imageFiles = self.path.glob("*.jpg")
-        for imageFile in imageFiles:
-            yield cv.imread(imageFile.as_posix())
+logging.basicConfig(format="[{levelname:.1s}] [{asctime}.{msecs:<3.0f}] {module:>8} : {message}", datefmt="%H:%M:%S", style="{", level=logging.DEBUG)
 
 
 def main() -> None:
-    camRes = Resolution(3648, 2736)
     storedParams = Path("camParams.npz")
-    if storedParams.exists():
-        cam = RobotCamera.fromSavedParameters(camRes, storedParams)
-    else:
-        helper = Helper(Path("img/calib"))
-        cam = RobotCamera(camRes)
-        cam.calibrate(helper.images(), (8,6))
+    cam = RobotCamera(feedInput=5, intrinsicsFile=storedParams if storedParams.exists() else None)
+    if not cam.isCalibrated:
+        cam.calibrate((8,6))
         cam.saveParameters("camParams.npz")
 
-    distortedBoardImage = cv.imread("img/test4.jpg")
-    undistortedBoardImage = cam.undistort(distortedBoardImage)
-    xiangqiBoard: Board = cam.detectBoard(undistortedBoardImage)
+    xiangqiBoard: Board = cam.detectBoard(cam.read())
     pieces = xiangqiBoard.pieces()
 
     boardCopy = xiangqiBoard.data.copy()

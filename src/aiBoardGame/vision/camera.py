@@ -4,8 +4,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import cv2 as cv
-from dataclasses import dataclass, field
-from typing import ClassVar, Tuple, NamedTuple, Optional, Iterable
+from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union
 
 from aiBoardGame.model.board import Board
 
@@ -33,33 +32,48 @@ class CameraError(Exception):
         self.message = message
 
 
-class CalibrationError(CameraError):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
 
-
-@dataclass
 class Camera:
     """Class for handling camera input"""
-    resolution: Resolution
-    _intrinsicMatrix: Optional[np.ndarray] = field(init=False, default=None)
-    _distortionCoefficients: Optional[np.ndarray] = field(init=False, default=None)
-
-    _newIntrinsicMatrix: Optional[np.ndarray] = field(init=False, default=None)
-    _regionOfInterest: Optional[Tuple[float, float, float, float]] = field(init=False, default=None)
 
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     _calibrationMinPatternCount: ClassVar[int] = 5
 
-    def __post_init__(self) -> None:
-        _cameraLogger.debug(f"Init camera with ({self.resolution}) resolution")
+    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None) -> None:
+        if isinstance(feedInput, (int, str)):
+            self._capture = cv.VideoCapture(feedInput)
+        elif isinstance(feedInput, Path):
+            self._capture = cv.VideoCapture(feedInput.as_posix())
+        else:
+            raise CameraError("Invalid camera input type, must be int, Path or str")
+
+        if not self._capture.isOpened():
+            raise CameraError("Cannot open camera, invalid feed input")
+
+        #_cameraLogger.debug(f"Init camera with ({self.resolution}) resolution")
+
+        self._intrinsicMatrix: Optional[np.ndarray] = None
+        self._distortionCoefficients: Optional[np.ndarray] = None
+
+        self._undistortedIntrinsicMatrix: Optional[np.ndarray] = None
+        self._regionOfInterest: Optional[Tuple[float, float, float, float]] = None
+
+        if intrinsicsFile is not None:
+            self.loadParameters(intrinsicsFile)
+
+    def __del__(self) -> None:
+        self._capture.release()
+
+    @property
+    def resolution(self) -> Resolution:
+        return Resolution(self._capture.get(cv.CAP_PROP_FRAME_WIDTH), self._capture.get(cv.CAP_PROP_FRAME_HEIGHT))
 
     @property
     def isCalibrated(self) -> bool:
         """Check if camera has been calibrated yet"""
         return self._intrinsicMatrix is not None and \
                self._distortionCoefficients is not None and \
-               self._newIntrinsicMatrix is not None and \
+               self._undistortedIntrinsicMatrix is not None and \
                self._regionOfInterest is not None
 
     @property
@@ -70,16 +84,36 @@ class Camera:
             :raises CalibrationError: Camera is not calibrated yet
         """
         if not self.isCalibrated:
-            raise CalibrationError("Camera is not calibrated yet")
+            raise CameraError("Camera is not calibrated yet")
         return FocalLength(self._intrinsicMatrix[0][0], self._intrinsicMatrix[1][1])
 
-    def calibrate(self, images: Iterable[np.ndarray], checkerBoardShape: Tuple[int, int] = (8,8)) -> None:
+    def read(self, undistorted: bool = True) -> Optional[np.ndarray]:
+        wasSuccessful, image = self._capture.read()
+        if wasSuccessful:
+            return image if undistorted is False else self._undistort(image)
+        else:
+            return None
+
+    def _undistort(self, image: np.ndarray) -> np.ndarray:
+        if not self.isCalibrated:
+                raise CameraError("Camera is not calibrated yet")
+        undistortedImage = cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
+        x, y, width, height = self._regionOfInterest
+        return undistortedImage[y:y+height, x:x+width]
+
+    def feed(self, undistorted: bool = True) -> Iterator[np.ndarray]:
+        while True:
+            image = self.read(undistorted)
+            if image is not None:
+                yield image
+
+    def calibrate(self, checkerBoardShape: Tuple[int, int] = (8,8)) -> None:
         """
             Calibrate camera with given image feed
 
             :raises CalibrationError: Not enough valid pattern input or reprojection error is too high
         """
-        _cameraLogger.debug("[Calibrate camera]")
+        _cameraLogger.info("[Calibrate camera]")
         objp = np.zeros((np.prod(checkerBoardShape),3), np.float32)
         objp[:,:2] = np.mgrid[0:checkerBoardShape[0],0:checkerBoardShape[1]].T.reshape(-1,2)
 
@@ -88,12 +122,13 @@ class Camera:
 
         _cameraLogger.debug(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self._calibrationMinPatternCount})")
         patternCount = 0
-        while (image := next(images, None)) is not None and patternCount < self._calibrationMinPatternCount:
+        while (image := next(self.feed(undistorted=False), None)) is not None and patternCount < self._calibrationMinPatternCount:
             grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
             isPatternFound, corners = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
 
             if isPatternFound:
+                print("found")
                 patternCount += 1
                 _cameraLogger.debug(f"Found checkered board image, need {self._calibrationMinPatternCount - patternCount} more")
                 objPoints.append(objp)
@@ -102,31 +137,34 @@ class Camera:
                 imgPoints.append(corners)
 
         if patternCount < self._calibrationMinPatternCount:
-            raise CalibrationError(f"Not enough pattern found for calibration, found only {patternCount} out of {self._calibrationMinPatternCount}")
+            raise CameraError(f"Not enough pattern found for calibration, found only {patternCount} out of {self._calibrationMinPatternCount}")
 
         _cameraLogger.debug("Calibrate camera")
         reprojectionError, cameraMatrix, distortionCoefficients, _, _ = cv.calibrateCamera(objPoints, imgPoints, self.resolution, None, None)
 
         if not 0 <= reprojectionError <= 1:
-            raise CalibrationError(f"Reprojection error should be between 0.0 and 1.0 pixel, was {reprojectionError} pixel")
+            raise CameraError(f"Reprojection error should be between 0.0 and 1.0 pixel after calibration, was {reprojectionError} pixel")
 
         self._intrinsicMatrix = cameraMatrix
         self._distortionCoefficients = distortionCoefficients
         _cameraLogger.debug(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
         _cameraLogger.debug(f"Distortion coefficients: {self._distortionCoefficients}")
 
-        self._newIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
-        _cameraLogger.debug(f"New intrinsic matrix:\n{self._newIntrinsicMatrix}")
+        self._undistortedIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
+        _cameraLogger.debug(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
         _cameraLogger.debug(f"Region of intereset: {self._regionOfInterest}")
 
         _cameraLogger.debug("Calibration finished")
 
     def saveParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Saving camera parameters to {filePath}")
+        resolution = self.resolution
         parameters = {
+            "cameraWidth": resolution.width,
+            "cameraHeight": resolution.height,
             "intrinsicMatrix": self._intrinsicMatrix,
             "distortionCoefficients": self._distortionCoefficients,
-            "newIntrinsicMatrix": self._newIntrinsicMatrix,
+            "newIntrinsicMatrix": self._undistortedIntrinsicMatrix,
             "regionOfInterest": self._regionOfInterest
         }
         np.savez(filePath, **parameters)
@@ -134,33 +172,29 @@ class Camera:
     def loadParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Load camera parameters from {filePath}")
         with np.load(filePath, mmap_mode="r") as parameters:
-            self._intrinsicMatrix = parameters["intrinsicMatrix"]
-            self._distortionCoefficients = parameters["distortionCoefficients"]
-            self._newIntrinsicMatrix = parameters["newIntrinsicMatrix"]
-            self._regionOfInterest = parameters["regionOfInterest"]
-
-    @classmethod
-    def fromSavedParameters(cls, resolution: Resolution, parameterFilePath: Path) -> Camera:
-        camera = cls(resolution)
-        camera.loadParameters(parameterFilePath)
-        return camera
-        
-    def undistort(self, image: np.ndarray) -> np.ndarray:
-        """Undistort given image with camera matrices and distortion coefficients"""
-        if not self.isCalibrated:
-            raise CalibrationError("Camera is not calibrated yet")
-        _cameraLogger.debug("[Undistort image]")
-        undistortedImage = cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._newIntrinsicMatrix)
-        x, y, width, height = self._regionOfInterest
-        _cameraLogger.debug(f"Finished undistorting")
-        return undistortedImage[y:y+height, x:x+width]
+            if self.resolution == Resolution(parameters["cameraWidth"], parameters["cameraHeight"]):
+                self._intrinsicMatrix = parameters["intrinsicMatrix"]
+                self._distortionCoefficients = parameters["distortionCoefficients"]
+                self._undistortedIntrinsicMatrix = parameters["newIntrinsicMatrix"]
+                self._regionOfInterest = parameters["regionOfInterest"]
+            else:
+                _cameraLogger.error("Camera resolutions do not match, cannot import parameters")
 
 
-@dataclass
 class RobotCamera(Camera):
     """Camera subclass used for playing board games"""
     _boardRows: ClassVar[int] = 10
     _boardCols: ClassVar[int] = 9
+
+    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None) -> None:
+        super().__init__(feedInput, intrinsicsFile)
+
+        self._boardHeight = min(self.resolution.width, self.resolution.height)
+        self._boardHeight -= self._boardHeight % self._boardRows
+        self._boardWidth = int(self._boardHeight * self._boardCols / self._boardRows)
+        self._boardWidth -= self._boardHeight % self._boardCols
+
+        self._robotToCameraTransform: Optional[np.ndarray] = None
 
     def detectBoard(self, image: np.ndarray, arucoDictEnum: int = cv.aruco.DICT_4X4_50) -> Board:
         """
@@ -170,9 +204,7 @@ class RobotCamera(Camera):
         """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
-        _cameraLogger.debug("[Detect board on image]")
-
-        height, width, _ = image.shape
+        _cameraLogger.info("[Detect board on image]")
 
         _cameraLogger.debug("Get ArUco dictionary")
         arucoDict = cv.aruco.getPredefinedDictionary(arucoDictEnum)
@@ -190,15 +222,15 @@ class RobotCamera(Camera):
 
         _cameraLogger.debug("Transforming detected board image")
         board = np.array([markers[i][0][(i+2) % 4] for i in range(4)])
-        newHeight = min(width, height)
-        newHeight -= newHeight % self._boardRows
-        newWidth = int(newHeight * self._boardCols / self._boardRows)
-        newWidth -= newWidth % self._boardCols
         mat = cv.getPerspectiveTransform(board, np.float32([
             [0, 0],
-            [newWidth, 0],
-            [newWidth, newHeight],
-            [0, newHeight]
+            [self._boardWidth, 0],
+            [self._boardWidth, self._boardHeight],
+            [0, self._boardHeight]
         ]))
-        warpedBoard = cv.warpPerspective(image, mat, (newWidth, newHeight), flags=cv.INTER_LINEAR)
+        warpedBoard = cv.warpPerspective(image, mat, (self._boardWidth, self._boardHeight), flags=cv.INTER_LINEAR)
         return Board(warpedBoard, rows=self._boardRows, cols=self._boardCols)
+
+    def calculateRobotToCameraTransform(self, robotPoints: np.ndarray, board: Board) -> None:
+        if len(robotPoints) != 4:
+            raise CameraError(f"Robot to camera transform calculation needs 4 points in the robot's coordinate system, got {len(robotPoints)}")
