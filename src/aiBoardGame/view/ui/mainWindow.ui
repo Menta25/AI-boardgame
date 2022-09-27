@@ -25,7 +25,7 @@
       </attribute>
       <layout class="QGridLayout" name="rawCameraTabLayout">
        <item row="0" column="0">
-        <layout class="QVBoxLayout" name="rawCameraVerticalLayout" stretch="0,0,1,0">
+        <layout class="QVBoxLayout" name="rawCameraVerticalLayout" stretch="0,0,0">
          <item>
           <widget class="QComboBox" name="cameraInputsComboBox">
            <property name="currentText">
@@ -37,48 +37,12 @@
           </widget>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="calibrationButtonLayout" stretch="0,0">
-           <property name="spacing">
-            <number>6</number>
-           </property>
-           <property name="sizeConstraint">
-            <enum>QLayout::SetNoConstraint</enum>
-           </property>
-           <item>
-            <widget class="QPushButton" name="calibrateButton">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="text">
-              <string>Calibrate</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="loadCalibrationButton">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Load calibration</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QLabel" name="cameraFeedLabel">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <widget class="QPushButton" name="calibrateButton">
+           <property name="enabled">
+            <bool>true</bool>
            </property>
            <property name="text">
-            <string/>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <string>Calibrate</string>
            </property>
           </widget>
          </item>

@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import cv2 as cv
-from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union
+from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union, List
 
 from aiBoardGame.model.board import Board
 
@@ -107,7 +107,13 @@ class Camera:
             if image is not None:
                 yield image
 
-    def calibrate(self, checkerBoardShape: Tuple[int, int] = (8,8)) -> None:
+    def isSuitableForCalibration(self, image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
+        grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        isPatternFound, _ = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
+        return isPatternFound
+
+
+    def calibrate(self, checkerBoardImages: List[np.ndarray], checkerBoardShape: Tuple[int, int]) -> None:
         """
             Calibrate camera with given image feed
 
@@ -122,13 +128,13 @@ class Camera:
 
         _cameraLogger.debug(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self._calibrationMinPatternCount})")
         patternCount = 0
-        while (image := next(self.feed(undistorted=False), None)) is not None and patternCount < self._calibrationMinPatternCount:
+        for image in checkerBoardImages:
+            if patternCount >= self._calibrationMinPatternCount:
+                break
+
             grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-
             isPatternFound, corners = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
-
             if isPatternFound:
-                print("found")
                 patternCount += 1
                 _cameraLogger.debug(f"Found checkered board image, need {self._calibrationMinPatternCount - patternCount} more")
                 objPoints.append(objp)
