@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
+    <width>415</width>
     <height>300</height>
    </rect>
   </property>
@@ -87,6 +87,9 @@
      </item>
      <item>
       <widget class="QPushButton" name="calibrateButton">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Calibrate</string>
        </property>

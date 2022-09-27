@@ -8,22 +8,30 @@ from aiBoardGame.vision.camera import RobotCamera
 class CameraThread(QThread):
     newCameraImageSignal: ClassVar[pyqtSignal] = pyqtSignal(np.ndarray)
 
-    def __init__(self, capturePath: Path, isUndistorted: bool = False) -> None:
+    def __init__(self, capturePath: Path) -> None:
         super().__init__()
         self._isRunning = True
         self._capturePath = capturePath
-        self._isUndistorted = isUndistorted
+        self._isUndistorted = False
+
+        self.image = None
+        self.camera = None
 
     @property
+    def isUndistorted(self) -> bool:
+        return self._isUndistorted
+
+    @isUndistorted.setter
     def isUndistorted(self, value: bool) -> None:
         self._isUndistorted = value
 
     def run(self):
-        robotCamera = RobotCamera(self._capturePath)
+        self.camera = RobotCamera(self._capturePath)
         while self._isRunning:
-            image = robotCamera.read(undistorted=self._isUndistorted)
+            image = self.camera.read(undistorted=self._isUndistorted)
             if image is not None:
-                self.newCameraImageSignal.emit(image)
+                self.image = image
+                self.newCameraImageSignal.emit(self.image)
 
     def stop(self):
         self._isRunning = False

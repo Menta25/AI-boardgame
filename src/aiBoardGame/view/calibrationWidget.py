@@ -1,12 +1,15 @@
+import logging
 from pathlib import Path
 from typing import Optional, ClassVar
 from PyQt6 import uic
-from PyQt6.QtWidgets import QWidget
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QProgressBar, QSpinBox
+from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent
 
 from aiBoardGame.view.cameraThread import CameraThread
 from aiBoardGame.view.cameraFeed import CameraFeed
+
+from aiBoardGame.vision.camera import RobotCamera, CameraError
 
 
 _UI_PATH = Path("src/aiBoardGame/view/ui/calibrationWidget.ui")
@@ -14,8 +17,9 @@ _UI_PATH = Path("src/aiBoardGame/view/ui/calibrationWidget.ui")
 
 class CalibrationWidget(QWidget):
     closed: ClassVar[pyqtSignal] = pyqtSignal()
+    calibrated: ClassVar[pyqtSlot] = pyqtSignal()
 
-    def __init__(self, cameraThread: CameraThread, parent: Optional['QWidget'] = None, flags: Qt.WindowType = Qt.WindowType.Dialog) -> None:
+    def __init__(self, cameraThread: Optional[CameraThread], parent: Optional['QWidget'] = None, flags: Qt.WindowType = Qt.WindowType.Dialog) -> None:
         super().__init__(parent, flags)
         uic.load_ui.loadUi(_UI_PATH.as_posix(), self)
 
@@ -23,15 +27,56 @@ class CalibrationWidget(QWidget):
         self.cameraFeedLabel = CameraFeed()
         self.calibrationLayout.insertWidget(1, self.cameraFeedLabel, stretch=1)
 
+        self.calibrateButton.setEnabled(self._cameraThread is not None)
+
+        self.calibrationProgressBar.setMaximum(RobotCamera.calibrationMinPatternCount)
+        self._calibrationImages = []
+        self.calibrateButton.clicked.connect(self.collectCalibrationImage)
+
     @property
-    def cameraThread(self) -> CameraThread:
+    def cameraThread(self) -> Optional[CameraThread]:
         return self._cameraThread
 
     @cameraThread.setter
     def cameraThread(self, value: CameraThread) -> None:
+        if not self.calibrateButton.isEnabled():
+            self.calibrateButton.setEnabled(True)
+
         self._cameraThread = value
         self.cameraFeedLabel.cameraThread = self._cameraThread
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.closed.emit()
         return super().closeEvent(a0)
+
+    def setVerticiesSpinBoxEnabled(self, value: bool) -> None:
+        self.horizontalVerticiesSpinBox.setEnabled(value)
+        self.verticalVerticiesSpinBox.setEnabled(value)
+
+    def resetWidget(self) -> None:
+        self.setVerticiesSpinBoxEnabled(True)
+        self._calibrationImages.clear()
+        self.calibrationProgressBar.setValue(0)
+
+    @pyqtSlot()
+    def collectCalibrationImage(self) -> None:
+        image = self._cameraThread.image
+        if RobotCamera.isSuitableForCalibration(image, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value())):
+            if self.horizontalVerticiesSpinBox.isEnabled() or self.verticalVerticiesSpinBox.isEnabled():
+                self.setVerticiesSpinBoxEnabled(False)
+
+            self._calibrationImages.append(image)
+            self.calibrationProgressBar.setValue(len(self._calibrationImages))
+
+            if len(self._calibrationImages) >= RobotCamera.calibrationMinPatternCount:
+                self.calibrateCamera()
+
+    def calibrateCamera(self) -> None:
+        try:
+            self._cameraThread.camera.calibrate(checkerBoardImages=self._calibrationImages, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value()))
+        except CameraError:
+            logging.exception()
+        else:
+            self.calibrated.emit()
+        finally:
+            self.resetWidget()

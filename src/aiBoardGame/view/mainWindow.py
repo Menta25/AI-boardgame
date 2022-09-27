@@ -29,8 +29,9 @@ class MainWindow(QWidget):
         self.undistortCheckBox.stateChanged.connect(self.setCameraUndistortion)
         self.calibrateButton.clicked.connect(self.showCalibrationWidget)
 
-        self.calibrationWidget = CalibrationWidget(self)
+        self.calibrationWidget = CalibrationWidget(self._cameraThread, self)
         self.calibrationWidget.closed.connect(self.showWindow)
+        self.calibrationWidget.calibrated.connect(self.enableUndistortButton)
 
     @property
     def cameraThread(self) -> CameraThread:
@@ -65,7 +66,7 @@ class MainWindow(QWidget):
         if self.cameraThread is not None:
             self.cameraThread.stop()
 
-        self.cameraThread = CameraThread(capturePath=Path(cameraPathStr), isUndistorted=self.undistortCheckBox.isChecked())
+        self.cameraThread = CameraThread(capturePath=Path(cameraPathStr))
         self.cameraThread.start()
 
     @pyqtSlot(int)
@@ -81,3 +82,7 @@ class MainWindow(QWidget):
     @pyqtSlot()
     def showWindow(self) -> None:
         self.show()
+
+    @pyqtSlot()
+    def enableUndistortButton(self) -> None:
+        self.undistortCheckBox.setEnabled(self._cameraThread.camera.isCalibrated)

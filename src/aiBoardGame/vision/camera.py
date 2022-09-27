@@ -14,8 +14,8 @@ _cameraLogger = logging.getLogger(__name__)
 
 class Resolution(NamedTuple):
     """Store width and height in pixel"""
-    width: float
-    height: float
+    width: int
+    height: int
 
     def __str__(self) -> str:
         return f"{self.width}x{self.height}"
@@ -36,8 +36,8 @@ class CameraError(Exception):
 class Camera:
     """Class for handling camera input"""
 
+    calibrationMinPatternCount: ClassVar[int] = 5
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-    _calibrationMinPatternCount: ClassVar[int] = 5
 
     def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None) -> None:
         if isinstance(feedInput, (int, str)):
@@ -49,8 +49,6 @@ class Camera:
 
         if not self._capture.isOpened():
             raise CameraError("Cannot open camera, invalid feed input")
-
-        #_cameraLogger.debug(f"Init camera with ({self.resolution}) resolution")
 
         self._intrinsicMatrix: Optional[np.ndarray] = None
         self._distortionCoefficients: Optional[np.ndarray] = None
@@ -66,7 +64,7 @@ class Camera:
 
     @property
     def resolution(self) -> Resolution:
-        return Resolution(self._capture.get(cv.CAP_PROP_FRAME_WIDTH), self._capture.get(cv.CAP_PROP_FRAME_HEIGHT))
+        return Resolution(int(self._capture.get(cv.CAP_PROP_FRAME_WIDTH)), int(self._capture.get(cv.CAP_PROP_FRAME_HEIGHT)))
 
     @property
     def isCalibrated(self) -> bool:
@@ -81,7 +79,7 @@ class Camera:
         """
             Get focal length stored in the camera matrix
 
-            :raises CalibrationError: Camera is not calibrated yet
+            :raises CameraError: Camera is not calibrated yet
         """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
@@ -107,7 +105,9 @@ class Camera:
             if image is not None:
                 yield image
 
-    def isSuitableForCalibration(self, image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
+    @staticmethod
+    def isSuitableForCalibration(image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
+        logging.info(checkerBoardShape)
         grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         isPatternFound, _ = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
         return isPatternFound
@@ -117,7 +117,7 @@ class Camera:
         """
             Calibrate camera with given image feed
 
-            :raises CalibrationError: Not enough valid pattern input or reprojection error is too high
+            :raises CameraError: Not enough valid pattern input or reprojection error is too high
         """
         _cameraLogger.info("[Calibrate camera]")
         objp = np.zeros((np.prod(checkerBoardShape),3), np.float32)
@@ -126,26 +126,26 @@ class Camera:
         objPoints = []
         imgPoints = []
 
-        _cameraLogger.debug(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self._calibrationMinPatternCount})")
+        _cameraLogger.info(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self.calibrationMinPatternCount})")
         patternCount = 0
         for image in checkerBoardImages:
-            if patternCount >= self._calibrationMinPatternCount:
+            if patternCount >= self.calibrationMinPatternCount:
                 break
 
             grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
             isPatternFound, corners = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
             if isPatternFound:
                 patternCount += 1
-                _cameraLogger.debug(f"Found checkered board image, need {self._calibrationMinPatternCount - patternCount} more")
+                _cameraLogger.info(f"Found checkered board image, need {self.calibrationMinPatternCount - patternCount} more")
                 objPoints.append(objp)
 
                 cv.cornerSubPix(grayImage, corners, (11,11), (-1,-1), self._calibrationCritera)
                 imgPoints.append(corners)
 
-        if patternCount < self._calibrationMinPatternCount:
-            raise CameraError(f"Not enough pattern found for calibration, found only {patternCount} out of {self._calibrationMinPatternCount}")
+        if patternCount < self.calibrationMinPatternCount:
+            raise CameraError(f"Not enough pattern found for calibration, found only {patternCount} out of {self.calibrationMinPatternCount}")
 
-        _cameraLogger.debug("Calibrate camera")
+        _cameraLogger.info("Calibrate camera")
         reprojectionError, cameraMatrix, distortionCoefficients, _, _ = cv.calibrateCamera(objPoints, imgPoints, self.resolution, None, None)
 
         if not 0 <= reprojectionError <= 1:
@@ -153,14 +153,14 @@ class Camera:
 
         self._intrinsicMatrix = cameraMatrix
         self._distortionCoefficients = distortionCoefficients
-        _cameraLogger.debug(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
-        _cameraLogger.debug(f"Distortion coefficients: {self._distortionCoefficients}")
+        _cameraLogger.info(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
+        _cameraLogger.info(f"Distortion coefficients: {self._distortionCoefficients}")
 
         self._undistortedIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
-        _cameraLogger.debug(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
-        _cameraLogger.debug(f"Region of intereset: {self._regionOfInterest}")
+        _cameraLogger.info(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
+        _cameraLogger.info(f"Region of intereset: {self._regionOfInterest}")
 
-        _cameraLogger.debug("Calibration finished")
+        _cameraLogger.info("Calibration finished")
 
     def saveParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Saving camera parameters to {filePath}")
