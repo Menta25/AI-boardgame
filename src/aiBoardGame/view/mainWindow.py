@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Optional, List
 from PyQt6 import uic
@@ -7,7 +8,7 @@ from PyQt6.QtGui import QCloseEvent
 
 from aiBoardGame.view.cameraThread import CameraThread
 from aiBoardGame.view.cameraFeed import CameraFeed
-from aiBoardGame.view.calibrationWidget import CalibrationWidget
+from aiBoardGame.view.calibrationTypesWidget import CalibrationTypesWidget
 
 
 _UI_PATH = Path("src/aiBoardGame/view/ui/mainWindow.ui")
@@ -27,29 +28,32 @@ class MainWindow(QWidget):
 
         self.cameraInputsComboBox.currentTextChanged.connect(self.initCamera)
         self.undistortCheckBox.stateChanged.connect(self.setCameraUndistortion)
-        self.calibrateButton.clicked.connect(self.showCalibrationWidget)
+        self.calibrateButton.clicked.connect(self.calibrationTypesWidget)
 
-        self.calibrationWidget = CalibrationWidget(self._cameraThread, self)
-        self.calibrationWidget.closed.connect(self.showWindow)
-        self.calibrationWidget.calibrated.connect(self.enableUndistortButton)
+        self.calibrationTypesWidget = CalibrationTypesWidget(self._cameraThread, self)
+        self.calibrationTypesWidget.closed.connect(self.showWindow)
+        self.calibrationTypesWidget.calibrated.connect(self.showWindow)
 
     @property
-    def cameraThread(self) -> CameraThread:
+    def cameraThread(self) -> Optional[CameraThread]:
         return self._cameraThread
 
     @cameraThread.setter
     def cameraThread(self, value: CameraThread) -> None:
         if self._cameraThread is not None:
             self._cameraThread.stop()
+            self._cameraThread.calibrated.disconnect(self.enableUndistortButton)
 
         self._cameraThread = value
-        self.calibrationWidget.cameraThread = self._cameraThread
+        self.calibrationTypesWidget.cameraThread = self._cameraThread
         self.cameraFeedLabel.cameraThread = self._cameraThread
+        self._cameraThread.calibrated.connect(self.enableUndistortButton)
+        self._cameraThread.start()
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         if self.cameraThread is not None:
             self.cameraThread.stop()
-        self.calibrationWidget.closed.disconnect()
+        self.calibrationTypesWidget.closed.disconnect()
         return super().closeEvent(a0)
 
     def initCameraInputsComboBox(self) -> None:
@@ -63,11 +67,10 @@ class MainWindow(QWidget):
 
     @pyqtSlot(str)
     def initCamera(self, cameraPathStr: str) -> None:
-        if self.cameraThread is not None:
-            self.cameraThread.stop()
-
         self.cameraThread = CameraThread(capturePath=Path(cameraPathStr))
-        self.cameraThread.start()
+
+        if not self.calibrateButton.isEnabled():
+            self.calibrateButton.setEnabled(True)
 
     @pyqtSlot(int)
     def setCameraUndistortion(self, value: int) -> None:
@@ -75,9 +78,9 @@ class MainWindow(QWidget):
             self.cameraThread.isUndistorted = bool(value)
 
     @pyqtSlot()
-    def showCalibrationWidget(self) -> None:
+    def calibrationTypesWidget(self) -> None:
         self.hide()
-        self.calibrationWidget.show()
+        self.calibrationTypesWidget.show()
 
     @pyqtSlot()
     def showWindow(self) -> None:

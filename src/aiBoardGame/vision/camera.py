@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 import numpy as np
 import cv2 as cv
+from pathlib import Path
 from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union, List
+from PyQt6.QtCore import pyqtSignal, QObject
 
 from aiBoardGame.model.board import Board
 
@@ -33,13 +34,16 @@ class CameraError(Exception):
 
 
 
-class Camera:
+class Camera(QObject):
     """Class for handling camera input"""
+    calibrated: ClassVar[pyqtSignal] = pyqtSignal()
 
     calibrationMinPatternCount: ClassVar[int] = 5
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None) -> None:
+    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+        super().__init__(parent)
+
         if isinstance(feedInput, (int, str)):
             self._capture = cv.VideoCapture(feedInput)
         elif isinstance(feedInput, Path):
@@ -161,6 +165,7 @@ class Camera:
         _cameraLogger.info(f"Region of intereset: {self._regionOfInterest}")
 
         _cameraLogger.info("Calibration finished")
+        self.calibrated.emit()
 
     def saveParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Saving camera parameters to {filePath}")
@@ -177,14 +182,18 @@ class Camera:
 
     def loadParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Load camera parameters from {filePath}")
-        with np.load(filePath, mmap_mode="r") as parameters:
-            if self.resolution == Resolution(parameters["cameraWidth"], parameters["cameraHeight"]):
-                self._intrinsicMatrix = parameters["intrinsicMatrix"]
-                self._distortionCoefficients = parameters["distortionCoefficients"]
-                self._undistortedIntrinsicMatrix = parameters["newIntrinsicMatrix"]
-                self._regionOfInterest = parameters["regionOfInterest"]
-            else:
-                _cameraLogger.error("Camera resolutions do not match, cannot import parameters")
+        try:
+            with np.load(filePath, mmap_mode="r") as parameters:
+                if self.resolution == Resolution(parameters["cameraWidth"], parameters["cameraHeight"]):
+                    self._intrinsicMatrix = parameters["intrinsicMatrix"]
+                    self._distortionCoefficients = parameters["distortionCoefficients"]
+                    self._undistortedIntrinsicMatrix = parameters["newIntrinsicMatrix"]
+                    self._regionOfInterest = parameters["regionOfInterest"]
+                    self.calibrated.emit()
+                else:
+                    _cameraLogger.error("Camera resolutions do not match, cannot import parameters")
+        except AttributeError as attributeError:
+            raise CameraError(f"Invalid parameter file, cannot load calibration\n{attributeError}")
 
 
 class RobotCamera(Camera):
@@ -192,8 +201,8 @@ class RobotCamera(Camera):
     _boardRows: ClassVar[int] = 10
     _boardCols: ClassVar[int] = 9
 
-    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None) -> None:
-        super().__init__(feedInput, intrinsicsFile)
+    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+        super().__init__(feedInput, intrinsicsFile, parent)
 
         self._boardHeight = min(self.resolution.width, self.resolution.height)
         self._boardHeight -= self._boardHeight % self._boardRows

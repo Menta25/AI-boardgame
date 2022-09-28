@@ -1,8 +1,9 @@
+from dataclasses import field
 import logging
 from pathlib import Path
 from typing import Optional, ClassVar
 from PyQt6 import uic
-from PyQt6.QtWidgets import QWidget, QProgressBar, QSpinBox
+from PyQt6.QtWidgets import QWidget, QMessageBox, QDialog, QFileDialog
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent
 
@@ -17,7 +18,6 @@ _UI_PATH = Path("src/aiBoardGame/view/ui/calibrationWidget.ui")
 
 class CalibrationWidget(QWidget):
     closed: ClassVar[pyqtSignal] = pyqtSignal()
-    calibrated: ClassVar[pyqtSlot] = pyqtSignal()
 
     def __init__(self, cameraThread: Optional[CameraThread], parent: Optional['QWidget'] = None, flags: Qt.WindowType = Qt.WindowType.Dialog) -> None:
         super().__init__(parent, flags)
@@ -76,7 +76,16 @@ class CalibrationWidget(QWidget):
             self._cameraThread.camera.calibrate(checkerBoardImages=self._calibrationImages, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value()))
         except CameraError:
             logging.exception()
+            QMessageBox(title="Calibration", text="Calibration failed", buttons=QMessageBox.StandardButton.Ok, parent=self).show()
         else:
-            self.calibrated.emit()
+            reply = QMessageBox.question(self, "Save Calibration", "Do you want to save the parameters used for camera calibration?")
+            if reply == QMessageBox.StandardButton.Yes:
+                self.showSaveCalibrationFileDialog()
+            self.close()
         finally:
             self.resetWidget()
+
+    def showSaveCalibrationFileDialog(self) -> None:
+        fileName, _ = QFileDialog.getSaveFileName(self, caption="Save calibration", filter="Numpy save format (*.npz)")
+        savePath = Path(fileName).with_suffix(".npz")
+        self._cameraThread.camera.saveParameters(savePath)
