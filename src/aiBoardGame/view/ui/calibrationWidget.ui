@@ -2,6 +2,9 @@
 <ui version="4.0">
  <class>calibrationWidget</class>
  <widget class="QWidget" name="calibrationWidget">
+  <property name="windowModality">
+   <enum>Qt::ApplicationModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -88,7 +91,7 @@
      <item>
       <widget class="QPushButton" name="calibrateButton">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>Calibrate</string>

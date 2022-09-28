@@ -9,30 +9,35 @@ class CameraThread(QThread):
     newCameraImageSignal: ClassVar[pyqtSignal] = pyqtSignal(np.ndarray)
     calibrated: ClassVar[pyqtSignal] = pyqtSignal()
 
-    def __init__(self, capturePath: Path) -> None:
+    def __init__(self, capturePath: Optional[Path] = None) -> None:
         super().__init__()
         self._isRunning = True
-        self._capturePath = capturePath
+        self.capturePath = capturePath
         self._isUndistorted = False
 
         self.image = None
         self._camera = None
 
     @property
-    def isUndistorted(self) -> bool:
-        return self._isUndistorted
-
-    @property
     def camera(self) -> Optional[RobotCamera]:
         return self._camera
 
+    @property
+    def isUndistorted(self) -> bool:
+        return self._isUndistorted
+
     @isUndistorted.setter
     def isUndistorted(self, value: bool) -> None:
+        if value is True and not self._camera.isCalibrated:
+            return
+
         self._isUndistorted = value
 
     def run(self):
-        self._camera = RobotCamera(self._capturePath)
+        self._camera = RobotCamera(self.capturePath)
         self._camera.calibrated.connect(self.onCameraCalibrated)
+        self._isUndistorted = False
+        self._isRunning = True
         while self._isRunning:
             image = self._camera.read(undistorted=self._isUndistorted)
             if image is not None:

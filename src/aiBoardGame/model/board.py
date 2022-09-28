@@ -24,7 +24,7 @@ class Board:
     def __post_init__(self) -> None:
         object.__setattr__(self, "tileWidth", int(self.data.shape[1] / self.cols))
         object.__setattr__(self, "tileHeight", int(self.data.shape[0] / self.rows))
-        _boardLogger.debug(f"Create Board(rows={self.rows}; cols={self.cols}; tileSize={self.tileWidth}x{self.tileHeight}) from {self.data.shape} array")
+        _boardLogger.info(f"Create Board(rows={self.rows}; cols={self.cols}; tileSize={self.tileWidth}x{self.tileHeight}) from {self.data.shape} array")
 
     @classmethod
     def create(cls, ndarray: np.ndarray, rows: int = 10, cols: int = 9) -> Board:

@@ -1,9 +1,8 @@
-from dataclasses import field
 import logging
 from pathlib import Path
 from typing import Optional, ClassVar
 from PyQt6 import uic
-from PyQt6.QtWidgets import QWidget, QMessageBox, QDialog, QFileDialog
+from PyQt6.QtWidgets import QWidget, QMessageBox, QFileDialog
 from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt6.QtGui import QCloseEvent
 
@@ -19,12 +18,12 @@ _UI_PATH = Path("src/aiBoardGame/view/ui/calibrationWidget.ui")
 class CalibrationWidget(QWidget):
     closed: ClassVar[pyqtSignal] = pyqtSignal()
 
-    def __init__(self, cameraThread: Optional[CameraThread], parent: Optional['QWidget'] = None, flags: Qt.WindowType = Qt.WindowType.Dialog) -> None:
+    def __init__(self, cameraThread: Optional[CameraThread], parent: Optional[QWidget] = None, flags: Qt.WindowType = Qt.WindowType.Widget) -> None:
         super().__init__(parent, flags)
         uic.load_ui.loadUi(_UI_PATH.as_posix(), self)
 
         self._cameraThread = cameraThread
-        self.cameraFeedLabel = CameraFeed()
+        self.cameraFeedLabel = CameraFeed(self._cameraThread)
         self.calibrationLayout.insertWidget(1, self.cameraFeedLabel, stretch=1)
 
         self.calibrateButton.setEnabled(self._cameraThread is not None)
@@ -32,22 +31,6 @@ class CalibrationWidget(QWidget):
         self.calibrationProgressBar.setMaximum(RobotCamera.calibrationMinPatternCount)
         self._calibrationImages = []
         self.calibrateButton.clicked.connect(self.collectCalibrationImage)
-
-    @property
-    def cameraThread(self) -> Optional[CameraThread]:
-        return self._cameraThread
-
-    @cameraThread.setter
-    def cameraThread(self, value: CameraThread) -> None:
-        if not self.calibrateButton.isEnabled():
-            self.calibrateButton.setEnabled(True)
-
-        self._cameraThread = value
-        self.cameraFeedLabel.cameraThread = self._cameraThread
-
-    def closeEvent(self, a0: QCloseEvent) -> None:
-        self.closed.emit()
-        return super().closeEvent(a0)
 
     def setVerticiesSpinBoxEnabled(self, value: bool) -> None:
         self.horizontalVerticiesSpinBox.setEnabled(value)
@@ -75,13 +58,13 @@ class CalibrationWidget(QWidget):
         try:
             self._cameraThread.camera.calibrate(checkerBoardImages=self._calibrationImages, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value()))
         except CameraError:
-            logging.exception()
+            logging.exception("Calibration failed")
             QMessageBox(title="Calibration", text="Calibration failed", buttons=QMessageBox.StandardButton.Ok, parent=self).show()
         else:
             reply = QMessageBox.question(self, "Save Calibration", "Do you want to save the parameters used for camera calibration?")
             if reply == QMessageBox.StandardButton.Yes:
                 self.showSaveCalibrationFileDialog()
-            self.close()
+            self.hide()
         finally:
             self.resetWidget()
 
@@ -89,3 +72,11 @@ class CalibrationWidget(QWidget):
         fileName, _ = QFileDialog.getSaveFileName(self, caption="Save calibration", filter="Numpy save format (*.npz)")
         savePath = Path(fileName).with_suffix(".npz")
         self._cameraThread.camera.saveParameters(savePath)
+
+    def hide(self) -> None:
+        self.closed.emit()
+        return super().hide()
+
+    def closeEvent(self, a0: QCloseEvent) -> None:
+        self.closed.emit()
+        return super().closeEvent(a0)

@@ -17,88 +17,8 @@
    <item row="0" column="0">
     <widget class="QTabWidget" name="tabsWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>-1</number>
      </property>
-     <widget class="QWidget" name="rawCameraTab">
-      <attribute name="title">
-       <string>Raw Camera</string>
-      </attribute>
-      <layout class="QGridLayout" name="rawCameraTabLayout">
-       <item row="0" column="0">
-        <layout class="QVBoxLayout" name="rawCameraVerticalLayout" stretch="0,0,0">
-         <item>
-          <widget class="QComboBox" name="cameraInputsComboBox">
-           <property name="currentText">
-            <string/>
-           </property>
-           <property name="currentIndex">
-            <number>-1</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="calibrateButton">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>Calibrate</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QCheckBox" name="undistortCheckBox">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-           <property name="text">
-            <string>Undistort</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="boardTab">
-      <attribute name="title">
-       <string>Board</string>
-      </attribute>
-      <layout class="QGridLayout" name="boardTabLayout">
-       <item row="1" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
-         <item>
-          <layout class="QVBoxLayout" name="verticalLayout">
-           <item alignment="Qt::AlignTop">
-            <widget class="QGraphicsView" name="graphicsView">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QCheckBox" name="circlePiecesCheckBox">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="text">
-              <string>Circle pieces</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QGraphicsView" name="graphicsView_2">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-      </layout>
-     </widget>
     </widget>
    </item>
   </layout>

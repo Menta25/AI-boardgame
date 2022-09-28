@@ -123,14 +123,14 @@ class Camera(QObject):
 
             :raises CameraError: Not enough valid pattern input or reprojection error is too high
         """
-        _cameraLogger.info("[Calibrate camera]")
+        _cameraLogger.debug("[Calibrate camera]")
         objp = np.zeros((np.prod(checkerBoardShape),3), np.float32)
         objp[:,:2] = np.mgrid[0:checkerBoardShape[0],0:checkerBoardShape[1]].T.reshape(-1,2)
 
         objPoints = []
         imgPoints = []
 
-        _cameraLogger.info(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self.calibrationMinPatternCount})")
+        _cameraLogger.debug(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self.calibrationMinPatternCount})")
         patternCount = 0
         for image in checkerBoardImages:
             if patternCount >= self.calibrationMinPatternCount:
@@ -140,7 +140,7 @@ class Camera(QObject):
             isPatternFound, corners = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
             if isPatternFound:
                 patternCount += 1
-                _cameraLogger.info(f"Found checkered board image, need {self.calibrationMinPatternCount - patternCount} more")
+                _cameraLogger.debug(f"Found checkered board image, need {self.calibrationMinPatternCount - patternCount} more")
                 objPoints.append(objp)
 
                 cv.cornerSubPix(grayImage, corners, (11,11), (-1,-1), self._calibrationCritera)
@@ -149,7 +149,7 @@ class Camera(QObject):
         if patternCount < self.calibrationMinPatternCount:
             raise CameraError(f"Not enough pattern found for calibration, found only {patternCount} out of {self.calibrationMinPatternCount}")
 
-        _cameraLogger.info("Calibrate camera")
+        _cameraLogger.debug("Calibrate camera")
         reprojectionError, cameraMatrix, distortionCoefficients, _, _ = cv.calibrateCamera(objPoints, imgPoints, self.resolution, None, None)
 
         if not 0 <= reprojectionError <= 1:
@@ -157,14 +157,14 @@ class Camera(QObject):
 
         self._intrinsicMatrix = cameraMatrix
         self._distortionCoefficients = distortionCoefficients
-        _cameraLogger.info(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
-        _cameraLogger.info(f"Distortion coefficients: {self._distortionCoefficients}")
+        _cameraLogger.debug(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
+        _cameraLogger.debug(f"Distortion coefficients: {self._distortionCoefficients}")
 
         self._undistortedIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
-        _cameraLogger.info(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
-        _cameraLogger.info(f"Region of intereset: {self._regionOfInterest}")
+        _cameraLogger.debug(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
+        _cameraLogger.debug(f"Region of intereset: {self._regionOfInterest}")
 
-        _cameraLogger.info("Calibration finished")
+        _cameraLogger.debug("Calibration finished")
         self.calibrated.emit()
 
     def saveParameters(self, filePath: Path) -> None:
@@ -219,7 +219,7 @@ class RobotCamera(Camera):
         """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
-        _cameraLogger.info("[Detect board on image]")
+        _cameraLogger.debug("[Detect board on image]")
 
         _cameraLogger.debug("Get ArUco dictionary")
         arucoDict = cv.aruco.getPredefinedDictionary(arucoDictEnum)
@@ -227,10 +227,11 @@ class RobotCamera(Camera):
 
         _cameraLogger.debug("Detecting ArUco markers")
         markerCorners, markerIDs, _ = cv.aruco.detectMarkers(image, arucoDict, parameters=arucoParams)
-        _cameraLogger.debug(f"Marker IDs: {markerIDs.flatten()}")
 
-        if len(markerIDs) != 4:
-            raise CameraError(f"Not enough ArUco marker found, found only {len(markerIDs)} out of 4")
+        if markerIDs is None or len(markerIDs) != 4:
+            raise CameraError(f"Not enough ArUco marker found, found only {len(markerIDs) if markerIDs is not None else 0} out of 4")
+
+        _cameraLogger.debug(f"Marker IDs: {markerIDs.flatten()}")
 
         markers = zip(markerIDs, markerCorners)
         markers = {markerId[0]-1: markerCorners for markerId, markerCorners in markers}
