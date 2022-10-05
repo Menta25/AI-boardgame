@@ -1,22 +1,23 @@
-from dataclasses import dataclass
-from typing import ClassVar
-from enum import IntEnum
+from dataclasses import dataclass, field
 
-from aiBoardGame.logic.soldier import Soldier
+from aiBoardGame.logic.utils import BoardState, Side, FILE_BOUNDS, RANK_BOUNDS
+import aiBoardGame.logic.piece as piece
+import aiBoardGame.logic.soldier as soldier
 
-FILE_BOUNDS = (0, 8)
-RANK_BOUNDS = (0, 9)
-
-
-class Side(IntEnum):
-    Black = -1
-    Red = 1
+def createXiangqiBoard() -> BoardState[Side, piece.Piece]:
+    xiangqiBoard = BoardState(sum(FILE_BOUNDS)+1, sum(RANK_BOUNDS)+1, Side)
+    xiangqiBoard[Side.Red][0][0] = soldier.Soldier
+    return xiangqiBoard
 
 
 @dataclass
 class Xiangqi:
-    fileCount: ClassVar[int] = sum(FILE_BOUNDS) + 1
-    rankCount: ClassVar[int] = sum(RANK_BOUNDS) + 1
+    boardState: BoardState[Side, piece.Piece] = field(default_factory=createXiangqiBoard, init=False)
+    currentSide: Side = Side.Red
 
-    soldier: Soldier = Soldier(5, 5)
-    
+    def move(self, fF, fR, tF, tR) -> None:
+        self.boardState[self.currentSide][fF][fR].move(self.boardState, self.currentSide, fF, fR, tF, tR)
+
+if __name__ == "__main__":
+    game = Xiangqi()
+    game.move(0, 0, 0, 1)
