@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from enum import Enum, IntEnum
 from dataclasses import dataclass
-from typing import Generic, Type, TypeVar, List, Optional, Dict
+from typing import Generic, NamedTuple, Type, TypeVar, List, Optional, Dict
 
 
-FILE_BOUNDS = (0, 8)
-RANK_BOUNDS = (0, 9)
+FILE_BOUNDS = (0, 9)
+RANK_BOUNDS = (0, 10)
 
 
 class Side(IntEnum):
@@ -17,14 +17,21 @@ class Side(IntEnum):
     def opponent(self) -> Side:
         return Side(-self)
 
+    def __str__(self) -> str:
+        return "B" if self == self.Black else "R"
+
 
 PieceType = TypeVar("PieceType")
 SideType = TypeVar("SideType", bound=Enum)
 
 
+class BoardEntity(NamedTuple, Generic[SideType, PieceType]):
+    side: SideType
+    piece: Type[PieceType]
+
 @dataclass(init=False)
-class Board(Generic[PieceType]):
-    _data: List[List[Optional[PieceType]]]
+class Board(Generic[SideType, PieceType]):
+    _data: List[List[Optional[BoardEntity[SideType, PieceType]]]]
 
     def __init__(self, fileCount: int, rankCount: int) -> None:
         if fileCount <= 0 or rankCount <= 0:
@@ -32,7 +39,7 @@ class Board(Generic[PieceType]):
         self._data = [[None for _ in range(rankCount)] for _ in range(fileCount)]
 
     @property
-    def data(self) -> List[List[Optional[PieceType]]]:
+    def data(self) -> List[List[Optional[BoardEntity[SideType, PieceType]]]]:
         return self._data
 
     @property
@@ -43,23 +50,14 @@ class Board(Generic[PieceType]):
     def rankCount(self) -> int:
         return len(self._data[0])
 
-    def __getitem__(self, key: int) -> List[Optional[PieceType]]:
+    def __getitem__(self, key: int) -> List[Optional[BoardEntity[SideType, PieceType]]]:
         return self._data[key]
 
-@dataclass(init=False)
-class BoardState(Generic[SideType, PieceType]):
-    _sideBoards: Dict[SideType, Board[PieceType]]
-
-    def __init__(self, fileCount: int, rankCount: int, sides: Type[SideType]) -> None:
-        self._sideBoards = {side: Board(fileCount, rankCount) for side in sides}
-
-    def __getitem__(self, key: SideType) -> Board[PieceType]:
-        return self._sideBoards[key]
-
-    @property
-    def fileCount(self) -> int:
-        return next(iter(self._sideBoards.values())).fileCount
-
-    @property
-    def rankCount(self) -> int:
-        return next(iter(self._sideBoards.values())).rankCount
+    def __str__(self) -> str:
+        boardStr = ""
+        for rank in range(self.rankCount - 1, -1, -1):
+            for file in range(self.fileCount):
+                boardStr += str(self[file][rank].side) if self[file][rank] != None else "0"
+                boardStr += " "
+            boardStr += "\n"
+        return boardStr
