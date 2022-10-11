@@ -11,17 +11,17 @@ class Soldier(Piece):
     rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
 
     @classmethod
-    def isValidMove(cls, _: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, _: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
-        
+
         isOverRiver = fromRank >= (sum(cls.rankBounds) + 1) / 2
         if side == Side.Black:
             deltaRank *= -1
             isOverRiver = not isOverRiver
 
         isOneDeltaOnly = not (deltaFile != 0 and deltaRank != 0)
-        isValidForwardMove = deltaRank == 1
-        isValidSidewaysMove = isOverRiver and abs(deltaFile) == 1
-        
-        return isOneDeltaOnly and isValidForwardMove or isValidSidewaysMove
+        isValidDeltaRank = deltaRank == 1
+        isValidDeltaFile = isOverRiver and abs(deltaFile) == 1
+
+        return isOneDeltaOnly and isValidDeltaRank or isValidDeltaFile

@@ -14,10 +14,10 @@ class Elephant(Piece):
     rankBounds: ClassVar[Tuple[int, int]] = (RANK_BOUNDS[0], RANK_BOUND_LENGTH)
 
     @classmethod
-    def isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
-        
+
         isValidDelta = abs(deltaFile) == 2 and abs(deltaRank) == 2
         isPieceInTheWay = board[fromFile + round(deltaFile / 2)][fromRank + round(deltaRank / 2)] is not None
 

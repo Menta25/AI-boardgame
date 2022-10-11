@@ -31,14 +31,8 @@ class Xiangqi:
             return
 
         chosenPiece = self.board[fromFile][fromRank].piece
-        invalidMoveBaseParams = (chosenPiece, fromFile, fromRank, toFile, toRank)
-        if not chosenPiece.isPositionInBounds(self.currentSide, toFile, toRank):
-            raise InvalidMove(*invalidMoveBaseParams)
-        elif fromFile == toFile and fromRank == toRank:
-            raise InvalidMove(*invalidMoveBaseParams, f"{chosenPiece.__name__} is already at ({toFile},{toRank}), cannot stay in one place")
-        isPointOccupiedByAllyPiece = self.board[toFile][toRank] is not None and self.board[toFile][toRank].side == self.currentSide
-        if not chosenPiece.isValidMove(self.board, self.currentSide, fromFile, fromRank, toFile, toRank) or isPointOccupiedByAllyPiece:
-            raise InvalidMove(*invalidMoveBaseParams)
+        if not chosenPiece.isValidMove(self.board, self.currentSide, fromFile, fromRank, toFile, toRank):
+            raise InvalidMove(chosenPiece, fromFile, fromRank, toFile, toRank)
 
         if self.board[toFile][toRank] is not None:
             self.board[toFile][toRank] = None

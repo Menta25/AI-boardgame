@@ -8,7 +8,7 @@ from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
 
 
 @dataclass(init=False)
-class Chariot(Piece):
+class Cannon(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
     rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
 
@@ -23,8 +23,10 @@ class Chariot(Piece):
         files = range(fromFile + np.sign(deltaFile), toFile, np.sign(deltaFile)) if deltaFile != 0 else [toFile] * (abs(deltaRank) - 1)
         ranks = range(fromRank + np.sign(deltaRank), toRank, np.sign(deltaRank)) if deltaRank != 0 else [toRank] * (abs(deltaFile) - 1)
 
-        for file, rank in zip(files, ranks):  # NOTE: == isPieceInTheWay
+        isCaptureMove = board[toFile][toRank] is not None
+        piecesInTheWay = 0
+        for file, rank in zip(files, ranks):
             if board[file][rank] is not None:
-                return False
+                piecesInTheWay += 1
 
-        return True
+        return isCaptureMove and piecesInTheWay == 1 or not isCaptureMove and piecesInTheWay == 0

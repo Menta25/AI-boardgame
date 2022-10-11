@@ -30,8 +30,18 @@ class Piece(ABC):
 
     @classmethod
     @abstractmethod
-    def isValidMove(self, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(self, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented isValidMove method")
+
+    @classmethod
+    def isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+        isFromAndToTheSame = fromFile == toFile and fromRank == toRank
+        if isFromAndToTheSame and not cls.isPositionInBounds(side, toFile, toRank):
+            return False
+        isPointOccupiedByAllyPiece = board[toFile][toRank] is not None and board[toFile][toRank].side == side
+        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromFile, fromRank, toFile, toRank):
+            return False
+        return True
 
     @staticmethod
     def mirrorFile(file: int) -> int:

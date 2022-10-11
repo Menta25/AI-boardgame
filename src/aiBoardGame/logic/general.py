@@ -17,10 +17,11 @@ class General(Piece):
     rankBounds: ClassVar[Tuple[int, int]] = (RANK_BOUNDS[0], RANK_BOUND_LENGTH)
 
     @classmethod
-    def isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
-        
-        isOneDeltaOnly = not (deltaFile != 0 and deltaRank != 0)
 
-        return isOneDeltaOnly and abs(deltaFile) == 1 or abs(deltaRank) == 1
+        isOneDeltaOnly = not (deltaFile != 0 and deltaRank != 0)
+        isValidDelta = abs(deltaFile) == 1 or abs(deltaRank) == 1
+
+        return isOneDeltaOnly and isValidDelta
