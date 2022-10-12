@@ -1,17 +1,16 @@
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar
 
-from aiBoardGame.logic.piece import Piece
-from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
+from aiBoardGame.logic.pieces import Piece
+from aiBoardGame.logic.auxiliary import Board, Side
 
 
 @dataclass(init=False)
 class Horse(Piece):
-    fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
-    rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
+    abbreviation: ClassVar[str] = "H"
 
     @classmethod
-    def _isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
 

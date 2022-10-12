@@ -4,13 +4,23 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Tuple, ClassVar
 
-from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
+from aiBoardGame.logic.auxiliary import Board, Side
 
 
 @dataclass(init=False)
 class Piece(ABC):
-    fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
-    rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
+    fileBounds: ClassVar[Tuple[int, int]] = Board.fileBounds
+    rankBounds: ClassVar[Tuple[int, int]] = Board.rankBounds
+
+    abbreviation: ClassVar[str] = "X"
+
+    @classmethod
+    def fileLength(cls) -> int:
+        return sum(cls.fileBounds)
+
+    @classmethod
+    def rankLength(cls) -> int:
+        return sum(cls.rankBounds)
 
     @classmethod
     def isFileInBounds(cls, side: Side, file: int) -> bool:
@@ -30,26 +40,26 @@ class Piece(ABC):
 
     @classmethod
     @abstractmethod
-    def _isValidMove(self, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(self, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented isValidMove method")
 
     @classmethod
-    def isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         isFromAndToTheSame = fromFile == toFile and fromRank == toRank
-        if isFromAndToTheSame and not cls.isPositionInBounds(side, toFile, toRank):
+        if not cls.isPositionInBounds(side, toFile, toRank) or not cls.isPositionInBounds(side, fromFile, fromRank) or isFromAndToTheSame or board[side][fromFile, fromRank] is None or board[side][fromFile, fromRank] != cls:
             return False
-        isPointOccupiedByAllyPiece = board[toFile][toRank] is not None and board[toFile][toRank].side == side
+        isPointOccupiedByAllyPiece = board[side][toFile, toRank] is not None
         if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromFile, fromRank, toFile, toRank):
             return False
         return True
 
     @staticmethod
     def mirrorFile(file: int) -> int:
-        return sum(FILE_BOUNDS) - file - 1
+        return sum(Board.fileBounds) - file - 1
 
     @staticmethod
     def mirrorRank(rank: int) -> int:
-        return sum(RANK_BOUNDS) - rank - 1
+        return sum(Board.rankBounds) - rank - 1
 
     @classmethod
     def mirrorPosition(cls, file: int, rank: int) -> Tuple[int, int]:

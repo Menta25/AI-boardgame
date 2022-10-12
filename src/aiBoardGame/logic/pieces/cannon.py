@@ -1,19 +1,18 @@
 import numpy as np
 
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar
 
-from aiBoardGame.logic.piece import Piece
-from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
+from aiBoardGame.logic.pieces import Piece
+from aiBoardGame.logic.auxiliary import Board, Side
 
 
 @dataclass(init=False)
 class Cannon(Piece):
-    fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
-    rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
+    abbreviation: ClassVar[str] = "C"
 
     @classmethod
-    def _isValidMove(cls, board: Board[Side, Piece], _: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board, _: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
 

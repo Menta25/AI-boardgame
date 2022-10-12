@@ -1,20 +1,22 @@
 from dataclasses import dataclass
 from typing import ClassVar, Tuple
 
-from aiBoardGame.logic.piece import Piece
-from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
+from aiBoardGame.logic.pieces import Piece
+from aiBoardGame.logic.auxiliary import Board, Side
 
 
-RANK_BOUND_LENGTH = sum(RANK_BOUNDS) // 2
+NEW_RANK_LENGTH = Piece.rankLength() // 2
 
 
 @dataclass(init=False)
 class Elephant(Piece):
-    fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
-    rankBounds: ClassVar[Tuple[int, int]] = (RANK_BOUNDS[0], RANK_BOUND_LENGTH)
+    fileBounds: ClassVar[Tuple[int, int]] = Piece.fileBounds
+    rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
+
+    abbreviation: ClassVar[str] = "E"
 
     @classmethod
-    def _isValidMove(cls, board: Board[Side, Piece], side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
 

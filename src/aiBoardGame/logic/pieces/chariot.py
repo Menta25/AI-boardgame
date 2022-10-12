@@ -1,19 +1,18 @@
 import numpy as np
 
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar
 
-from aiBoardGame.logic.piece import Piece
-from aiBoardGame.logic.utils import Board, Side, FILE_BOUNDS, RANK_BOUNDS
+from aiBoardGame.logic.pieces import Piece
+from aiBoardGame.logic.auxiliary import Board, Side
 
 
 @dataclass(init=False)
 class Chariot(Piece):
-    fileBounds: ClassVar[Tuple[int, int]] = FILE_BOUNDS
-    rankBounds: ClassVar[Tuple[int, int]] = RANK_BOUNDS
+    abbreviation: ClassVar[str] = "R"
 
     @classmethod
-    def _isValidMove(cls, board: Board[Side, Piece], _: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
+    def _isValidMove(cls, board: Board, _: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
 
@@ -24,7 +23,7 @@ class Chariot(Piece):
         ranks = range(fromRank + np.sign(deltaRank), toRank, np.sign(deltaRank)) if deltaRank != 0 else [toRank] * (abs(deltaFile) - 1)
 
         for file, rank in zip(files, ranks):  # NOTE: == isPieceInTheWay
-            if board[file][rank] is not None:
+            if board[file, rank] is not None:
                 return False
 
         return True
