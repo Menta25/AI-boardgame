@@ -6,7 +6,7 @@ from typing import ClassVar, Tuple
 from aiBoardGame.logic.pieces import Piece
 from aiBoardGame.logic.pieces.cannon import Cannon
 from aiBoardGame.logic.pieces.horse import Horse
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 NEW_FILE_LENGTH = 3
@@ -64,14 +64,14 @@ class General(Piece):
                 foundPieceCount += 1
                 foundPiece = board[checkFile, checkRank]
                 if foundPiece.side == side.opponent and (foundPieceCount == 1 and foundPiece != Cannon or foundPieceCount == 2 and foundPiece == Cannon):
-                    if foundPiece.piece.isValidMove(board, side.opponent, checkFile, checkRank, file, rank):
+                    if foundPiece.piece.isValidMove(board, side.opponent, Position(checkFile, checkRank), Position(file, rank)):
                         return True
 
         horseDeltas = [(fstSign*1,sndSign*2) for fstSign, sndSign in [(1,1),(1,-1),(-1,1),(-1,-1)]]
         horseDeltas += [horseDeltas[::-1] for horseDeltas in horseDeltas]
         
         for deltaFile, deltaRank in horseDeltas:
-            if Horse.isValidMove(board, side.opponent, file+deltaFile, rank+deltaRank, file, rank):
+            if Horse.isValidMove(board, side.opponent, Position(file+deltaFile, rank+deltaRank), Position(file, rank)):
                 return True
 
         return False

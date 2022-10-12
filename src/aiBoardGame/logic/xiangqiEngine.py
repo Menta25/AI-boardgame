@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from aiBoardGame.logic.pieces import General
-from aiBoardGame.logic.auxiliary import Board, Side
-from aiBoardGame.logic.move import InvalidMove, MoveRecord
+from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.move import InvalidMove, Move
 from aiBoardGame.logic.xiangqiBoardGeneration import createXiangqiBoard
 
 
@@ -13,27 +13,32 @@ class XiangqiEngine:
     board: Board
     generals: Dict[Side, Tuple[int, int]]
     currentSide: Side
-    moveHistory: List[MoveRecord]
+    moveHistory: List[Move]
 
     def __init__(self) -> None:
         self.board, self.generals = createXiangqiBoard()
         self.currentSide = Side.Red
         self.moveHistory = []
 
-    def move(self, fromFile, fromRank, toFile, toRank) -> None:
-        if self.board[fromFile, fromRank] == None:
-            raise InvalidMove(None, fromFile, fromRank, toFile, toRank, f"No piece found on ({fromFile},{fromRank})")
+    def move(self, fromPositon: Union[Position, Tuple[int, int]], toPosition: Union[Position, Tuple[int, int]]) -> None:
+        if not isinstance(fromPositon, Position):
+            fromPositon = Position(*fromPositon)
+        if not isinstance(toPosition, Position):
+            toPosition = Position(*toPosition)
 
-        chosenPiece = self.board[fromFile, fromRank].piece
-        if not chosenPiece.isValidMove(self.board, self.currentSide, fromFile, fromRank, toFile, toRank):
-            raise InvalidMove(chosenPiece, fromFile, fromRank, toFile, toRank)
+        if self.board[fromPositon] == None:
+            raise InvalidMove(None, fromPositon, toPosition, f"No piece found on {*fromPositon,}")
 
-        self._move(fromFile, fromRank, toFile, toRank)
+        chosenPiece = self.board[fromPositon].piece
+        if not chosenPiece.isValidMove(self.board, self.currentSide, fromPositon, toPosition):
+            raise InvalidMove(chosenPiece, fromPositon, toPosition)
+
+        self._move(fromPositon, toPosition)
 
         allyGeneralFile, allyGeneralRank = self.generals[self.currentSide]
         if General.isInCheck(self.board, self.currentSide, allyGeneralFile, allyGeneralRank):
             self._undoMove()
-            raise InvalidMove(chosenPiece, fromFile, fromRank, toFile, toRank, f"{self.currentSide}'s General is in check, cannot move {chosenPiece} from ({fromFile},{fromRank}) to ({toFile},{toRank})")
+            raise InvalidMove(chosenPiece, fromPositon, toPosition, f"{self.currentSide}'s General is in check, cannot move {chosenPiece} from {*fromPositon,} to {*toPosition,}")
 
         enemyGeneralFile, enemyGeneralRank = self.generals[self.currentSide.opponent]
         if General.isInCheck(self.board, self.currentSide.opponent, enemyGeneralFile, enemyGeneralRank):
@@ -42,20 +47,20 @@ class XiangqiEngine:
         #self.currentSide = self.currentSide.opponent
         self.print()
 
-    def _move(self, fromFile, fromRank, toFile, toRank) -> None:
-        self.moveHistory.append(MoveRecord(self.board, fromFile, fromRank, toFile, toRank))
-        self.board[toFile, toRank] = self.board[fromFile, fromRank]
-        self.board[fromFile, fromRank] = None
+    def _move(self, fromPosition: Position, toPosition: Position) -> None:
+        self.moveHistory.append(Move.make(self.board, fromPosition, toPosition))
+        self.board[toPosition] = self.board[fromPosition]
+        self.board[fromPosition] = None
 
     def undoMove(self) -> None:
-        self._undoMove
+        self._undoMove()
         self.print()
 
     def _undoMove(self) -> None:
         if len(self.moveHistory) > 0:
             lastMove = self.moveHistory.pop()
-            self.board[lastMove.fromFile, lastMove.fromRank] = lastMove.movedPiece
-            self.board[lastMove.toFile, lastMove.toRank] = lastMove.capturedPiece
+            self.board[lastMove.fromPosition] = lastMove.movedPieceEntity
+            self.board[lastMove.toPosition] = lastMove.capturedPieceEntity
 
     def print(self) -> None:
         boardStr = ""
@@ -97,13 +102,15 @@ class XiangqiEngine:
                 boardStr += "\n ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃\n"
         boardStr = boardStr[:-36]
         print(boardStr)
+        print()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     game = XiangqiEngine()
-    game.move(0, 0, 0, 1)
-    game.move(0, 1, 3, 1)
-    game.move(3, 1, 3, 8)
-    game.move(3, 8, 4, 8)
+    game.move((0, 0), (0, 1))
+    game.move((0, 1), (3, 1))
+    game.move((3, 1), (3, 8))
+    game.move((3, 8), (4, 8))
+    game.undoMove()

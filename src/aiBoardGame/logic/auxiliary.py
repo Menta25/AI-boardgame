@@ -3,7 +3,7 @@ from decimal import InvalidOperation
 
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import ClassVar, Dict, NamedTuple, Optional, TypeVar, Union, Tuple
+from typing import ClassVar, Dict, NamedTuple, Optional, Type, TypeVar, Union, Tuple
 
 
 Piece = TypeVar("Piece")
@@ -28,17 +28,17 @@ class Position(NamedTuple):
 
 class BoardEntity(NamedTuple):
     side: Side
-    piece: Piece
+    piece: Type[Piece]
 
 
-class SideState(Dict[Position, Piece]):
-    def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Piece]:
+class SideState(Dict[Position, Type[Piece]]):
+    def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Type[Piece]]:
         if isinstance(key, (Position, tuple)):
             return self.get(key)
         else:
             raise TypeError(f"Key has invalid type {key.__class__.__name__}")
 
-    def __setitem__(self, key: Union[Position, Tuple[int, int]], value: Union[Optional[Piece], BoardEntity]) -> None:
+    def __setitem__(self, key: Union[Position, Tuple[int, int]], value: Union[Optional[Type[Piece]], BoardEntity]) -> None:
         if isinstance(value, BoardEntity):
             raise InvalidOperation(f"Cannot assign {value.__class__.__name__} to {self.__class__.__name__} because object is not {value.side.__class__.__name__} aware")
         return super().__setitem__(key, value)
@@ -70,10 +70,12 @@ class Board(Dict[Side, SideState]):
         if isinstance(key, (Position, tuple)) and (isinstance(value, BoardEntity) or value is None):
             if value is None:
                 for sideState in self.values():
-                    sideState[key] = None
+                    if key in sideState:
+                        del sideState[key]
             else:
                 self[value.side][key] = value.piece
-                self[value.side.opponent][key] = None
+                if key in self[value.side.opponent]:
+                    del self[value.side.opponent][key]
         else:
             raise InvalidOperation(f"Cannot set {value.__class__.__name__} to {self.__class__.__name__}'")
 

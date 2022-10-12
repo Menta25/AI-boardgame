@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Tuple, ClassVar
 
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 @dataclass(init=False)
@@ -44,12 +44,12 @@ class Piece(ABC):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented isValidMove method")
 
     @classmethod
-    def isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
-        isFromAndToTheSame = fromFile == toFile and fromRank == toRank
-        if not cls.isPositionInBounds(side, toFile, toRank) or not cls.isPositionInBounds(side, fromFile, fromRank) or isFromAndToTheSame or board[side][fromFile, fromRank] is None or board[side][fromFile, fromRank] != cls:
+    def isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
+        isFromAndToTheSame = fromPosition.file == toPosition.file and fromPosition.rank == toPosition.rank
+        if not cls.isPositionInBounds(side, toPosition.rank, toPosition.rank) or not cls.isPositionInBounds(side, fromPosition.file, fromPosition.rank) or isFromAndToTheSame or board[side][fromPosition] is None or board[side][fromPosition] != cls:
             return False
-        isPointOccupiedByAllyPiece = board[side][toFile, toRank] is not None
-        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromFile, fromRank, toFile, toRank):
+        isPointOccupiedByAllyPiece = board[side][toPosition] is not None
+        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromPosition.file, fromPosition.rank, toPosition.file, toPosition.rank):
             return False
         return True
 
