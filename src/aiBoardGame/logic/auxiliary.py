@@ -25,6 +25,12 @@ class Position(NamedTuple):
     file: int
     rank: int
 
+    def __add__(self, other: Union[Position, Tuple[int, int]]) -> Position:
+        return Position(self.file + other[0], self.rank + other[1])
+
+    def __sub__(self, other: Union[Position, Tuple[int, int]]) -> Position:
+        return Position(self.file - other[0], self.rank - other[1])
+
 
 class BoardEntity(NamedTuple):
     side: Side
@@ -82,41 +88,3 @@ class Board(Dict[Side, SideState]):
                     del self[value.side.opponent][key]
         else:
             raise InvalidOperation(f"Cannot set {value.__class__.__name__} to {self.__class__.__name__}'")
-
-
-# from enum import Enum
-# from dataclasses import dataclass
-# from typing import Generic, NamedTuple, Type, TypeVar, List, Optional
-
-# SideType = TypeVar("SideType", bound=Enum)
-# PieceType = TypeVar("PieceType")
-
-
-# class BoardEntity(NamedTuple, Generic[SideType, PieceType]):
-#     side: SideType
-#     piece: Type[PieceType]
-
-
-# @dataclass(init=False)
-# class Board(Generic[SideType, PieceType]):
-#     _data: List[List[Optional[BoardEntity]]]
-
-#     def __init__(self, fileCount: int, rankCount: int) -> None:
-#         if fileCount <= 0 or rankCount <= 0:
-#             raise ValueError(f"File and rank count must be greater than 0, got {fileCount} and {rankCount}")
-#         self._data = [[None for _ in range(rankCount)] for _ in range(fileCount)]
-
-#     @property
-#     def data(self) -> List[List[Optional[BoardEntity]]]:
-#         return self._data
-
-#     @property
-#     def fileCount(self) -> int:
-#         return len(self._data)
-
-#     @property
-#     def rankCount(self) -> int:
-#         return len(self._data[0])
-
-#     def __getitem__(self, key: int) -> List[Optional[BoardEntity]]:
-#         return self._data[key]

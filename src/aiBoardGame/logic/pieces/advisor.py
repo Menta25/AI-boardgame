@@ -28,4 +28,4 @@ class Advisor(Piece):
 
     @classmethod
     def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
-        return [Position(fromPosition.file + deltaFile, fromPosition.rank + deltaRank) for deltaFile, deltaRank in product((-1,1), repeat=2)]
+        return [fromPosition + deltas for deltas in product((-1,1), repeat=2) if cls.isPositionInBounds(fromPosition + deltas) and board[side][fromPosition + deltas] is None]

@@ -41,18 +41,18 @@ class Piece(ABC):
 
     @classmethod
     @abstractmethod
-    def _isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
-        raise NotImplementedError(f"{cls.__class__.__name__} has not implemented isValidMove method")
+    def _getPossibleMoves(cls, board: Board, side: Side, fromPosition: Position) -> List[Position]:
+        raise NotImplementedError(f"{cls.__class__.__name__} has not implemented getPossibleMoves method")
 
     @classmethod
     def getPossibleMoves(cls, board: Board, fromPosition: Position) -> List[Move]:
         side, _ = board[fromPosition]
-        return [Move.make(board, fromPosition, toPosition) for toPosition in cls._getPossibleMoves(board, side, fromPosition) if cls.isPositionInBounds(toPosition)]
+        return [Move.make(board, fromPosition, toPosition) for toPosition in cls._getPossibleMoves(board, side, fromPosition)]
 
     @classmethod
     @abstractmethod
-    def _getPossibleMoves(cls, board: Board, side: Side, fromPosition: Position) -> List[Position]:
-        raise NotImplementedError(f"{cls.__class__.__name__} has not implemented getPossibleMoves method")
+    def _isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
+        raise NotImplementedError(f"{cls.__class__.__name__} has not implemented isValidMove method")
 
     @classmethod
     def isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
@@ -60,7 +60,7 @@ class Piece(ABC):
         if not cls.isPositionInBounds(side, toPosition) or not cls.isPositionInBounds(side, fromPosition) or isFromAndToTheSame or board[side][fromPosition] is None or board[side][fromPosition] != cls:
             return False
         isPointOccupiedByAllyPiece = board[side][toPosition] is not None
-        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromPosition.file, fromPosition.rank, toPosition.file, toPosition.rank):
+        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromPosition, toPosition):
             return False
         return True
 

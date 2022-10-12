@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Type
+from typing import Optional, Type, TypeVar
 
-from aiBoardGame.logic.pieces import Piece
 from aiBoardGame.logic.auxiliary import Board, BoardEntity, Position
+
+
+Piece = TypeVar("Piece")
 
 
 @dataclass(frozen=True)
