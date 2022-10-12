@@ -33,12 +33,16 @@ class BoardEntity(NamedTuple):
 
 class SideState(Dict[Position, Type[Piece]]):
     def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Type[Piece]]:
+        if isinstance(key, tuple):
+            key = Position(*key)
         if isinstance(key, (Position, tuple)):
             return self.get(key)
         else:
             raise TypeError(f"Key has invalid type {key.__class__.__name__}")
 
     def __setitem__(self, key: Union[Position, Tuple[int, int]], value: Union[Optional[Type[Piece]], BoardEntity]) -> None:
+        if isinstance(key, tuple):
+            key = Position(*key)
         if isinstance(value, BoardEntity):
             raise InvalidOperation(f"Cannot assign {value.__class__.__name__} to {self.__class__.__name__} because object is not {value.side.__class__.__name__} aware")
         return super().__setitem__(key, value)
