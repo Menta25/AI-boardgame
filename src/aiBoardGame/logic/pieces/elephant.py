@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar, List, Tuple
+from itertools import product
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 NEW_RANK_LENGTH = Piece.rankLength() // 2
@@ -24,3 +25,8 @@ class Elephant(Piece):
         isPieceInTheWay = board[fromFile + round(deltaFile / 2)][fromRank + round(deltaRank / 2)] is not None
 
         return isValidDelta and not isPieceInTheWay
+
+    # TODO: Check for intervening pieces
+    @classmethod
+    def _getPossibleMoves(cls, board: Board, side: Side, fromPosition: Position) -> List[Position]:
+        return [Position(fromPosition.file + deltaFile, fromPosition.rank + deltaRank) for deltaFile, deltaRank in product((-2,2), repeat=2)]

@@ -1,10 +1,10 @@
 import numpy as np
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, List
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 @dataclass(init=False)
@@ -27,3 +27,7 @@ class Chariot(Piece):
                 return False
 
         return True
+
+    @classmethod
+    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
+        pass

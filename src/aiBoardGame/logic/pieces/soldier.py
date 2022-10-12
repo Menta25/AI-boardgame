@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, List
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 @dataclass(init=False)
@@ -14,7 +14,7 @@ class Soldier(Piece):
         deltaFile = toFile - fromFile
         deltaRank = toRank - fromRank
 
-        isOverRiver = fromRank >= (sum(cls.rankBounds) + 1) / 2
+        isOverRiver = fromRank >= (Piece.rankLength + 1) / 2
         if side == Side.Black:
             deltaRank *= -1
             isOverRiver = not isOverRiver
@@ -24,3 +24,13 @@ class Soldier(Piece):
         isValidDeltaFile = isOverRiver and abs(deltaFile) == 1
 
         return isOneDeltaOnly and isValidDeltaRank or isValidDeltaFile
+
+    @classmethod
+    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
+        possibleToPositions = []
+        possibleToPositions.append(Position(fromPosition.file, fromPosition.rank + side))
+        isOverRiver = fromPosition.rank >= (Piece.rankLength + 1) / 2
+        if isOverRiver:
+            possibleToPositions.append(Position(fromPosition.file + 1, fromPosition.rank))
+            possibleToPositions.append(Position(fromPosition.file - 1, fromPosition.rank))
+        return possibleToPositions

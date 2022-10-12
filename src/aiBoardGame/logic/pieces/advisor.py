@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import ClassVar, Tuple
+from typing import ClassVar, List, Tuple
+from itertools import product
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 
 
 NEW_FILE_LENGTH = 3
@@ -24,3 +25,7 @@ class Advisor(Piece):
         deltaRank = toRank - fromRank
 
         return abs(deltaFile) == 1 and abs(deltaRank) == 1  # NOTE: == isValidDelta
+
+    @classmethod
+    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
+        return [Position(fromPosition.file + deltaFile, fromPosition.rank + deltaRank) for deltaFile, deltaRank in product((-1,1), repeat=2)]
