@@ -20,6 +20,11 @@ class XiangqiEngine:
         self.currentSide = Side.Red
         self.moveHistory = []
 
+
+    def _getAllPossibleMoves(self) -> List[Move]:
+        return [piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()]
+
+
     def move(self, fromPositon: Union[Position, Tuple[int, int]], toPosition: Union[Position, Tuple[int, int]]) -> None:
         if not isinstance(fromPositon, Position):
             fromPositon = Position(*fromPositon)
