@@ -1,17 +1,19 @@
 from dataclasses import dataclass
 import logging
 from typing import Dict, List, Tuple, Union
+from itertools import chain, product
 
-from aiBoardGame.logic.pieces import General
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.pieces import General, Cannon
+from aiBoardGame.logic.auxiliary import Board, BoardEntity, Position, Side
 from aiBoardGame.logic.move import InvalidMove, Move
+from aiBoardGame.logic.pieces.horse import Horse
 from aiBoardGame.logic.xiangqiBoardGeneration import createXiangqiBoard
 
 
 @dataclass(init=False)
 class XiangqiEngine:
     board: Board
-    generals: Dict[Side, Tuple[int, int]]
+    generals: Dict[Side, Position]
     currentSide: Side
     moveHistory: List[Move]
 
@@ -24,6 +26,59 @@ class XiangqiEngine:
     def _getAllPossibleMoves(self) -> List[Move]:
         return [piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()]
 
+    def _getAllValidMoves(self) -> List[Move]:
+        # TODO: Remove invalid pin moves
+
+        validMoves = []
+        checks, pins = self._getChecksAndPins
+        if len(checks) > 0:
+            if len(checks) == 1:
+                validMoves = self._getAllPossibleMoves()
+                # TODO: Finish
+            else:
+                validMoves = General.getPossibleMoves(self.board, self.generals[self.currentSide])
+        else:
+            validMoves = self._getAllPossibleMoves()
+        return validMoves
+
+    def _getChecksAndPins(self) -> Tuple[List[Position], List[Position]]:
+        checks = []
+        pins = []
+        for deltas in chain(product((1,-1), (0,)), product((0,), (1,-1))):
+            possiblePinPositions = []
+            position = self.generals[self.currentSide] + deltas
+            foundBoardEntityCount = 0
+            while self.board.isInBounds(position) and foundBoardEntityCount < 3:
+                if foundBoardEntity := self.board[position] is not None:
+                    foundBoardEntityCount += 1
+                    if foundBoardEntity.side == self.currentSide:
+                        possiblePinPositions.append(position)
+                    else:
+                        if (foundBoardEntityCount == 1 and foundBoardEntity.piece != Cannon) or (foundBoardEntityCount == 2 and foundBoardEntity.piece == Cannon) and \
+                            foundBoardEntity.piece.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide]):
+                            checks.append(position)
+                        elif len(possiblePinPositions) > 0 and not (foundBoardEntityCount == 3 ^ foundBoardEntity.piece == Cannon):
+                            for possiblePinPosition in list(possiblePinPositions):
+                                possiblePinBoardEntity = self.board[possiblePinPosition]
+                                self.board[possiblePinPosition] = None
+                                isValidMove = foundBoardEntity.piece.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide])
+                                self.board[possiblePinPosition] = possiblePinBoardEntity
+                                if isValidMove:
+                                    pins.append(possiblePinPosition)
+                                    del possiblePinPositions[possiblePinPosition]
+
+        for deltaFile, deltaRank in chain(product((1,-1), (2,-2)), product((2,-2), (1,-1))):
+            position = self.generals[self.currentSide] + deltas
+            if self.board.isInBounds(position) and self.board[position] == BoardEntity(self.currentSide.opponent, Horse):
+                possiblePinBoardEntity = self.board[position + (round(deltaFile/2), round(deltaRank/2))]
+                if possiblePinBoardEntity is None or possiblePinBoardEntity.side == self.currentSide:
+                    self.board[position + (round(deltaFile/2), round(deltaRank/2))] = None
+                    if Horse.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide]):
+                        checksOrPins = checks.append(position) if possiblePinBoardEntity is None else pins.append(position)
+                        checksOrPins.append(position)
+                    self.board[position + (round(deltaFile/2), round(deltaRank/2))] = possiblePinBoardEntity
+
+        return checks, pins
 
     def move(self, fromPositon: Union[Position, Tuple[int, int]], toPosition: Union[Position, Tuple[int, int]]) -> None:
         if not isinstance(fromPositon, Position):
@@ -56,6 +111,9 @@ class XiangqiEngine:
         self.moveHistory.append(Move.make(self.board, fromPosition, toPosition))
         self.board[toPosition] = self.board[fromPosition]
         self.board[fromPosition] = None
+
+        if self.board[toPosition].piece == General:
+            self.generals[self.board[toPosition].side] = toPosition
 
     def undoMove(self) -> None:
         self._undoMove()

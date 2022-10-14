@@ -1,5 +1,5 @@
 from typing import Dict, Tuple
-from aiBoardGame.logic.auxiliary import Board, Side
+from aiBoardGame.logic.auxiliary import Board, Position, Side
 from aiBoardGame.logic.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier
 
 
@@ -24,8 +24,8 @@ def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
             xiangqiBoard[side][file, rank] = Cannon
 
     generals = {
-        Side.Red: (Board.fileLength // 2, Board.rankBounds[0]),
-        Side.Black: (Board.fileLength // 2, Board.rankBounds[1] - 1)
+        Side.Red: Position(Board.fileLength // 2, Board.rankBounds[0]),
+        Side.Black: Position(Board.fileLength // 2, Board.rankBounds[1] - 1)
     }
 
     return xiangqiBoard, generals

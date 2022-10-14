@@ -40,42 +40,6 @@ class General(Piece):
             return True
         else:
             return False
-
-    @classmethod
-    def isInCheck(cls, board: Board, side: Side, file: int, rank: int) -> bool:
-        upwardRanks = list(range(rank + 1, Piece.rankBounds[1]))
-        downwardRanks = list(range(rank - 1, Piece.rankBounds[0], -1))
-        rightwardFiles = list(range(file + 1, Piece.fileBounds[1]))
-        leftwardFiles = list(range(file - 1, Piece.fileBounds[0], -1))
-
-        upwardRanks = zip([file]*len(upwardRanks), upwardRanks)
-        downwardRanks = zip([file]*len(downwardRanks), downwardRanks)
-        rightwardFiles = zip(rightwardFiles, [rank]*len(rightwardFiles))
-        leftwardFiles = zip(leftwardFiles, [rank]*len(leftwardFiles))
-
-        directions = [upwardRanks, rightwardFiles, downwardRanks, leftwardFiles]
-
-        for direction in directions:
-            foundPieceCount = 0
-            for checkFile, checkRank in direction:
-                if foundPieceCount == 2:
-                    break
-                if board[checkFile, checkRank] is None:
-                    continue
-                foundPieceCount += 1
-                foundPiece = board[checkFile, checkRank]
-                if foundPiece.side == side.opponent and (foundPieceCount == 1 and foundPiece != Cannon or foundPieceCount == 2 and foundPiece == Cannon):
-                    if foundPiece.piece.isValidMove(board, side.opponent, Position(checkFile, checkRank), Position(file, rank)):
-                        return True
-
-        horseDeltas = [(fstSign*1,sndSign*2) for fstSign, sndSign in [(1,1),(1,-1),(-1,1),(-1,-1)]]
-        horseDeltas += [horseDeltas[::-1] for horseDeltas in horseDeltas]
-        
-        for deltaFile, deltaRank in horseDeltas:
-            if Horse.isValidMove(board, side.opponent, Position(file+deltaFile, rank+deltaRank), Position(file, rank)):
-                return True
-
-        return False
         
 
     @classmethod

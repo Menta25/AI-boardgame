@@ -3,7 +3,7 @@ from decimal import InvalidOperation
 
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import ClassVar, Dict, NamedTuple, Optional, Type, TypeVar, Union, Tuple
+from typing import ClassVar, Dict, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 
 Piece = TypeVar("Piece")
@@ -25,11 +25,35 @@ class Position(NamedTuple):
     file: int
     rank: int
 
+    def __eq__(self, other: Union[Position, Tuple[int, int]]) -> bool:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
+        return self.file == other[0] and self.rank == other[1]
+
     def __add__(self, other: Union[Position, Tuple[int, int]]) -> Position:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
         return Position(self.file + other[0], self.rank + other[1])
 
     def __sub__(self, other: Union[Position, Tuple[int, int]]) -> Position:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
         return Position(self.file - other[0], self.rank - other[1])
+
+    def __gt__(self, other: Union[Position, Tuple[int, int]]) -> bool:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
+        return self.file > other[0] and self.rank > other[1]
+
+    def __lt__(self, other: Union[Position, Tuple[int, int]]) -> bool:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
+        return self.file < other[0] and self.rank < other[1]
+
+    def __ge__(self, other: Union[Position, Tuple[int, int]]) -> bool:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
+        return self > other or self == other
 
 
 class BoardEntity(NamedTuple):
@@ -65,6 +89,14 @@ class Board(Dict[Side, SideState]):
     def __init__(self) -> None:
         self.update({side: SideState() for side in Side})
 
+    @overload
+    def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[BoardEntity]:
+        ...
+
+    @overload
+    def __getitem__(self, key: Side) -> SideState:
+        ...
+
     def __getitem__(self, key: Union[Position, Tuple[int, int], Side]) -> Union[Optional[BoardEntity], SideState]:
         if isinstance(key, Side):
             return super().__getitem__(key)
@@ -88,3 +120,7 @@ class Board(Dict[Side, SideState]):
                     del self[value.side.opponent][key]
         else:
             raise InvalidOperation(f"Cannot set {value.__class__.__name__} to {self.__class__.__name__}'")
+
+    @classmethod
+    def isInBounds(cls, position: Position) -> bool:
+        return (cls.fileBounds[0], cls.rankBounds[0]) <= position < (cls.fileBounds[1], cls.rankBounds[1])
