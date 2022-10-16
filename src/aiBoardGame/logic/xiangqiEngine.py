@@ -27,33 +27,48 @@ class XiangqiEngine:
     def _getAllPossibleMoves(self) -> Dict[Position, List[Position]]:
         return {position: piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()}
 
-    def _getAllValidMoves(self) -> List[Move]:
-        validMoves = []
+    def _getAllValidMoves(self) -> List[Move]:  # TODO: Maybe change return type
+        possibleMoves: Dict[Position, List[Position]] = {}
         checks, pins = self._getChecksAndPins()
 
         if len(checks) >= 1:
-            return [Move(self.generals[self.currentSide], end) for end in General.getPossibleMoves(self.board, self.generals[self.currentSide])]
-
-        validMoves = self._getAllPossibleMoves()
+            possibleMoves[self.generals[self.currentSide]] = General.getPossibleMoves(self.board, self.generals[self.currentSide])
+        else:
+            possibleMoves = self._getAllPossibleMoves()
         
-        for pinned, pinning in pins.items():
-            if pinned in validMoves:
-                if len(pinning) >= 2:
-                    del validMoves[pinned]
+            for pinned, pinning in pins.items():
+                if pinned in possibleMoves:
+                    if len(pinning) >= 2:
+                        del possibleMoves[pinned]
+                    else:
+                        pinningGeneralDeltaNorm = (pinning[0] - self.generals[self.currentSide]).normalize()
+                        for end in list(possibleMoves[pinned]):
+                            if end != pinning:
+                                pinningEndDeltaNorm = (pinning[0] - end).normalize()
+                                generalEndDeltaNorm = (self.generals[self.currentSide] - end).normalize()
+                                if not (pinningGeneralDeltaNorm == pinningEndDeltaNorm and pinningGeneralDeltaNorm != generalEndDeltaNorm):
+                                    possibleMoves[pinned].remove(end)
+
+            if len(checks) == 1:
+                validEnds = [checks[0]]
+                delta = checks[0] - self.generals[self.currentSide]
+                if self.board[checks[0]].piece == Horse:
+                    delta = (delta/2).round()
+                    validEnds.append([self.generals[self.currentSide] + delta])
                 else:
-                    pinningGeneralDeltaNorm = (pinning[0] - self.generals[self.currentSide]).normalize()
-                    for end in list(validMoves[pinned]):
-                        if end != pinning:
-                            pinningEndDeltaNorm = (pinning[0] - end).normalize()
-                            generalEndDeltaNorm = (self.generals[self.currentSide] - end).normalize()
-                            if not (pinningGeneralDeltaNorm == pinningEndDeltaNorm and pinningGeneralDeltaNorm != generalEndDeltaNorm):
-                                validMoves[pinned].remove(end)
+                    delta = delta.normalize()
+                    end = self.generals[self.currentSide]
+                    while (end := end + delta) != checks[0]:
+                        validEnds.append
+                for start, ends in possibleMoves:
+                    if start != self.generals[self.currentSide]:
+                        for end in list(ends):
+                            if end not in validEnds:
+                                possibleMoves[start].remove(end)
 
-        if len(checks) == 1:
-            # TODO: Finish
-            pass
+        # TODO: Generate General moves and check if it will be in check => if it is undo the move then remove it from possible moves
 
-        return validMoves
+        return possibleMoves
 
     def _getChecksAndPins(self) -> Tuple[List[Position], Dict[Position, List[Position]]]:
         checks = []
