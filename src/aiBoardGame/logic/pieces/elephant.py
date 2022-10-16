@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import ClassVar, List, Tuple
-from itertools import product
+from itertools import product, starmap
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 
 NEW_RANK_LENGTH = Piece.rankLength() // 2
@@ -17,21 +17,20 @@ class Elephant(Piece):
     abbreviation: ClassVar[str] = "E"
 
     @classmethod
-    def _isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
-        deltaFile = toPosition.file - fromPosition.file
-        deltaRank = toPosition.rank - fromPosition.rank
+    def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
+        delta = Delta(end.file - start.file, end.rank - start.rank)
 
-        isValidDelta = abs(deltaFile) == 2 and abs(deltaRank) == 2
-        isPieceInTheWay = board[fromPosition + (round(deltaFile/2), round(deltaRank/2))] is not None
+        isValidDelta = abs(delta.file) == 2 and abs(delta.rank) == 2
+        isPieceInTheWay = board[start + (delta/2).round()] is not None
 
         return isValidDelta and not isPieceInTheWay
 
 
     @classmethod
-    def _getPossibleMoves(cls, board: Board, side: Side, fromPosition: Position) -> List[Position]:
+    def _getPossibleMoves(cls, board: Board, side: Side, start: Position) -> List[Position]:
         possibleToPositions = []
-        for deltaFile, deltaRank in product((-2,2), repeat=2):
-            toPosition = fromPosition + (deltaFile, deltaRank)
-            if cls.isPositionInBounds(side, toPosition) and board[side][toPosition] is None and board[fromPosition + (round(deltaFile/2), round(deltaRank/2))] is None:
+        for delta in starmap(Delta, product((-2,2), repeat=2)):
+            toPosition = start + delta
+            if cls.isPositionInBounds(side, toPosition) and board[side][toPosition] is None and board[start + (delta/2).round()] is None:
                 possibleToPositions.append(toPosition)
         return possibleToPositions

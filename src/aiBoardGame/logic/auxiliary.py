@@ -3,6 +3,7 @@ from decimal import InvalidOperation
 
 from enum import IntEnum
 from dataclasses import dataclass
+from math import sqrt
 from typing import ClassVar, Dict, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 
@@ -21,24 +22,72 @@ class Side(IntEnum):
         return super().__str__().split(".")[-1]
 
 
+class Delta(NamedTuple):
+    file: Union[int, float]
+    rank: Union[int, float]
+
+    def normalize(self) -> Delta:
+        length = abs(self)
+        return Delta(self.file/length, self.rank/length)
+
+    def round(self) -> Delta:
+        return Delta(round(self.file), round(self.rank))
+
+    def __add__(self, other: Union[Delta, Tuple[int, int]]) -> Delta:
+        if not isinstance(other, (Delta, tuple)):
+            raise TypeError("Other object must be Delta or tuple")
+        return Delta(self.file + other[0], self.rank + other[1])
+
+    def __sub__(self, other: Union[Delta, Tuple[int, int]]) -> Delta:
+        if not isinstance(other, (Delta, tuple)):
+            raise TypeError("Other object must be Delta or tuple")
+        return Delta(self.file - other[0], self.rank - other[1])
+
+    def __mul__(self, other: Union[int, float]) -> Delta:
+        if not isinstance(other, (int, float)):
+            raise TypeError("Other object must be int or float")
+        return Delta(self.file*other, self.rank*other)
+
+    def __truediv__(self, other: Union[int, float]) -> Delta:
+        if not isinstance(other, (int, float)):
+            raise TypeError("Other object must be int or float")
+        return Delta(self.file/other, self.rank/other)
+
+    def __abs__(self) -> float:
+        return sqrt(self.file**2, self.rank**2)
+
 class Position(NamedTuple):
     file: int
     rank: int
+
+    def __add__(self, other: Union[Delta, Tuple[int, int]]) -> Position:
+        if not isinstance(other, (Delta, tuple)):
+            raise TypeError("Other object must be Delta or tuple")
+        if isinstance(other, Delta):
+            other = other.round()
+        return Position(self.file + other[0], self.rank + other[1])
+
+    @overload
+    def __sub__(self, other: Position) -> Delta:
+        ...
+
+    @overload
+    def __sub__(self, other: Union[Delta, Tuple[int, int]]) -> Position:
+        ...
+
+    def __sub__(self, other: Union[Position, Delta, Tuple[int, int]]) -> Union[Delta, Position]:
+        if not isinstance(other, (Position, Delta, tuple)):
+            raise TypeError("Other object must be Position, Delta or tuple")
+        if isinstance(other, Position):
+            return Delta(self.file - other.file, self.rank - other.rank)
+        elif isinstance(other, Delta):
+            other = other.round()
+        return Position(self.file - other[0], self.rank - other[1])
 
     def __eq__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
             raise TypeError("Other object must be Position or tuple")
         return self.file == other[0] and self.rank == other[1]
-
-    def __add__(self, other: Union[Position, Tuple[int, int]]) -> Position:
-        if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
-        return Position(self.file + other[0], self.rank + other[1])
-
-    def __sub__(self, other: Union[Position, Tuple[int, int]]) -> Position:
-        if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
-        return Position(self.file - other[0], self.rank - other[1])
 
     def __gt__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):

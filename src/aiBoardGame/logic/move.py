@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Optional, Type, TypeVar, NamedTuple
 
 from aiBoardGame.logic.auxiliary import Board, BoardEntity, Position
 
@@ -12,26 +12,28 @@ Piece = TypeVar("Piece")
 @dataclass(frozen=True)
 class InvalidMove(Exception):
     piece: Type[Piece]
-    fromPosition: Position
-    toPosition: Position
+    move: Move
     message: Optional[str] = None
 
     def __str__(self) -> str:
-        return f"{self.piece.__name__} cannot move from {*self.fromPosition,} to {*self.toPosition,}" if self.message is None else self.message
+        return f"{self.piece.__name__} cannot move from {*self.move.start,} to {*self.move.end,}" if self.message is None else self.message
+
+
+class Move(NamedTuple):
+    start: Position
+    end: Position
 
 
 @dataclass(frozen=True)
-class Move:
-    fromPosition: Position
-    toPosition: Position
+class MoveRecord:
+    move: Move
     movedPieceEntity: BoardEntity
     capturedPieceEntity: Optional[BoardEntity]
 
     @classmethod
-    def make(cls, board: Board, fromPosition: Position, toPosition: Position) -> Move:
-        return Move(
-            fromPosition=fromPosition,
-            toPosition=toPosition,
-            movedPieceEntity=board[fromPosition],
-            capturedPieceEntity=board[toPosition]
+    def make(cls, board: Board, start: Position, end: Position) -> MoveRecord:
+        return MoveRecord(
+            move=Move(start, end),
+            movedPieceEntity=board[start],
+            capturedPieceEntity=board[end]
         )

@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 import logging
 from typing import Dict, List, Tuple, Union
-from itertools import chain, product
+from itertools import chain, product, starmap
+from collections import defaultdict
 
 from aiBoardGame.logic.pieces import General, Cannon
-from aiBoardGame.logic.auxiliary import Board, BoardEntity, Position, Side
-from aiBoardGame.logic.move import InvalidMove, Move
+from aiBoardGame.logic.auxiliary import Board, BoardEntity, Delta, Position, Side
+from aiBoardGame.logic.move import Move, InvalidMove, MoveRecord
 from aiBoardGame.logic.pieces.horse import Horse
 from aiBoardGame.logic.xiangqiBoardGeneration import createXiangqiBoard
 
@@ -15,7 +16,7 @@ class XiangqiEngine:
     board: Board
     generals: Dict[Side, Position]
     currentSide: Side
-    moveHistory: List[Move]
+    moveHistory: List[MoveRecord]
 
     def __init__(self) -> None:
         self.board, self.generals = createXiangqiBoard()
@@ -23,33 +24,46 @@ class XiangqiEngine:
         self.moveHistory = []
 
 
-    def _getAllPossibleMoves(self) -> List[Move]:
-        return [piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()]
+    def _getAllPossibleMoves(self) -> Dict[Position, List[Position]]:
+        return {position: piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()}
 
     def _getAllValidMoves(self) -> List[Move]:
-        # TODO: Remove invalid pin moves
-
         validMoves = []
-        checks, pins = self._getChecksAndPins
-        if len(checks) > 0:
-            if len(checks) == 1:
-                validMoves = self._getAllPossibleMoves()
-                # TODO: Finish
-            else:
-                validMoves = General.getPossibleMoves(self.board, self.generals[self.currentSide])
-        else:
-            validMoves = self._getAllPossibleMoves()
+        checks, pins = self._getChecksAndPins()
+
+        if len(checks) >= 1:
+            return [Move(self.generals[self.currentSide], end) for end in General.getPossibleMoves(self.board, self.generals[self.currentSide])]
+
+        validMoves = self._getAllPossibleMoves()
+        
+        for pinned, pinning in pins.items():
+            if pinned in validMoves:
+                if len(pinning) >= 2:
+                    del validMoves[pinned]
+                else:
+                    pinningGeneralDeltaNorm = (pinning[0] - self.generals[self.currentSide]).normalize()
+                    for end in list(validMoves[pinned]):
+                        if end != pinning:
+                            pinningEndDeltaNorm = (pinning[0] - end).normalize()
+                            generalEndDeltaNorm = (self.generals[self.currentSide] - end).normalize()
+                            if not (pinningGeneralDeltaNorm == pinningEndDeltaNorm and pinningGeneralDeltaNorm != generalEndDeltaNorm):
+                                validMoves[pinned].remove(end)
+
+        if len(checks) == 1:
+            # TODO: Finish
+            pass
+
         return validMoves
 
-    def _getChecksAndPins(self) -> Tuple[List[Position], List[Position]]:
+    def _getChecksAndPins(self) -> Tuple[List[Position], Dict[Position, List[Position]]]:
         checks = []
-        pins = []
-        for deltas in chain(product((1,-1), (0,)), product((0,), (1,-1))):
+        pins = defaultdict(list)
+        for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
             possiblePinPositions = []
-            position = self.generals[self.currentSide] + deltas
+            position = self.generals[self.currentSide] + delta
             foundBoardEntityCount = 0
             while self.board.isInBounds(position) and foundBoardEntityCount < 3:
-                if foundBoardEntity := self.board[position] is not None:
+                if (foundBoardEntity := self.board[position]) is not None:
                     foundBoardEntityCount += 1
                     if foundBoardEntity.side == self.currentSide:
                         possiblePinPositions.append(position)
@@ -64,56 +78,60 @@ class XiangqiEngine:
                                 isValidMove = foundBoardEntity.piece.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide])
                                 self.board[possiblePinPosition] = possiblePinBoardEntity
                                 if isValidMove:
-                                    pins.append(possiblePinPosition)
+                                    pins[possiblePinPosition].append(position)
                                     del possiblePinPositions[possiblePinPosition]
 
-        for deltaFile, deltaRank in chain(product((1,-1), (2,-2)), product((2,-2), (1,-1))):
-            position = self.generals[self.currentSide] + deltas
+        for delta in starmap(Delta, chain(product((1,-1), (2,-2)), product((2,-2), (1,-1)))):
+            position = self.generals[self.currentSide] + delta
             if self.board.isInBounds(position) and self.board[position] == BoardEntity(self.currentSide.opponent, Horse):
-                possiblePinBoardEntity = self.board[position + (round(deltaFile/2), round(deltaRank/2))]
+                possiblePinPosition = position + (delta/2).round()
+                possiblePinBoardEntity = self.board[possiblePinPosition]
                 if possiblePinBoardEntity is None or possiblePinBoardEntity.side == self.currentSide:
-                    self.board[position + (round(deltaFile/2), round(deltaRank/2))] = None
+                    self.board[possiblePinPosition] = None
                     if Horse.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide]):
-                        checksOrPins = checks.append(position) if possiblePinBoardEntity is None else pins.append(position)
-                        checksOrPins.append(position)
-                    self.board[position + (round(deltaFile/2), round(deltaRank/2))] = possiblePinBoardEntity
+                        if possiblePinBoardEntity is None:
+                            checks.append(position)
+                        else:
+                            pins[possiblePinPosition].append(position)
+                    self.board[possiblePinPosition] = possiblePinBoardEntity
 
-        return checks, pins
+        return checks, dict(pins)
 
-    def move(self, fromPositon: Union[Position, Tuple[int, int]], toPosition: Union[Position, Tuple[int, int]]) -> None:
-        if not isinstance(fromPositon, Position):
-            fromPositon = Position(*fromPositon)
-        if not isinstance(toPosition, Position):
-            toPosition = Position(*toPosition)
+    def move(self, start: Union[Position, Tuple[int, int]], end: Union[Position, Tuple[int, int]]) -> None:
+        if not isinstance(start, Position):
+            start = Position(*start)
+        if not isinstance(end, Position):
+            end = Position(*end)
+        move = Move(start, end)
 
-        if self.board[fromPositon] == None:
-            raise InvalidMove(None, fromPositon, toPosition, f"No piece found on {*fromPositon,}")
+        if self.board[start] == None:
+            raise InvalidMove(None, move, f"No piece found on {*start,}")
 
-        chosenPiece = self.board[fromPositon].piece
-        if not chosenPiece.isValidMove(self.board, self.currentSide, fromPositon, toPosition):
-            raise InvalidMove(chosenPiece, fromPositon, toPosition)
+        # chosenPiece = self.board[fromPositon].piece
+        # if not chosenPiece.isValidMove(self.board, self.currentSide, fromPositon, toPosition):
+        #     raise InvalidMove(chosenPiece, fromPositon, toPosition)
 
-        self._move(fromPositon, toPosition)
+        self._move(start, end)
 
-        allyGeneralFile, allyGeneralRank = self.generals[self.currentSide]
-        if General.isInCheck(self.board, self.currentSide, allyGeneralFile, allyGeneralRank):
-            self._undoMove()
-            raise InvalidMove(chosenPiece, fromPositon, toPosition, f"{self.currentSide}'s General is in check, cannot move {chosenPiece} from {*fromPositon,} to {*toPosition,}")
+        # allyGeneralFile, allyGeneralRank = self.generals[self.currentSide]
+        # if General.isInCheck(self.board, self.currentSide, allyGeneralFile, allyGeneralRank):
+        #     self._undoMove()
+        #     raise InvalidMove(chosenPiece, fromPositon, toPosition, f"{self.currentSide}'s General is in check, cannot move {chosenPiece} from {*fromPositon,} to {*toPosition,}")
 
-        enemyGeneralFile, enemyGeneralRank = self.generals[self.currentSide.opponent]
-        if General.isInCheck(self.board, self.currentSide.opponent, enemyGeneralFile, enemyGeneralRank):
-            logging.info(f"{self.currentSide.opponent}'s General is in check")
+        # enemyGeneralFile, enemyGeneralRank = self.generals[self.currentSide.opponent]
+        # if General.isInCheck(self.board, self.currentSide.opponent, enemyGeneralFile, enemyGeneralRank):
+        #     logging.info(f"{self.currentSide.opponent}'s General is in check")
 
         #self.currentSide = self.currentSide.opponent
         self.print()
 
-    def _move(self, fromPosition: Position, toPosition: Position) -> None:
-        self.moveHistory.append(Move.make(self.board, fromPosition, toPosition))
-        self.board[toPosition] = self.board[fromPosition]
-        self.board[fromPosition] = None
+    def _move(self, start: Position, end: Position) -> None:
+        self.moveHistory.append(MoveRecord.make(self.board, start, end))
+        self.board[end] = self.board[start]
+        self.board[start] = None
 
-        if self.board[toPosition].piece == General:
-            self.generals[self.board[toPosition].side] = toPosition
+        if self.board[end].piece == General:
+            self.generals[self.board[end].side] = end
 
     def undoMove(self) -> None:
         self._undoMove()

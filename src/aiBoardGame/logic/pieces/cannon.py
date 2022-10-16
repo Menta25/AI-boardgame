@@ -2,10 +2,10 @@ import numpy as np
 
 from dataclasses import dataclass
 from typing import ClassVar, List
-from itertools import chain, product
+from itertools import chain, product, starmap
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 
 @dataclass(init=False)
@@ -13,17 +13,16 @@ class Cannon(Piece):
     abbreviation: ClassVar[str] = "C"
 
     @classmethod
-    def _isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
-        deltaFile = toPosition.file - fromPosition.file
-        deltaRank = toPosition.rank - fromPosition.rank
+    def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
+        delta = Delta(end.file - start.file, end.rank - start.rank)
 
-        if deltaFile != 0 and deltaRank != 0:  # NOTE: == isOneDeltaOnly
+        if delta.file != 0 and delta.rank != 0:  # NOTE: == isOneDeltaOnly
             return False
 
-        files = range(fromPosition.file + np.sign(deltaFile), toPosition.file, np.sign(deltaFile)) if deltaFile != 0 else [toPosition.file] * (abs(deltaRank) - 1)
-        ranks = range(fromPosition.rank + np.sign(deltaRank), toPosition.rank, np.sign(deltaRank)) if deltaRank != 0 else [toPosition.rank] * (abs(deltaFile) - 1)
+        files = range(start.file + np.sign(delta.file), end.file, np.sign(delta.file)) if delta.file != 0 else [end.file] * (abs(delta.rank) - 1)
+        ranks = range(start.rank + np.sign(delta.rank), end.rank, np.sign(delta.rank)) if delta.rank != 0 else [end.rank] * (abs(delta.file) - 1)
 
-        isCaptureMove = board[toPosition] is not None
+        isCaptureMove = board[end] is not None
         piecesInTheWay = 0
         for position in zip(files, ranks):
             if board[position] is not None:
@@ -32,10 +31,10 @@ class Cannon(Piece):
         return isCaptureMove and piecesInTheWay == 1 or not isCaptureMove and piecesInTheWay == 0
 
     @classmethod
-    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
+    def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
-        for deltaFile, deltaRank in chain(product((1,-1), (0,)), product((0,), (1,-1))):
-            toPosition = fromPosition + (deltaFile, deltaRank)
+        for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
+            toPosition = start + delta
             hasFoundPiece = False
             while cls.isPositionInBounds(toPosition):
                 if not hasFoundPiece and board[toPosition] is None:
@@ -47,5 +46,5 @@ class Cannon(Piece):
                         break
                     else:
                         hasFoundPiece = True
-                toPosition += (deltaFile, deltaRank)
+                toPosition += delta
         return possibleToPositions

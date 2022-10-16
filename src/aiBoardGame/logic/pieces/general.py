@@ -2,12 +2,10 @@ import numpy as np
 
 from dataclasses import dataclass
 from typing import ClassVar, List, Tuple
-from itertools import chain, product
+from itertools import chain, product, starmap
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.pieces.cannon import Cannon
-from aiBoardGame.logic.pieces.horse import Horse
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 
 NEW_FILE_LENGTH = 3
@@ -24,32 +22,30 @@ class General(Piece):
     abbreviation: ClassVar[str] = "G"
 
     @classmethod
-    def _isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
-        deltaFile = toPosition.file - fromPosition.file
-        deltaRank = toPosition.rank - fromPosition.rank
+    def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
+        delta = Delta(end.file - start.file, end.rank - start.rank)
 
-        isOneDeltaOnly = not (deltaFile != 0 and deltaRank != 0)
-        isValidDelta = abs(deltaFile) == 1 or abs(deltaRank) == 1
+        isOneDeltaOnly = not (delta.file != 0 and delta.rank != 0)
+        isValidDelta = abs(delta.file) == 1 or abs(delta.rank) == 1
 
         if isOneDeltaOnly and isValidDelta:
             return True
-        elif isOneDeltaOnly and abs(deltaRank) > 1 and board[toPosition].piece == General:  # NOTE: Flying general
-            for rank in range(fromPosition.rank + np.sign(deltaRank), toPosition.rank, np.sign(deltaRank)):
-                if board[toPosition.file, rank] is not None:   
+        elif isOneDeltaOnly and abs(delta.rank) > 1 and board[end].piece == General:  # NOTE: Flying general
+            for rank in range(start.rank + np.sign(delta.rank), end.rank, np.sign(delta.rank)):
+                if board[end.file, rank] is not None:   
                     return False
             return True
         else:
             return False
-        
 
     @classmethod
-    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
+    def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
-        for deltaFile, deltaRank in chain(product((1,-1), (0,)), product((0,), (1,-1))):
-            toPosition = fromPosition + (deltaFile, deltaRank)
+        for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
+            toPosition = start + delta
             if cls.isPositionInBounds(side, toPosition) and board[side][toPosition] is None:
                 possibleToPositions.append(toPosition)
-        toPosition = fromPosition + (0, side)
+        toPosition = start + (0, side)
         while cls.isPositionInBounds(side, toPosition):
             if board[toPosition] is not None:
                 if board[side.opponent][toPosition] == General:

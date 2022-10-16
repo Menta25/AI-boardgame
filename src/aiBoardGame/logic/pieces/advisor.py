@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import ClassVar, List, Tuple
-from itertools import product
+from itertools import product, starmap
 
 from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 
 NEW_FILE_LENGTH = 3
@@ -20,12 +20,10 @@ class Advisor(Piece):
     abbreviation: ClassVar[str] = "A"
 
     @classmethod
-    def _isValidMove(cls, board: Board, side: Side, fromFile: int, fromRank: int, toFile: int, toRank: int) -> bool:
-        deltaFile = toFile - fromFile
-        deltaRank = toRank - fromRank
-
-        return abs(deltaFile) == 1 and abs(deltaRank) == 1  # NOTE: == isValidDelta
+    def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
+        delta = Delta(start.file - end.file, start.rank - end.rank)
+        return abs(delta.file) == 1 and abs(delta.rank) == 1  # NOTE: == isValidDelta
 
     @classmethod
-    def _getPossibleMoves(cls, board: Board, side: Side,  fromPosition: Position) -> List[Position]:
-        return [fromPosition + deltas for deltas in product((-1,1), repeat=2) if cls.isPositionInBounds(fromPosition + deltas) and board[side][fromPosition + deltas] is None]
+    def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
+        return [start + delta for delta in starmap(Delta, product((-1,1), repeat=2)) if cls.isPositionInBounds(start + delta) and board[side][start + delta] is None]

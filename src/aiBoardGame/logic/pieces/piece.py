@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List, Tuple, ClassVar
 
 from aiBoardGame.logic.auxiliary import Board, Position, Side
-from aiBoardGame.logic.move import Move
 
 
 @dataclass(init=False)
@@ -41,37 +40,34 @@ class Piece(ABC):
 
     @classmethod
     @abstractmethod
-    def _getPossibleMoves(cls, board: Board, side: Side, fromPosition: Position) -> List[Position]:
+    def _getPossibleMoves(cls, board: Board, side: Side, start: Position) -> List[Position]:
         raise NotImplementedError(f"{cls.__class__.__name__} has not implemented getPossibleMoves method")
 
     @classmethod
-    def getPossibleMoves(cls, board: Board, fromPosition: Position) -> List[Move]:
-        side, _ = board[fromPosition]
-        return [Move.make(board, fromPosition, toPosition) for toPosition in cls._getPossibleMoves(board, side, fromPosition)]
+    def getPossibleMoves(cls, board: Board, start: Position) -> List[Position]:
+        side, _ = board[start]
+        return [endPosition for endPosition in cls._getPossibleMoves(board, side, start)]
 
     @classmethod
     @abstractmethod
-    def _isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
+    def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
         raise NotImplementedError(f"{cls.__class__.__name__} has not implemented isValidMove method")
 
     @classmethod
-    def isValidMove(cls, board: Board, side: Side, fromPosition: Position, toPosition: Position) -> bool:
-        isFromAndToTheSame = fromPosition.file == toPosition.file and fromPosition.rank == toPosition.rank
-        if not cls.isPositionInBounds(side, toPosition) or not cls.isPositionInBounds(side, fromPosition) or isFromAndToTheSame or board[side][fromPosition] is None or board[side][fromPosition] != cls:
-            return False
-        isPointOccupiedByAllyPiece = board[side][toPosition] is not None
-        if isPointOccupiedByAllyPiece or not cls._isValidMove(board, side, fromPosition, toPosition):
-            return False
-        return True
+    def isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
+        return cls.isPositionInBounds(side, end) and cls.isPositionInBounds(side, start) and \
+               board[side][start] is not None and board[side][start] == cls and \
+               end != start and board[side][end] is None and \
+               cls._isValidMove(board, side, start, end)
 
     @staticmethod
     def mirrorFile(file: int) -> int:
-        return sum(Board.fileBounds) - file - 1
+        return Board.fileLength - file - 1
 
     @staticmethod
     def mirrorRank(rank: int) -> int:
-        return sum(Board.rankBounds) - rank - 1
+        return Board.rankLength - rank - 1
 
-    @classmethod
-    def mirrorPosition(cls, file: int, rank: int) -> Tuple[int, int]:
-        return cls.mirrorFile(file), cls.mirrorRank(rank)
+    @staticmethod
+    def mirrorPosition(position: Position) -> Position:
+        return Position(Piece.mirrorFile(position.file), Piece.mirrorRank(position.rank))
