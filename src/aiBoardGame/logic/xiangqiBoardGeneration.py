@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, Tuple
 from aiBoardGame.logic.auxiliary import Board, Position, Side
 from aiBoardGame.logic.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier

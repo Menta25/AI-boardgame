@@ -45,8 +45,9 @@ class General(Piece):
             toPosition = start + delta
             if cls.isPositionInBounds(side, toPosition) and board[side][toPosition] is None:
                 possibleToPositions.append(toPosition)
-        toPosition = start + (0, side)
-        while cls.isPositionInBounds(side, toPosition):
+        delta = Delta(0, side)
+        toPosition = start
+        while cls.isPositionInBounds(side, toPosition := toPosition + delta):
             if board[toPosition] is not None:
                 if board[side.opponent][toPosition] == General:
                     possibleToPositions.append(toPosition)

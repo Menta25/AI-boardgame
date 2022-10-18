@@ -36,7 +36,7 @@ class Cannon(Piece):
         for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
             toPosition = start + delta
             hasFoundPiece = False
-            while cls.isPositionInBounds(toPosition):
+            while cls.isPositionInBounds(side, toPosition):
                 if not hasFoundPiece and board[toPosition] is None:
                     possibleToPositions.append(toPosition)
                 elif board[toPosition] is not None:

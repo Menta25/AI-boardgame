@@ -33,7 +33,7 @@ class Chariot(Piece):
         possibleToPositions = []
         for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
             toPosition = start + delta
-            while cls.isPositionInBounds(toPosition):
+            while cls.isPositionInBounds(side, toPosition):
                 if board[toPosition] is None:
                     possibleToPositions.append(toPosition)
                 elif board[toPosition] is not None:

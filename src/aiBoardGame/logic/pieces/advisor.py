@@ -26,4 +26,4 @@ class Advisor(Piece):
 
     @classmethod
     def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
-        return [start + delta for delta in starmap(Delta, product((-1,1), repeat=2)) if cls.isPositionInBounds(start + delta) and board[side][start + delta] is None]
+        return [start + delta for delta in starmap(Delta, product((-1,1), repeat=2)) if cls.isPositionInBounds(side, start + delta) and board[side][start + delta] is None]

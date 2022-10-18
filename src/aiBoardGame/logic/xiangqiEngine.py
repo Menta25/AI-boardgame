@@ -6,9 +6,17 @@ from collections import defaultdict
 
 from aiBoardGame.logic.pieces import General, Cannon
 from aiBoardGame.logic.auxiliary import Board, BoardEntity, Delta, Position, Side
-from aiBoardGame.logic.move import Move, InvalidMove, MoveRecord
+from aiBoardGame.logic.move import InvalidMove, MoveRecord
 from aiBoardGame.logic.pieces.horse import Horse
 from aiBoardGame.logic.xiangqiBoardGeneration import createXiangqiBoard
+
+
+@dataclass(frozen=True)
+class XiangqiError(Exception):
+    message: str
+
+    def __str__(self) -> str:
+        return self.message
 
 
 @dataclass(init=False)
@@ -17,17 +25,19 @@ class XiangqiEngine:
     generals: Dict[Side, Position]
     currentSide: Side
     moveHistory: List[MoveRecord]
+    _validMoves: Dict[Position, List[Position]]
 
     def __init__(self) -> None:
         self.board, self.generals = createXiangqiBoard()
         self.currentSide = Side.Red
         self.moveHistory = []
+        self._validMoves = self._getAllValidMoves()
 
 
     def _getAllPossibleMoves(self) -> Dict[Position, List[Position]]:
         return {position: piece.getPossibleMoves(self.board, position) for position, piece in self.board[self.currentSide].items()}
 
-    def _getAllValidMoves(self) -> List[Move]:  # TODO: Maybe change return type
+    def _getAllValidMoves(self) -> Dict[Position, List[Position]]:
         possibleMoves: Dict[Position, List[Position]] = {}
         checks, pins = self._getChecksAndPins()
 
@@ -66,7 +76,16 @@ class XiangqiEngine:
                             if end not in validEnds:
                                 possibleMoves[start].remove(end)
 
-        # TODO: Generate General moves and check if it will be in check => if it is undo the move then remove it from possible moves
+        for possibleGeneralMove in list(possibleMoves[self.generals[self.currentSide]]):
+            self._move(self.generals[self.currentSide], possibleGeneralMove)
+            checks, _ = self._getChecksAndPins()
+            self._undoMove()
+            if len(checks) > 0:
+                possibleMoves[self.generals[self.currentSide]].remove(possibleGeneralMove)
+
+        for piece in list(possibleMoves):
+            if len(possibleMoves[piece]) == 0:
+                del possibleMoves[piece]
 
         return possibleMoves
 
@@ -75,9 +94,9 @@ class XiangqiEngine:
         pins = defaultdict(list)
         for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
             possiblePinPositions = []
-            position = self.generals[self.currentSide] + delta
+            position = self.generals[self.currentSide]
             foundBoardEntityCount = 0
-            while self.board.isInBounds(position) and foundBoardEntityCount < 3:
+            while self.board.isInBounds(position := position + delta) and foundBoardEntityCount < 3:
                 if (foundBoardEntity := self.board[position]) is not None:
                     foundBoardEntityCount += 1
                     if foundBoardEntity.side == self.currentSide:
@@ -86,7 +105,7 @@ class XiangqiEngine:
                         if (foundBoardEntityCount == 1 and foundBoardEntity.piece != Cannon) or (foundBoardEntityCount == 2 and foundBoardEntity.piece == Cannon) and \
                             foundBoardEntity.piece.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide]):
                             checks.append(position)
-                        elif len(possiblePinPositions) > 0 and not (foundBoardEntityCount == 3 ^ foundBoardEntity.piece == Cannon):
+                        elif len(possiblePinPositions) > 0 and not ((foundBoardEntityCount == 3) ^ (foundBoardEntity.piece == Cannon)):
                             for possiblePinPosition in list(possiblePinPositions):
                                 possiblePinBoardEntity = self.board[possiblePinPosition]
                                 self.board[possiblePinPosition] = None
@@ -117,27 +136,24 @@ class XiangqiEngine:
             start = Position(*start)
         if not isinstance(end, Position):
             end = Position(*end)
-        move = Move(start, end)
 
         if self.board[start] == None:
-            raise InvalidMove(None, move, f"No piece found on {*start,}")
-
-        # chosenPiece = self.board[fromPositon].piece
-        # if not chosenPiece.isValidMove(self.board, self.currentSide, fromPositon, toPosition):
-        #     raise InvalidMove(chosenPiece, fromPositon, toPosition)
+            raise InvalidMove(None, start, end, f"No piece found on {*start,}")
+        elif end not in self._validMoves[start]:
+            raise InvalidMove(self.board[start], start, end)
 
         self._move(start, end)
 
-        # allyGeneralFile, allyGeneralRank = self.generals[self.currentSide]
-        # if General.isInCheck(self.board, self.currentSide, allyGeneralFile, allyGeneralRank):
-        #     self._undoMove()
-        #     raise InvalidMove(chosenPiece, fromPositon, toPosition, f"{self.currentSide}'s General is in check, cannot move {chosenPiece} from {*fromPositon,} to {*toPosition,}")
+        self.currentSide = self.currentSide.opponent
+        self._validMoves = self._getAllValidMoves()
 
-        # enemyGeneralFile, enemyGeneralRank = self.generals[self.currentSide.opponent]
-        # if General.isInCheck(self.board, self.currentSide.opponent, enemyGeneralFile, enemyGeneralRank):
-        #     logging.info(f"{self.currentSide.opponent}'s General is in check")
+        if len(self._validMoves) == 0:
+            logging.info(f"{self.currentSide.opponent} has delivered a mate, {self.currentSide.opponent} won!")
+        else:
+            checks, _ = self._getChecksAndPins()
+            if len(checks) > 0:
+                logging.info(f"{self.currentSide} is in check!")
 
-        #self.currentSide = self.currentSide.opponent
         self.print()
 
     def _move(self, start: Position, end: Position) -> None:
@@ -150,13 +166,20 @@ class XiangqiEngine:
 
     def undoMove(self) -> None:
         self._undoMove()
+        self.currentSide = self.currentSide.opponent
+        self._validMoves = self._getAllValidMoves()
         self.print()
 
     def _undoMove(self) -> None:
         if len(self.moveHistory) > 0:
             lastMove = self.moveHistory.pop()
-            self.board[lastMove.fromPosition] = lastMove.movedPieceEntity
-            self.board[lastMove.toPosition] = lastMove.capturedPieceEntity
+            self.board[lastMove.start] = lastMove.movedPieceEntity
+            self.board[lastMove.end] = lastMove.capturedPieceEntity
+
+            if lastMove.movedPieceEntity.piece == General:
+                self.generals[lastMove.movedPieceEntity.side] = lastMove.start
+        else:
+            raise XiangqiError("Cannot undo move, game is in start state")
 
     def print(self) -> None:
         boardStr = ""
@@ -205,8 +228,30 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     game = XiangqiEngine()
-    game.move((0, 0), (0, 1))
-    game.move((0, 1), (3, 1))
-    game.move((3, 1), (3, 8))
-    game.move((3, 8), (4, 8))
-    game.undoMove()
+
+    while True:
+        command = input("Command: ")
+        if command == "undo":
+            try:
+                game.undoMove()
+            except XiangqiError as error:
+                logging.info(error)
+        else:
+            try:
+                commandParts = command.split(" ")
+                if len(commandParts) == 2:
+                    startPositionStrs = commandParts[0].split(",")
+                    endPositionStrs = commandParts[1].split(",")
+                    if len(startPositionStrs) == 2 and len(endPositionStrs) == 2:
+                        start = Position(int(startPositionStrs[0]), int(startPositionStrs[1]))
+                        end = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
+                        try:
+                            game.move(start, end)
+                        except InvalidMove as error:
+                            logging.info(error)
+                        finally:
+                            continue
+            except:
+                pass
+            logging.info("Invalid command")
+            
