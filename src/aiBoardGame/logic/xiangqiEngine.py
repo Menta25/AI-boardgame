@@ -1,4 +1,3 @@
-from locale import normalize
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
@@ -40,6 +39,10 @@ class XiangqiEngine:
             raise XiangqiError("Could not convert notation to move")
         self.move(start, end)
 
+    # TODO: Do not allow perpetual chasing and checking
+    # TODO: Signal end of the game (its kind of already implemented)
+    # TODO: Calculate approximate values for each side
+    # TODO: Generate appropriate games state for AlphaZero
     def move(self, start: Union[Position, Tuple[int, int]], end: Union[Position, Tuple[int, int]]) -> None:
         if not isinstance(start, Position):
             start = Position(*start)
