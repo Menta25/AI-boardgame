@@ -5,6 +5,9 @@ from aiBoardGame.logic.pieces import Piece
 from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 
+_RIVER_RANK = (Piece.rankLength() + 1) / 2
+
+
 @dataclass(init=False)
 class Soldier(Piece):
     abbreviation: ClassVar[str] = "S"
@@ -24,11 +27,13 @@ class Soldier(Piece):
 
         return isOneDeltaOnly and isValidDeltaRank or isValidDeltaFile
 
+
+
     @classmethod
     def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
         possibleToPositions.append(start + Delta(0, side))
-        isOverRiver = start.rank >= (Piece.rankLength() + 1) / 2
+        isOverRiver = start.rank >= _RIVER_RANK if side == Side.Red else start.rank < _RIVER_RANK
         if isOverRiver:
             possibleToPositions.append(start + Delta(1, 0))
             possibleToPositions.append(start + Delta(-1, 0))

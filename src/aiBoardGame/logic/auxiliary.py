@@ -1,10 +1,10 @@
 from __future__ import annotations
-from decimal import InvalidOperation
 
+from math import sqrt
 from enum import IntEnum
 from dataclasses import dataclass
-from math import sqrt
-from typing import ClassVar, Dict, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
+from re import A
+from typing import ClassVar, Dict, Generator, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 
 Piece = TypeVar("Piece")
@@ -54,7 +54,7 @@ class Delta(NamedTuple):
         return Delta(self.file/other, self.rank/other)
 
     def __abs__(self) -> float:
-        return sqrt(self.file**2, self.rank**2)
+        return sqrt(self.file**2 + self.rank**2)
 
 class Position(NamedTuple):
     file: int
@@ -102,7 +102,16 @@ class Position(NamedTuple):
     def __ge__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
             raise TypeError("Other object must be Position or tuple")
-        return self > other or self == other
+        return self.file >= other[0] and self.rank >= other[1]
+
+    def __le__(self, other: Union[Position, Tuple[int, int]]) -> bool:
+        if not isinstance(other, (Position, tuple)):
+            raise TypeError("Other object must be Position or tuple")
+        return self.file <= other[0] and self.rank <= other[1]
+
+
+    def isBetween(self, first: Position, second: Position) -> bool:
+        return first <= self <= second or first >= self >= second
 
 
 class BoardEntity(NamedTuple):
@@ -123,7 +132,7 @@ class SideState(Dict[Position, Type[Piece]]):
         if isinstance(key, tuple):
             key = Position(*key)
         if isinstance(value, BoardEntity):
-            raise InvalidOperation(f"Cannot assign {value.__class__.__name__} to {self.__class__.__name__} because object is not {value.side.__class__.__name__} aware")
+            raise TypeError(f"Cannot assign {value.__class__.__name__} to {self.__class__.__name__} because object is not {value.side.__class__.__name__} aware")
         return super().__setitem__(key, value)
 
 
@@ -168,8 +177,13 @@ class Board(Dict[Side, SideState]):
                 if key in self[value.side.opponent]:
                     del self[value.side.opponent][key]
         else:
-            raise InvalidOperation(f"Cannot set {value.__class__.__name__} to {self.__class__.__name__}'")
+            raise TypeError(f"Cannot set {value.__class__.__name__} to {self.__class__.__name__}'")
 
     @classmethod
     def isInBounds(cls, position: Position) -> bool:
         return (cls.fileBounds[0], cls.rankBounds[0]) <= position < (cls.fileBounds[1], cls.rankBounds[1])
+        
+    def pieces(self) -> Generator[Tuple[Position, BoardEntity], None, None]:
+        for side, sideState in self.items():
+            for position, piece in sideState.items():
+                yield position, BoardEntity(side, piece)

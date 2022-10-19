@@ -32,13 +32,12 @@ class Chariot(Piece):
     def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
         for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
-            toPosition = start + delta
-            while cls.isPositionInBounds(side, toPosition):
+            toPosition = start
+            while cls.isPositionInBounds(side, toPosition := toPosition + delta):
                 if board[toPosition] is None:
                     possibleToPositions.append(toPosition)
                 elif board[toPosition] is not None:
                     if board[toPosition].side == side.opponent:
                         possibleToPositions.append(toPosition)
                     break
-                toPosition += delta
         return possibleToPositions

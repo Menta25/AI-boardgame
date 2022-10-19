@@ -34,9 +34,9 @@ class Cannon(Piece):
     def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
         for delta in starmap(Delta, chain(product((1,-1), (0,)), product((0,), (1,-1)))):
-            toPosition = start + delta
+            toPosition = start
             hasFoundPiece = False
-            while cls.isPositionInBounds(side, toPosition):
+            while cls.isPositionInBounds(side, toPosition := toPosition + delta):
                 if not hasFoundPiece and board[toPosition] is None:
                     possibleToPositions.append(toPosition)
                 elif board[toPosition] is not None:
@@ -46,5 +46,4 @@ class Cannon(Piece):
                         break
                     else:
                         hasFoundPiece = True
-                toPosition += delta
         return possibleToPositions

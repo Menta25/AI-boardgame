@@ -7,6 +7,7 @@ from aiBoardGame.logic.pieces.chariot import Chariot
 from aiBoardGame.logic.pieces.cannon import Cannon
 from aiBoardGame.logic.pieces.soldier import Soldier
 
+from aiBoardGame.logic.pieces.abbreviations import ABBREVIATION_TO_PIECE
 
 __all__ = [
     "Piece",
@@ -16,5 +17,6 @@ __all__ = [
     "Horse",
     "Chariot",
     "Cannon",
-    "Soldier"
+    "Soldier",
+    "ABBREVIATION_TO_PIECE"
 ]
