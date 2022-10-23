@@ -8,7 +8,7 @@ from aiBoardGame.logic.pieces import General, Cannon
 from aiBoardGame.logic.auxiliary import Board, BoardEntity, Delta, Position, Side
 from aiBoardGame.logic.move import InvalidMove, MoveRecord
 from aiBoardGame.logic.pieces.horse import Horse
-from aiBoardGame.logic.util import createXiangqiBoard, notationToMove, boardToStr
+from aiBoardGame.logic.utility import createXiangqiBoard, notationToMove, boardToStr
 
 
 @dataclass(frozen=True)

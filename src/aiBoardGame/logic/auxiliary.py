@@ -141,8 +141,8 @@ class Board(Dict[Side, SideState]):
     fileBounds: ClassVar[Tuple[int, int]] = (0, 9)
     rankBounds: ClassVar[Tuple[int, int]] = (0, 10)
 
-    fileLength: ClassVar[int] = sum(fileBounds)
-    rankLength: ClassVar[int] = sum(rankBounds)
+    fileCount: ClassVar[int] = sum(fileBounds)
+    rankCount: ClassVar[int] = sum(rankBounds)
 
     def __init__(self) -> None:
         self.update({side: SideState() for side in Side})

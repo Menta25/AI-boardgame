@@ -3,7 +3,7 @@ from typing import ClassVar, Optional
 from pathlib import Path
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
-from aiBoardGame.vision.camera import RobotCamera
+from aiBoardGame.vision.camera import RobotCameraInterface
 
 class CameraThread(QThread):
     newCameraImageSignal: ClassVar[pyqtSignal] = pyqtSignal(np.ndarray)
@@ -19,7 +19,7 @@ class CameraThread(QThread):
         self._camera = None
 
     @property
-    def camera(self) -> Optional[RobotCamera]:
+    def camera(self) -> Optional[RobotCameraInterface]:
         return self._camera
 
     @property
@@ -34,7 +34,7 @@ class CameraThread(QThread):
         self._isUndistorted = value
 
     def run(self):
-        self._camera = RobotCamera(self.capturePath)
+        self._camera = RobotCameraInterface(self.capturePath)
         self._camera.calibrated.connect(self.onCameraCalibrated)
         self._isUndistorted = False
         self._isRunning = True

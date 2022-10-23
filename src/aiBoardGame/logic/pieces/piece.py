@@ -62,11 +62,11 @@ class Piece(ABC):
 
     @staticmethod
     def mirrorFile(file: int) -> int:
-        return Board.fileLength - file - 1
+        return Board.fileCount - file - 1
 
     @staticmethod
     def mirrorRank(rank: int) -> int:
-        return Board.rankLength - rank - 1
+        return Board.rankCount - rank - 1
 
     @staticmethod
     def mirrorPosition(position: Position) -> Position:

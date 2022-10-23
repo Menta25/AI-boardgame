@@ -27,8 +27,8 @@ def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
             xiangqiBoard[side][file, rank] = Cannon
 
     generals = {
-        Side.Red: Position(Board.fileLength // 2, Board.rankBounds[0]),
-        Side.Black: Position(Board.fileLength // 2, Board.rankBounds[1] - 1)
+        Side.Red: Position(Board.fileCount // 2, Board.rankBounds[0]),
+        Side.Black: Position(Board.fileCount // 2, Board.rankBounds[1] - 1)
     }
 
     return xiangqiBoard, generals
@@ -56,7 +56,7 @@ def notationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Posit
                     groupByFile[position.file].append(position.rank)
 
             if notationRegEx["formerFile"] is not None:
-                formerFile = int(notationRegEx["formerFile"]) - 1 if side == Side.Black else Board.fileLength - int(notationRegEx["formerFile"])
+                formerFile = int(notationRegEx["formerFile"]) - 1 if side == Side.Black else Board.fileCount - int(notationRegEx["formerFile"])
                 start = Position(formerFile, groupByFile[formerFile][floor(len(groupByFile[formerFile])/2)])
             else:
                 for file, ranks in groupByFile.items():
@@ -67,14 +67,14 @@ def notationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Posit
                         break
 
             if notationRegEx["direction"] in ["=", ".", ","]:
-                newFile = int(notationRegEx["newFileOrDeltaRank"]) - 1 if side == Side.Black else Board.fileLength - int(notationRegEx["newFileOrDeltaRank"])
+                newFile = int(notationRegEx["newFileOrDeltaRank"]) - 1 if side == Side.Black else Board.fileCount - int(notationRegEx["newFileOrDeltaRank"])
                 end = Position(newFile, start.rank)
             else:
                 if notatedPiece in [Soldier, Chariot, Cannon, General]:
                     ranksTraversed = int(notationRegEx["newFileOrDeltaRank"])
                     end = start + Delta(0, _OPERATOR_MAP[notationRegEx["direction"]](ranksTraversed) * side)
                 else:
-                    newFile = int(notationRegEx["newFileOrDeltaRank"]) - 1 if side == Side.Black else Board.fileLength - int(notationRegEx["newFileOrDeltaRank"])
+                    newFile = int(notationRegEx["newFileOrDeltaRank"]) - 1 if side == Side.Black else Board.fileCount - int(notationRegEx["newFileOrDeltaRank"])
                     if notatedPiece == Advisor:
                         rankDelta = 1
                     elif notatedPiece == Elephant:
@@ -89,8 +89,8 @@ def notationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Posit
 
 def boardToStr(board: Board) -> str:
     boardStr = ""
-    for rank in range(board.rankLength - 1, -1, -1):
-        for file in range(board.fileLength):
+    for rank in range(board.rankCount - 1, -1, -1):
+        for file in range(board.fileCount):
             if file == board.fileBounds[0]:
                 if rank == board.rankBounds[0]:
                     char = " ┗"
@@ -106,9 +106,9 @@ def boardToStr(board: Board) -> str:
                 else:
                     char = "━┫"
             else:
-                if rank in [board.rankBounds[0], board.rankLength//2]:
+                if rank in [board.rankBounds[0], board.rankCount//2]:
                     char = "━┻"
-                elif rank in [board.rankBounds[1] - 1, board.rankLength//2-1]:
+                elif rank in [board.rankBounds[1] - 1, board.rankCount//2-1]:
                     char = "━┳"
                 else:
                     char = "━╋"
@@ -117,7 +117,7 @@ def boardToStr(board: Board) -> str:
             boardStr += "━━"
         boardStr = boardStr[:-2]
 
-        if rank == board.rankLength//2:
+        if rank == board.rankCount//2:
             boardStr += "\n ┃                               ┃\n"
         elif rank == board.rankBounds[1] - 1 or rank == board.rankBounds[0] + 2:
             boardStr += "\n ┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃\n"
