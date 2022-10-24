@@ -1,0 +1,9 @@
+kb 40 kép bábunként (kb 1000x-esére)
+teszt set-en 98% felett legyen !!!!
+vgg16 (ha nem)
+kép felbontás először 32x32 -> __64x6x__ (alap) -> és -> 128x128
+színek külön + dúsításnál: nem nagy szín modifikáció !!!
+forgatás, fényviszony, eltolás, szögből
+folyó, kastély, sima => mindegyik
+
+train fgv -> képekből betanít egy osztályozót (pyfile vagy gomb) + config: betölt modellt

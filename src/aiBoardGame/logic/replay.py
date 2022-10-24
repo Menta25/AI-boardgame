@@ -18,7 +18,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="")
     try:
         gameRecord = Path(input("Gamerecord path: "))
-        replayGame(gameRecord, 1)
+        replayGame(gameRecord, 0)
     except (InvalidMove, XiangqiError) as error:
         logging.info(error)
     except:

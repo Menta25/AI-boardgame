@@ -44,6 +44,7 @@ class AbstractCameraInterface(QObject):
         super().__init__(parent)
 
         self.resolution = resolution
+
         self._intrinsicMatrix: Optional[np.ndarray] = None
         self._distortionCoefficients: Optional[np.ndarray] = None
         self._undistortedIntrinsicMatrix: Optional[np.ndarray] = None
@@ -226,9 +227,9 @@ class RobotCamera(RobotCameraInterface):
         super().__init__(resolution, intrinsicsFile, parent)
 
         if isinstance(feedInput, (int, str)):
-            self._capture = cv.VideoCapture(feedInput)
+            self._capture = cv.VideoCapture(feedInput, cv.CAP_V4L2)
         elif isinstance(feedInput, Path):
-            self._capture = cv.VideoCapture(feedInput.as_posix())
+            self._capture = cv.VideoCapture(feedInput.as_posix(), cv.CAP_V4L2)
         else:
             raise CameraError("Invalid camera input type, must be int, Path or str")
 
