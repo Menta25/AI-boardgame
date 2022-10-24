@@ -21,9 +21,9 @@ class BoardImage:
     tileHeight: int = field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "tileWidth", int(self.data.shape[1] / self.fileCount))
-        object.__setattr__(self, "tileHeight", int(self.data.shape[0] / self.rankCount))
-        _boardLogger.info(f"Create Board(rows={self.rankCount}; cols={self.fileCount}; tileSize={self.tileWidth}x{self.tileHeight}) from {self.data.shape} array")
+        object.__setattr__(self, "tileWidth", int(self.data.shape[1] / Board.fileCount))
+        object.__setattr__(self, "tileHeight", int(self.data.shape[0] / Board.rankCount))
+        _boardLogger.info(f"Create Board(rows={Board.rankCount}; cols={Board.fileCount}; tileSize={self.tileWidth}x{self.tileHeight}) from {self.data.shape} array")
 
     @property
     def tiles(self) -> np.ndarray:
@@ -56,7 +56,7 @@ class BoardImage:
         blurredBoard = cv.medianBlur(self.data, 5)
         grayBlurredBoard = cv.cvtColor(blurredBoard, cv.COLOR_BGR2GRAY)
 
-        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.2, minDist=self.tileWidth*3/4, param1=60, param2=50, minRadius=int(self.tileWidth/3), maxRadius=int(self.tileWidth/2.5))
+        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.5, minDist=self.tileWidth, param1=30, param2=46, minRadius=int(self.tileWidth/2 - self.tileWidth/10), maxRadius=int(self.tileWidth/2 + self.tileWidth/10))
         if pieces is None:
             print("No piece found")
             return

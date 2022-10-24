@@ -205,7 +205,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         boardWidth, boardHeight = boardSize if boardSize is not None else (self._boardWidth, self._boardHeight)
 
         _cameraLogger.debug("Transforming detected board image")
-        board = np.array([markers[i][0][(i+2) % 4] for i in range(4)])
+        board = np.array([markers[i][0][i] for i in range(4)])
         mat = cv.getPerspectiveTransform(board, np.float32([
             [0, 0],
             [boardWidth, 0],
