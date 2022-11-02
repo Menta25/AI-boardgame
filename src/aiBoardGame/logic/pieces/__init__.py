@@ -30,5 +30,5 @@ __all__ = [
     "Chariot",
     "Cannon",
     "Soldier",
-    "ABBREVIATION_TO_PIECE",
+    "ABBREVIATION_TO_PIECE"
 ]
