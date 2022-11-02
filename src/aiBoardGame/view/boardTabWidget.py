@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSlot
 
 from aiBoardGame.view.cameraFeed import CameraFeed
 from aiBoardGame.view.cameraFeed import CameraThread
-from aiBoardGame.view.utils import imageToPixmap
+from aiBoardGame.view.utility import imageToPixmap
 
 from aiBoardGame.vision.camera import CameraError
 

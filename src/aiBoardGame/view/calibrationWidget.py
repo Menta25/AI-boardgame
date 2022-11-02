@@ -9,7 +9,7 @@ from PyQt6.QtGui import QCloseEvent
 from aiBoardGame.view.cameraThread import CameraThread
 from aiBoardGame.view.cameraFeed import CameraFeed
 
-from aiBoardGame.vision.camera import RobotCamera, CameraError
+from aiBoardGame.vision.camera import RobotCameraInterface, CameraError
 
 
 _UI_PATH = Path("src/aiBoardGame/view/ui/calibrationWidget.ui")
@@ -28,7 +28,7 @@ class CalibrationWidget(QWidget):
 
         self.calibrateButton.setEnabled(self._cameraThread is not None)
 
-        self.calibrationProgressBar.setMaximum(RobotCamera.calibrationMinPatternCount)
+        self.calibrationProgressBar.setMaximum(RobotCameraInterface.calibrationMinPatternCount)
         self._calibrationImages = []
         self.calibrateButton.clicked.connect(self.collectCalibrationImage)
 
@@ -44,14 +44,14 @@ class CalibrationWidget(QWidget):
     @pyqtSlot()
     def collectCalibrationImage(self) -> None:
         image = self._cameraThread.image
-        if RobotCamera.isSuitableForCalibration(image, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value())):
+        if RobotCameraInterface.isSuitableForCalibration(image, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value())):
             if self.horizontalVerticiesSpinBox.isEnabled() or self.verticalVerticiesSpinBox.isEnabled():
                 self.setVerticiesSpinBoxEnabled(False)
 
             self._calibrationImages.append(image)
             self.calibrationProgressBar.setValue(len(self._calibrationImages))
 
-            if len(self._calibrationImages) >= RobotCamera.calibrationMinPatternCount:
+            if len(self._calibrationImages) >= RobotCameraInterface.calibrationMinPatternCount:
                 self.calibrateCamera()
 
     def calibrateCamera(self) -> None:

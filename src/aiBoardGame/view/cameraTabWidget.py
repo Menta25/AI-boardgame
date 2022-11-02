@@ -1,4 +1,4 @@
-import logging
+import cv2 as cv
 from pathlib import Path
 from typing import Optional, List
 from PyQt6 import uic
@@ -44,19 +44,36 @@ class CameraTabWidget(QWidget):
 
     def initCameraInputsComboBox(self) -> None:
         cameras = self.listCameras()
-        self.cameraInputsComboBox.addItems([camera.as_posix() for camera in cameras])
+        self.cameraInputsComboBox.addItems([str(camera) for camera in cameras])
         self.cameraInputsComboBox.setCurrentIndex(-1)
 
-    def listCameras(self) -> List[Path]:
-        devPath = Path("/dev/")
-        return list(devPath.glob("video*"))
+    def listCameras(self) -> List[int]:
+        """
+        Test the ports and returns a tuple with the available ports and the ones that are working.
+        """
+        non_working_ports = []
+        dev_port = 0
+        working_ports = []
+        while len(non_working_ports) < 6: # if there are more than 5 non working ports stop the testing. 
+            camera = cv.VideoCapture(dev_port)
+            if not camera.isOpened():
+                non_working_ports.append(dev_port)
+            else:
+                is_reading, _ = camera.read()
+                _ = camera.get(3)
+                _ = camera.get(4)
+                if is_reading:
+                    working_ports.append(dev_port)
+            dev_port +=1
+            camera.release()
+        return working_ports
 
     @pyqtSlot(str)
-    def initCamera(self, cameraPathStr: str) -> None:
+    def initCamera(self, cameraIndexStr: str) -> None:
         if self._cameraThread.isRunning():
             self._cameraThread.stop()
 
-        self._cameraThread.capturePath = Path(cameraPathStr)
+        self._cameraThread.captureIndex = int(cameraIndexStr)
         self._cameraThread.start()
 
         if not self.calibrateButton.isEnabled():

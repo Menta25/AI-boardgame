@@ -6,8 +6,9 @@ import cv2 as cv
 from pathlib import Path
 from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union, List
 from PyQt6.QtCore import pyqtSignal, QObject
+from aiBoardGame.logic.auxiliary import Board
 
-from aiBoardGame.model.board import Board
+from aiBoardGame.vision.boardImage import BoardImage
 
 
 _cameraLogger = logging.getLogger(__name__)
@@ -33,42 +34,24 @@ class CameraError(Exception):
         self.message = message
 
 
-
-class Camera(QObject):
+class AbstractCameraInterface(QObject):
     """Class for handling camera input"""
     calibrated: ClassVar[pyqtSignal] = pyqtSignal()
-
     calibrationMinPatternCount: ClassVar[int] = 5
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
 
-        if isinstance(feedInput, (int, str)):
-            self._capture = cv.VideoCapture(feedInput)
-        elif isinstance(feedInput, Path):
-            self._capture = cv.VideoCapture(feedInput.as_posix())
-        else:
-            raise CameraError("Invalid camera input type, must be int, Path or str")
-
-        if not self._capture.isOpened():
-            raise CameraError("Cannot open camera, invalid feed input")
+        self.resolution = resolution
 
         self._intrinsicMatrix: Optional[np.ndarray] = None
         self._distortionCoefficients: Optional[np.ndarray] = None
-
         self._undistortedIntrinsicMatrix: Optional[np.ndarray] = None
         self._regionOfInterest: Optional[Tuple[float, float, float, float]] = None
 
         if intrinsicsFile is not None:
             self.loadParameters(intrinsicsFile)
-
-    def __del__(self) -> None:
-        self._capture.release()
-
-    @property
-    def resolution(self) -> Resolution:
-        return Resolution(int(self._capture.get(cv.CAP_PROP_FRAME_WIDTH)), int(self._capture.get(cv.CAP_PROP_FRAME_HEIGHT)))
 
     @property
     def isCalibrated(self) -> bool:
@@ -89,25 +72,12 @@ class Camera(QObject):
             raise CameraError("Camera is not calibrated yet")
         return FocalLength(self._intrinsicMatrix[0][0], self._intrinsicMatrix[1][1])
 
-    def read(self, undistorted: bool = True) -> Optional[np.ndarray]:
-        wasSuccessful, image = self._capture.read()
-        if wasSuccessful:
-            return image if undistorted is False else self._undistort(image)
-        else:
-            return None
-
     def _undistort(self, image: np.ndarray) -> np.ndarray:
         if not self.isCalibrated:
                 raise CameraError("Camera is not calibrated yet")
         undistortedImage = cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
         x, y, width, height = self._regionOfInterest
         return undistortedImage[y:y+height, x:x+width]
-
-    def feed(self, undistorted: bool = True) -> Iterator[np.ndarray]:
-        while True:
-            image = self.read(undistorted)
-            if image is not None:
-                yield image
 
     @staticmethod
     def isSuitableForCalibration(image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
@@ -196,22 +166,19 @@ class Camera(QObject):
             raise CameraError(f"Invalid parameter file, cannot load calibration\n{attributeError}")
 
 
-class RobotCamera(Camera):
+class RobotCameraInterface(AbstractCameraInterface):
     """Camera subclass used for playing board games"""
-    _boardRows: ClassVar[int] = 10
-    _boardCols: ClassVar[int] = 9
+    def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+        super().__init__(resolution, intrinsicsFile, parent)
 
-    def __init__(self, feedInput: Union[int, Path, str], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
-        super().__init__(feedInput, intrinsicsFile, parent)
-
-        self._boardHeight = min(self.resolution.width, self.resolution.height)
-        self._boardHeight -= self._boardHeight % self._boardRows
-        self._boardWidth = int(self._boardHeight * self._boardCols / self._boardRows)
-        self._boardWidth -= self._boardHeight % self._boardCols
+        self._boardHeight = int(min(self.resolution.width, self.resolution.height) * (3/4))
+        self._boardHeight -= self._boardHeight % Board.rankCount
+        self._boardWidth = int(self._boardHeight * Board.fileCount / Board.rankCount)
+        self._boardWidth -= self._boardHeight % Board.fileCount
 
         self._robotToCameraTransform: Optional[np.ndarray] = None
 
-    def detectBoard(self, image: np.ndarray, arucoDictEnum: int = cv.aruco.DICT_4X4_50) -> Board:
+    def detectBoard(self, image: np.ndarray, boardSize: Optional[Tuple[int, int]] = None) -> BoardImage:
         """
             Detect game board on given image with the help of 4 ArUco markers and return a Board instance
 
@@ -222,7 +189,7 @@ class RobotCamera(Camera):
         _cameraLogger.debug("[Detect board on image]")
 
         _cameraLogger.debug("Get ArUco dictionary")
-        arucoDict = cv.aruco.getPredefinedDictionary(arucoDictEnum)
+        arucoDict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
         arucoParams = cv.aruco.DetectorParameters_create()
 
         _cameraLogger.debug("Detecting ArUco markers")
@@ -236,17 +203,54 @@ class RobotCamera(Camera):
         markers = zip(markerIDs, markerCorners)
         markers = {markerId[0]-1: markerCorners for markerId, markerCorners in markers}
 
+        boardWidth, boardHeight = boardSize if boardSize is not None else (self._boardWidth, self._boardHeight)
+
         _cameraLogger.debug("Transforming detected board image")
-        board = np.array([markers[i][0][(i+2) % 4] for i in range(4)])
+        board = np.array([markers[i][0][i] for i in range(4)])
         mat = cv.getPerspectiveTransform(board, np.float32([
             [0, 0],
-            [self._boardWidth, 0],
-            [self._boardWidth, self._boardHeight],
-            [0, self._boardHeight]
+            [boardWidth, 0],
+            [boardWidth, boardHeight],
+            [0, boardHeight]
         ]))
-        warpedBoard = cv.warpPerspective(image, mat, (self._boardWidth, self._boardHeight), flags=cv.INTER_LINEAR)
-        return Board(warpedBoard, rows=self._boardRows, cols=self._boardCols)
+        warpedBoard = cv.warpPerspective(image, mat, (boardWidth, boardHeight), flags=cv.INTER_LINEAR)
+        return BoardImage(warpedBoard)
 
-    def calculateRobotToCameraTransform(self, robotPoints: np.ndarray, board: Board) -> None:
+    # TODO: Implement
+    def calculateRobotToCameraTransform(self, robotPoints: np.ndarray, board: BoardImage) -> None:
         if len(robotPoints) != 4:
             raise CameraError(f"Robot to camera transform calculation needs 4 points in the robot's coordinate system, got {len(robotPoints)}")
+
+
+class RobotCamera(RobotCameraInterface):
+    def __init__(self, feedInput: Union[int, Path, str], resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+        super().__init__(resolution, intrinsicsFile, parent)
+
+        if isinstance(feedInput, (int, str)):
+            self._capture = cv.VideoCapture(feedInput, cv.CAP_V4L2)
+        elif isinstance(feedInput, Path):
+            self._capture = cv.VideoCapture(feedInput.as_posix(), cv.CAP_V4L2)
+        else:
+            raise CameraError("Invalid camera input type, must be int, Path or str")
+
+        if not self._capture.isOpened():
+            raise CameraError("Cannot open camera, invalid feed input")
+
+        self._capture.set(cv.CAP_PROP_FRAME_WIDTH, resolution.width)
+        self._capture.set(cv.CAP_PROP_FRAME_HEIGHT, resolution.height)
+
+    def read(self, undistorted: bool = True) -> Optional[np.ndarray]:
+        wasSuccessful, image = self._capture.read()
+        if wasSuccessful:
+            return image if undistorted is False else self._undistort(image)
+        else:
+            return None
+
+    def feed(self, undistorted: bool = True) -> Iterator[np.ndarray]:
+        while True:
+            image = self.read(undistorted)
+            if image is not None:
+                yield image
+
+    def __del__(self) -> None:
+        self._capture.release()
