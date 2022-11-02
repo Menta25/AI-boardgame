@@ -118,6 +118,9 @@ class BoardEntity(NamedTuple):
     side: Side
     piece: Type[Piece]
 
+    def __str__(self) -> str:
+        return f"{self.side}{self.piece.name()}"
+
 
 class SideState(Dict[Position, Type[Piece]]):
     def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Type[Piece]]:
@@ -187,3 +190,4 @@ class Board(Dict[Side, SideState]):
         for side, sideState in self.items():
             for position, piece in sideState.items():
                 yield position, BoardEntity(side, piece)
+                

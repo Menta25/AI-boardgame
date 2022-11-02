@@ -15,6 +15,10 @@ class Piece(ABC):
     abbreviation: ClassVar[str] = "X"
 
     @classmethod
+    def name(cls) -> str:
+        return cls.__name__
+
+    @classmethod
     def fileLength(cls) -> int:
         return sum(cls.fileBounds)
 

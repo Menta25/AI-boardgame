@@ -9,6 +9,18 @@ from aiBoardGame.logic.pieces.soldier import Soldier
 
 from aiBoardGame.logic.pieces.abbreviations import ABBREVIATION_TO_PIECE
 
+
+PIECE_SET = [
+    Advisor,
+    Cannon,
+    Chariot,
+    Elephant,
+    General,
+    Horse,
+    Soldier
+]
+
+
 __all__ = [
     "Piece",
     "General",
@@ -18,5 +30,5 @@ __all__ = [
     "Chariot",
     "Cannon",
     "Soldier",
-    "ABBREVIATION_TO_PIECE"
+    "ABBREVIATION_TO_PIECE",
 ]
