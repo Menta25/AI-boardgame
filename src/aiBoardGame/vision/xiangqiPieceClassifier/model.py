@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import time
-import logging
 import torch
+import logging
 from pathlib import Path
 from torch import Tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
@@ -16,11 +16,12 @@ from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataLo
 from aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping import EarlyStopping
 from aiBoardGame.logic.auxiliary import BoardEntity
 
+
 class XiangqiPieceClassifier:
     batchSize: ClassVar[int] = 32
     epochCount: ClassVar[int] = 150
 
-    classes: ClassVar[List[BoardEntity]] = XIANGQI_PIECE_CLASSES
+    classes: ClassVar[List[Optional[BoardEntity]]] = XIANGQI_PIECE_CLASSES
 
     def __init__(self, weights: Optional[Union[Path, Dict[str, Tensor]]] = None, device: str = "cpu") -> None:
         self._model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=ResNet18_Weights.DEFAULT if weights is None else None)
@@ -50,7 +51,7 @@ class XiangqiPieceClassifier:
         self.model.load_state_dict(weights)
 
     def saveWeights(self, savePath: Path) -> None:
-        torch.save(self.model.state_dict(), savePath)
+        torch.save(self.model.state_dict(), savePath.with_suffix("pt"))
 
     def trainFromScratch(self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader) -> XiangqiPieceClassifier:       
         criterion = CrossEntropyLoss()
@@ -129,8 +130,8 @@ class XiangqiPieceClassifier:
                 if phase == "train":
                     scheduler.step()                  
                 
-                epochLoss = runningLoss / len(dataLoader.sampler.indices)
-                epochAccuracy = runningCorrects.double() / len(dataLoader.sampler.indices)
+                epochLoss = runningLoss / len(dataLoader.dataset.indices)
+                epochAccuracy = runningCorrects.double() / len(dataLoader.dataset.indices)
 
                 logging.debug(f"{phase.capitalize()} Loss: {epochLoss:.4f} Accuracy: {epochAccuracy:.4f}")
 
@@ -171,7 +172,7 @@ class XiangqiPieceClassifier:
             accuracy = 100 * float(correctCount) / totalPredictions[pieceClass]
             logging.info(f"Accuracy for class: {pieceClass} is {accuracy:.1f} %")
 
-    def predict(self, image: Tensor) -> BoardEntity:
+    def predict(self, image: Tensor) -> Optional[BoardEntity]:
         self.model.eval()
         image = image.to(self.device)
         output = self.model(image.unsqueeze(0))
@@ -208,7 +209,7 @@ if __name__ == "__main__":
 
     logging.info("")
 
-    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/BlackElephant/cut_25.jpg")
+    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/None/cut_15.jpg")
     pieceImage = cv.imread(pieceImagePath.as_posix())
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 

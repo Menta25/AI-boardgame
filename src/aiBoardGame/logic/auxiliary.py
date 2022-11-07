@@ -18,9 +18,6 @@ class Side(IntEnum):
     def opponent(self) -> Side:
         return Side(-self)
 
-    def __str__(self) -> str:
-        return super().__str__().split(".")[-1]
-
 
 class Delta(NamedTuple):
     file: Union[int, float]
@@ -119,7 +116,7 @@ class BoardEntity(NamedTuple):
     piece: Type[Piece]
 
     def __str__(self) -> str:
-        return f"{self.side}{self.piece.name()}"
+        return f"{self.side.name}{self.piece.name()}"
 
 
 class SideState(Dict[Position, Type[Piece]]):
