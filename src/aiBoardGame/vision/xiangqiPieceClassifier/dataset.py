@@ -21,12 +21,17 @@ class XiangqiPieceDataLoader(DataLoader):
 
 
 class XiangqiPieceDataset(ImageFolder):
+    basicTransform: ClassVar[transforms.Compose] = transforms.Compose([
+        transforms.Resize((128, 128)),
+        transforms.ToTensor()
+    ])
     trainTransform: ClassVar[transforms.Compose] = transforms.Compose([
+        basicTransform.transforms[0],
         transforms.RandomAffine(degrees=180, translate=(0.15, 0.15), scale=(0.8, 1.2)),
         transforms.ColorJitter(brightness=(0.9, 1.5), contrast=0.2, saturation=0.1, hue=0.04),
         transforms.RandomAdjustSharpness(sharpness_factor=1.5, p=0.3),
         transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 0.8)),
-        transforms.ToTensor()
+        basicTransform.transforms[-1]
     ])
     splitSizeFractions: ClassVar[List[float]] = [0.8, 0.1, 0.1]
 
@@ -47,7 +52,7 @@ class XiangqiPieceDataset(ImageFolder):
 
     @staticmethod
     def _generateSubsets(root: Path) -> List[Subset]:
-        basicDataset = XiangqiPieceDataset(root, transforms.Compose([transforms.ToTensor()]))
+        basicDataset = XiangqiPieceDataset(root, XiangqiPieceDataset.basicTransform)
         augmentedDataset = XiangqiPieceDataset(root, XiangqiPieceDataset.trainTransform)
 
         datasetSize = len(basicDataset)

@@ -168,17 +168,20 @@ class AbstractCameraInterface(QObject):
 
 class RobotCameraInterface(AbstractCameraInterface):
     """Camera subclass used for playing board games"""
+
+    _boardImageRatio: ClassVar[float] = 3/4
+
     def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(resolution, intrinsicsFile, parent)
 
-        self._boardHeight = int(min(self.resolution.width, self.resolution.height) * (3/4))
+        self._boardHeight = int(min(self.resolution.width, self.resolution.height) * self._boardImageRatio)
         self._boardHeight -= self._boardHeight % Board.rankCount
         self._boardWidth = int(self._boardHeight * Board.fileCount / Board.rankCount)
         self._boardWidth -= self._boardHeight % Board.fileCount
 
         self._robotToCameraTransform: Optional[np.ndarray] = None
 
-    def detectBoard(self, image: np.ndarray, boardSize: Optional[Tuple[int, int]] = None) -> BoardImage:
+    def detectBoard(self, image: np.ndarray) -> BoardImage:
         """
             Detect game board on given image with the help of 4 ArUco markers and return a Board instance
 
@@ -203,17 +206,15 @@ class RobotCameraInterface(AbstractCameraInterface):
         markers = zip(markerIDs, markerCorners)
         markers = {markerId[0]-1: markerCorners for markerId, markerCorners in markers}
 
-        boardWidth, boardHeight = boardSize if boardSize is not None else (self._boardWidth, self._boardHeight)
-
         _cameraLogger.debug("Transforming detected board image")
         board = np.array([markers[i][0][i] for i in range(4)])
         mat = cv.getPerspectiveTransform(board, np.float32([
             [0, 0],
-            [boardWidth, 0],
-            [boardWidth, boardHeight],
-            [0, boardHeight]
+            [self._boardWidth, 0],
+            [self._boardWidth, self._boardHeight],
+            [0, self._boardHeight]
         ]))
-        warpedBoard = cv.warpPerspective(image, mat, (boardWidth, boardHeight), flags=cv.INTER_LINEAR)
+        warpedBoard = cv.warpPerspective(image, mat, (self._boardWidth, self._boardHeight), flags=cv.INTER_LINEAR)
         return BoardImage(warpedBoard)
 
     # TODO: Implement

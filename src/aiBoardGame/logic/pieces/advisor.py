@@ -17,7 +17,8 @@ class Advisor(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = (Piece.fileBounds[0] + FILE_MARGIN, Piece.fileBounds[1] - FILE_MARGIN)
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
 
-    abbreviation: ClassVar[str] = "A"
+    baseAbbreviation: ClassVar[str] = "A"
+    fenAbbreviation: ClassVar[str] = "A"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

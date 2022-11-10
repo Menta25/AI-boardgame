@@ -14,7 +14,8 @@ class Elephant(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = Piece.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
 
-    abbreviation: ClassVar[str] = "E"
+    baseAbbreviation: ClassVar[str] = "E"
+    fenAbbreviation: ClassVar[str] = "B"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

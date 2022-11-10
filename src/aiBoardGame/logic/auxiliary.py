@@ -3,7 +3,6 @@ from __future__ import annotations
 from math import sqrt
 from enum import IntEnum
 from dataclasses import dataclass
-from re import A
 from typing import ClassVar, Dict, Generator, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 

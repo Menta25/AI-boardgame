@@ -12,7 +12,8 @@ class Piece(ABC):
     fileBounds: ClassVar[Tuple[int, int]] = Board.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = Board.rankBounds
 
-    abbreviation: ClassVar[str] = "X"
+    baseAbbreviation: ClassVar[str] = "X"
+    fenAbbreviation: ClassVar[str] = "X"
 
     @classmethod
     def name(cls) -> str:

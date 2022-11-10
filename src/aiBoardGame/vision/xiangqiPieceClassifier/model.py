@@ -3,18 +3,22 @@ from __future__ import annotations
 import time
 import torch
 import logging
+import cv2 as cv
+import numpy as np
 from pathlib import Path
-from torch import Tensor
+from torch import Tensor, tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from typing import Dict, List, Optional, Union, ClassVar
 from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
+from torchvision import transforms
 
-from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataLoader, XIANGQI_PIECE_CLASSES
+from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataset, XiangqiPieceDataLoader, XIANGQI_PIECE_CLASSES
 from aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping import EarlyStopping
-from aiBoardGame.logic.auxiliary import BoardEntity
+from aiBoardGame.logic.auxiliary import BoardEntity, Board
+from aiBoardGame.vision.boardImage import BoardImage
 
 
 class XiangqiPieceClassifier:
@@ -172,13 +176,54 @@ class XiangqiPieceClassifier:
             accuracy = 100 * float(correctCount) / totalPredictions[pieceClass]
             logging.info(f"Accuracy for class: {pieceClass} is {accuracy:.1f} %")
 
-    def predict(self, image: Tensor) -> Optional[BoardEntity]:
-        self.model.eval()
-        image = image.to(self.device)
-        output = self.model(image.unsqueeze(0))
-        _, prediction = torch.max(output, 1)
-        return self.classes[prediction]
+    def predict(self, input: Tensor) -> List[Optional[BoardEntity]]:
+        if len(input.shape) == 3:
+            input = input.unsqueeze(0)
+        elif len(input.shape) > 4:
+            input = input.reshape(-1, *input.shape[-3:])
 
+        self.model.eval()
+        input = input.to(self.device)
+        output = self.model(input)
+        _, predictions = torch.max(output, 1)
+
+        boardEntities = []
+        for prediction in predictions:
+            boardEntities.append(self.classes[prediction])
+        return boardEntities
+
+    def predictTile(self, tile: np.ndarray) -> Optional[BoardEntity]:
+        if not (len(tile.shape) == 3 and tile.shape[-1] == 3):
+            raise ValueError(f"Invalid tile shape, must be (..., ..., 3)")
+
+        return self.predict(self._cvImagesToTensor(tile[np.newaxis]))
+
+    def predictTiles(self, tiles: np.ndarray) -> Board:
+        if not (tiles.shape[:2] == (Board.fileCount, Board.rankCount) and tiles.shape[-1] == 3):
+            raise ValueError(f"Invalid tiles shape, must be ({Board.fileCount}, {Board.rankCount}, ..., ..., 3)")
+    
+        tilePredicts = self.predict(self._cvImagesToTensor(tiles))
+        
+        board = Board()
+        for rank in range(Board.rankCount):
+            for file in range(Board.fileCount):
+                tilePredict = tilePredicts[file*Board.rankCount+rank]
+                if tilePredict is not None:
+                    side, piece = tilePredict
+                    board[side][file, rank] = piece
+
+        return board
+
+    def predictBoard(self, boardImage: BoardImage) -> Board:
+        return self.predictTiles(boardImage.tiles)
+
+    @staticmethod
+    def _cvImagesToTensor(cvImages: np.ndarray) -> Tensor:
+        if len(cvImages.shape) > 4:
+            cvImages = cvImages.reshape(-1, *cvImages.shape[-3:])
+        pilImagesAsBatch = np.rollaxis(np.flip(cvImages, -1), -1, -3).astype(np.float32)/255
+        return tensor(pilImagesAsBatch)
+    
 
 if __name__ == "__main__":
     import cv2 as cv

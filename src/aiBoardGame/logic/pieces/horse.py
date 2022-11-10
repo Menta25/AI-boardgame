@@ -8,7 +8,8 @@ from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Horse(Piece):
-    abbreviation: ClassVar[str] = "H"
+    baseAbbreviation: ClassVar[str] = "H"
+    fenAbbreviation: ClassVar[str] = "N"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

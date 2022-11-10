@@ -1,7 +1,7 @@
 import re
 from math import floor
 from collections import defaultdict
-from typing import Dict, Literal, Optional, Tuple, Union
+from typing import Dict, Literal, Tuple, Union
 from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 from aiBoardGame.logic.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, ABBREVIATION_TO_PIECE
 
@@ -11,27 +11,27 @@ CANNON_RANK_OFFSET = 2
 
 
 def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
-    xiangqiBoard = Board()
+    board = Board()
 
     uniquePieces = [Chariot, Horse, Elephant, Advisor, General]
     for rank, side in [(Board.rankBounds[0], Side.Red), (Board.rankBounds[1]-1, Side.Black)]:
         for file, piece in enumerate(uniquePieces + uniquePieces[-2::-1]):
-            xiangqiBoard[side][file, rank] = piece
+            board[side][file, rank] = piece
 
     for rank, side in [(Board.rankBounds[0]+SOLDIER_RANK_OFFSET, Side.Red), (Board.rankBounds[1]-SOLDIER_RANK_OFFSET-1, Side.Black)]:
         for file in range(Board.fileBounds[0], Board.fileBounds[1], 2):
-            xiangqiBoard[side][file, rank] = Soldier
+            board[side][file, rank] = Soldier
 
     for rank, side in [(Board.rankBounds[0]+CANNON_RANK_OFFSET, Side.Red), (Board.rankBounds[1]-CANNON_RANK_OFFSET-1, Side.Black)]:
         for file in [Board.fileBounds[0]+1, Board.fileBounds[1]-2]:
-            xiangqiBoard[side][file, rank] = Cannon
+            board[side][file, rank] = Cannon
 
     generals = {
         Side.Red: Position(Board.fileCount // 2, Board.rankBounds[0]),
         Side.Black: Position(Board.fileCount // 2, Board.rankBounds[1] - 1)
     }
 
-    return xiangqiBoard, generals
+    return board, generals
 
 _OPERATOR_MAP = {
     "+": lambda x: x,
@@ -113,7 +113,7 @@ def boardToStr(board: Board) -> str:
                 else:
                     char = "━╋"
 
-            boardStr += str(board[file, rank].side)[0].lower() + board[file, rank].piece.abbreviation if board[file, rank] != None else char
+            boardStr += str(board[file, rank].side.name)[0].lower() + board[file, rank].piece.baseAbbreviation if board[file, rank] != None else char
             boardStr += "━━"
         boardStr = boardStr[:-2]
 

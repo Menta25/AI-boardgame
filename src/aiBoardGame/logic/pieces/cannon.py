@@ -10,7 +10,8 @@ from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Cannon(Piece):
-    abbreviation: ClassVar[str] = "C"
+    baseAbbreviation: ClassVar[str] = "C"
+    fenAbbreviation: ClassVar[str] = "C"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

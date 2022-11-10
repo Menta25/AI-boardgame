@@ -10,7 +10,8 @@ from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Chariot(Piece):
-    abbreviation: ClassVar[str] = "R"
+    baseAbbreviation: ClassVar[str] = "R"
+    fenAbbreviation: ClassVar[str] = "R"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

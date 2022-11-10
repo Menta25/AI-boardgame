@@ -10,7 +10,8 @@ _RIVER_RANK = (Piece.rankLength() + 1) / 2
 
 @dataclass(init=False)
 class Soldier(Piece):
-    abbreviation: ClassVar[str] = "S"
+    baseAbbreviation: ClassVar[str] = "S"
+    fenAbbreviation: ClassVar[str] = "P"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

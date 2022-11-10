@@ -1,11 +1,15 @@
-resnet34 vagy vgg(16)/(8)
+1. Üres képosztály -> 40 kép augmentáció
+2. FEN notation board state-ből
+3. process hívás stdin/stdout (fairyfish -> ucci -> position FEN -> go depth PARAM1 movetime PARAM2 (config)) 
+    - return stdout utolsó sor -> bestmove (xxxx) -> update boardstate + robotkommand ()
+4. robotintegráció + tesztek
 
-imageNet tanított verzió => finomhangolás
+stockfish (state-of-the-art sakkbot)
+    alfa-béta fa keresés -> levélnode-okon -> ezek kiértékelése
 
-augmentation:
-- fekete háttér + kivágott kör
-- forgatás
-- középpont mozgatás picit
-- blur
+=> történhet nn-nel : nnue -> hogy tanítják ezeket <-> ezt összehasonlítani az alphazero tanításával
 
-kínai karakter felismerő háló => le lehet-e tölteni => kép -> karakter => utolsó réteg eldobása (fully) -> global pooling után -> saját
+https://en.wikipedia.org/wiki/Efficiently_updatable_neural_network
+    - alfa-béta fa
+
+class weight -> loss fgv-ben 
