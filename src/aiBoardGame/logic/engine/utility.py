@@ -2,8 +2,9 @@ import re
 from math import floor
 from collections import defaultdict
 from typing import Dict, Literal, Tuple, Union
-from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
-from aiBoardGame.logic.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, ABBREVIATION_TO_PIECE
+
+from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
+from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, ABBREVIATION_TO_PIECE
 
 
 SOLDIER_RANK_OFFSET = 3

@@ -6,8 +6,8 @@ import cv2 as cv
 from pathlib import Path
 from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union, List
 from PyQt6.QtCore import pyqtSignal, QObject
-from aiBoardGame.logic.auxiliary import Board
 
+from aiBoardGame.logic.engine import Board
 from aiBoardGame.vision.boardImage import BoardImage
 
 

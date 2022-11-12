@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Tuple, ClassVar
 
-from aiBoardGame.logic.auxiliary import Board, Position, Side
+from aiBoardGame.logic.engine.auxiliary import Board, Position, Side
 
 
 @dataclass(init=False)

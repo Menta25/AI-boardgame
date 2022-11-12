@@ -15,9 +15,9 @@ from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
 from torchvision import transforms
 
+from aiBoardGame.logic.engine import BoardEntity, Board
 from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataset, XiangqiPieceDataLoader, XIANGQI_PIECE_CLASSES
 from aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping import EarlyStopping
-from aiBoardGame.logic.auxiliary import BoardEntity, Board
 from aiBoardGame.vision.boardImage import BoardImage
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
-from aiBoardGame.logic.auxiliary import Board, BoardEntity, Position
+from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Position
 
 
 Piece = TypeVar("Piece")

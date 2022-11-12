@@ -2,8 +2,9 @@ import logging
 from pathlib import Path
 from time import sleep
 from typing import Optional
-from aiBoardGame.logic.move import InvalidMove
-from aiBoardGame.logic.xiangqiEngine import XiangqiEngine, XiangqiError
+
+from aiBoardGame.logic.engine.move import InvalidMove
+from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine, XiangqiError
 
 def replayGame(gameRecord: Path, intermission: Optional[int] = None) -> None:
     game = XiangqiEngine()

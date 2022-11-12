@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import ClassVar, List
 from itertools import product, chain, starmap
 
-from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
+from aiBoardGame.logic.engine.pieces import Piece
+from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 
 @dataclass(init=False)

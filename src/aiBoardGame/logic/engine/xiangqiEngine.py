@@ -4,11 +4,11 @@ from typing import Dict, List, Tuple, Union
 from itertools import chain, product, starmap
 from collections import defaultdict
 
-from aiBoardGame.logic.pieces import General, Cannon
-from aiBoardGame.logic.auxiliary import Board, BoardEntity, Delta, Position, Side
-from aiBoardGame.logic.move import InvalidMove, MoveRecord
-from aiBoardGame.logic.pieces.horse import Horse
-from aiBoardGame.logic.utility import createXiangqiBoard, notationToMove, boardToStr
+from aiBoardGame.logic.engine.pieces import General, Cannon
+from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Delta, Position, Side
+from aiBoardGame.logic.engine.move import InvalidMove, MoveRecord
+from aiBoardGame.logic.engine.pieces.horse import Horse
+from aiBoardGame.logic.engine.utility import createXiangqiBoard, notationToMove, boardToStr
 
 
 @dataclass(frozen=True)
