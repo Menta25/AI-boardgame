@@ -1,4 +1,4 @@
-1. Üres képosztály -> 40 kép augmentáció
+1. Üres képosztály -> dataset bővítés: nagjából üres, de belelóg más darab vagy ellenőrzés hough transformmal
 2. FEN notation board state-ből
 3. process hívás stdin/stdout (fairyfish -> ucci -> position FEN -> go depth PARAM1 movetime PARAM2 (config)) 
     - return stdout utolsó sor -> bestmove (xxxx) -> update boardstate + robotkommand ()
