@@ -16,7 +16,6 @@ class BoardImage:
     """A game board represented by a ndarray"""
     data: np.ndarray
 
-    corners: np.ndarray = field(init=False)
     positions: np.ndarray = field(init=False)
 
     fileStep: np.float64 = field(init=False)
@@ -27,7 +26,7 @@ class BoardImage:
 
     def __post_init__(self) -> None:
         imageHSV = cv.cvtColor(self.data, cv.COLOR_BGR2HSV)
-        offsetHSV = np.array([5,80,80], np.uint8)
+        offsetHSV = np.array([10,80,80], np.uint8)
         boardHSV = np.array([15,89,153], np.uint8)
         boardMask = cv.inRange(imageHSV, boardHSV-offsetHSV, boardHSV+offsetHSV)
 
@@ -37,28 +36,18 @@ class BoardImage:
         boardContours, _ = cv.findContours(erosion, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         x, y, width, height = cv.boundingRect(np.vstack(boardContours))
 
-        fileStep = width / Board.fileCount
-        rankStep = height / Board.rankCount
+        fileStep = int(width / Board.fileCount)
+        rankStep = int(height / Board.rankCount)
+        tileSize = (np.array([fileStep, rankStep]) * self.offsetMultiplier).astype(np.uint16)
 
-        files = np.linspace(fileStep, width, num=Board.fileCount) + (x - fileStep/2)
-        ranks = np.linspace(rankStep, height, num=Board.rankCount) + (y - rankStep/2)
+        files = np.linspace(x, x+width, num=Board.fileCount+1, dtype=np.uint16)[:-1] + int(fileStep/2)
+        ranks = np.linspace(y, y+height, num=Board.rankCount+1, dtype=np.uint16)[:-1] + int(rankStep/2)
 
-        files = files.astype(np.uint16)
-        ranks = ranks.astype(np.uint16)
-
-        files = np.repeat(files[np.newaxis, :], Board.rankCount, 0)
-        ranks = np.repeat(ranks[:, np.newaxis], Board.fileCount, 1)
+        files = np.repeat(files[:, np.newaxis], Board.rankCount, 1)
+        ranks = np.repeat(ranks[np.newaxis, :], Board.fileCount, 0)
 
         positions = np.dstack((files, ranks))
 
-        corners = np.array([
-            np.array([x, y]),
-            np.array([x+width, y+height])
-        ])
-
-        tileSize = np.array([fileStep, rankStep], dtype=np.float64) * self.offsetMultiplier
-
-        object.__setattr__(self, "corners", corners)
         object.__setattr__(self, "positions", positions)
         object.__setattr__(self, "fileStep", fileStep)
         object.__setattr__(self, "rankStep", rankStep)
@@ -66,41 +55,18 @@ class BoardImage:
 
         _boardLogger.info(f"Created Board from {self.data.shape} array")
 
-    # @property
-    # def tiles(self) -> np.ndarray:
-    #     topLeftCorner = np.around(self.positions[0,0] - self.tileSize/2).astype(int)
-    #     bottomRightCorner = np.around(self.positions[-1,-1] + self.tileSize/2).astype(int)
-
-    #     tileShape = np.around(np.append(self.tileSize[::-1], [3])).astype(int)
-    #     tilesRoi = self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]-1:bottomRightCorner[0]]
-
-    #     rawTiles = np.lib.stride_tricks.sliding_window_view(tilesRoi, tileShape)[::round(self.rankStep),::round(self.fileStep)]
-
-    #     return np.flip(rawTiles.squeeze(2).swapaxes(0,1), 1)
-
     @property
     def tiles(self) -> np.ndarray:
-        for file in self.positions:
-            for tileCenter in file:
-                topLeftCorner = np.around(tileCenter - self.tileSize/2).astype(int)
-                bottomRightCorner = np.around(tileCenter + self.tileSize/2).astype(int)
-
-
-
-        tileShape = np.around(np.append(self.tileSize[::-1], [3])).astype(int)
-        tilesRoi = self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]-1:bottomRightCorner[0]]
-
-        rawTiles = np.lib.stride_tricks.sliding_window_view(tilesRoi, tileShape)[::int(self.rankStep),::int(self.fileStep)]
-
-        return np.flip(rawTiles.squeeze(2).swapaxes(0,1), 1)
+        return np.array([[self._tile(tileCenter) for tileCenter in file[::-1]] for file in self.positions])
 
     def tile(self, position: Position) -> np.ndarray:
         """Return the given tile's ndarray representation"""
         imagePosition: np.ndarray = self.positions[position.file, Board.rankCount-1 - position.rank]
+        return self._tile(imagePosition)
 
-        topLeftCorner = np.around(imagePosition - self.tileSize/2).astype(int)
-        bottomRightCorner = np.around(imagePosition + self.tileSize/2).astype(int)
-
+    def _tile(self, tileCenter: np.ndarray) -> np.ndarray:
+        topLeftCorner = (tileCenter - self.tileSize/2).astype(np.uint16)
+        bottomRightCorner = (tileCenter + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
 
     def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> np.ndarray:
@@ -113,21 +79,32 @@ class BoardImage:
 
     @property
     def roi(self) -> np.ndarray:
-        return self.data[self.corners[0][1]:self.corners[-1][1], self.corners[0][0]:self.corners[-1][0]]
+        topLeftCorner = (self.positions[0,0] - self.tileSize/2).astype(np.uint16)
+        bottomRightCorner = (self.positions[-1,-1] + self.tileSize/2).astype(np.uint16)
+        return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
 
     # NOTE: Obsolete
-    def pieces(self) -> np.ndarray:
+    def _pieces(self) -> np.ndarray:
         blurredBoard = cv.medianBlur(self.data, 5)
         grayBlurredBoard = cv.cvtColor(blurredBoard, cv.COLOR_BGR2GRAY)
 
-        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.5, minDist=self.tileWidth, param1=30, param2=46, minRadius=int(self.tileWidth/2 - self.tileWidth/10), maxRadius=int(self.tileWidth/2 + self.tileWidth/10))
+        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.5, minDist=int(self.fileStep-self.fileStep/10), param1=30, param2=46, minRadius=int(self.fileStep/2 - self.fileStep/10), maxRadius=int(self.fileStep/2 + self.fileStep/10))
         if pieces is None:
             print("No piece found")
             return
 
-        pieces = np.uint16(np.around(pieces))
-        return pieces[0,:]
+        return pieces[0,:].astype(np.uint16)
 
+    def showPieces(self) -> None:
+        dataCopy = self.data.copy()
+        for piece in self._pieces():
+            center = piece[0:2]
+            radius = piece[2]
+            cv.circle(dataCopy, center, 2, (0,0,255), 3)
+            cv.circle(dataCopy, center, radius, (0,255,0), 3)
+
+        cv.imshow("pieces", dataCopy)
+        cv.waitKey(0)
 
 if __name__ == "__main__":
     import time
@@ -136,7 +113,7 @@ if __name__ == "__main__":
     
     from aiBoardGame.logic.utility import boardToStr
 
-    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/board0.jpg")
+    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board1.jpg")
     boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
 
     classifier = XiangqiPieceClassifier(Path("newModelParams.pt"))
@@ -153,10 +130,19 @@ if __name__ == "__main__":
 
     print(boardToStr(board))
 
+    cv.imshow("roi", boardImage.roi)
+    cv.waitKey(0)
+
     # tiles = boardImage.tiles
     # for rank in range(Board.rankCount):
     #     for file in range(Board.fileCount):
     #         cv.imshow(f"({file},{rank})", tiles[file][rank])
     #         cv.waitKey(0)
+    #         cv.destroyAllWindows()
+
+    cv.imshow(f"{classifier.predictTile(boardImage[7,5])}", boardImage[7,5])
+    cv.waitKey(0)
+
+    boardImage.showPieces()
 
     cv.destroyAllWindows()

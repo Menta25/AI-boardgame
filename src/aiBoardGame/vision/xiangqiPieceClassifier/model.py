@@ -196,7 +196,7 @@ class XiangqiPieceClassifier:
         if not (len(tile.shape) == 3 and tile.shape[-1] == 3):
             raise ValueError(f"Invalid tile shape, must be (..., ..., 3)")
 
-        return self.predict(self._cvImagesToTensor(tile[np.newaxis]))
+        return self.predict(self._cvImagesToTensor(tile[np.newaxis]))[0]
 
     def predictTiles(self, tiles: np.ndarray) -> Board:
         if not (tiles.shape[:2] == (Board.fileCount, Board.rankCount) and tiles.shape[-1] == 3):
