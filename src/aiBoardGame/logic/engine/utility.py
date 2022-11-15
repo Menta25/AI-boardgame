@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict, Literal, Tuple, Union
 
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
-from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, ABBREVIATION_TO_PIECE
+from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, BASE_ABBREVIATION_TO_PIECE
 
 
 SOLDIER_RANK_OFFSET = 3
@@ -39,17 +39,17 @@ _OPERATOR_MAP = {
     "-": lambda x: -x
 }
 
-def notationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
+def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
     try:
         notationRegEx = re.match(r"(?P<tandem>[+-])?(?P<piece>\w)(?P<formerFile>\d)?(?P<direction>[+-=.,])(?P<newFileOrDeltaRank>\d)", notation)
         if notationRegEx is None:
             return None
-        if notationRegEx["piece"] is not None and notationRegEx["piece"].upper() not in ABBREVIATION_TO_PIECE and not ((side == Side.Red and notationRegEx["piece"].isupper()) or (side == Side.Black and notationRegEx["piece"].islower())):
+        if notationRegEx["piece"] is not None and notationRegEx["piece"].upper() not in BASE_ABBREVIATION_TO_PIECE and not ((side == Side.Red and notationRegEx["piece"].isupper()) or (side == Side.Black and notationRegEx["piece"].islower())):
             return None
         
         start, end = None, None
         if notationRegEx["piece"] is not None:
-            notatedPiece = ABBREVIATION_TO_PIECE[notationRegEx["piece"].upper()]
+            notatedPiece = BASE_ABBREVIATION_TO_PIECE[notationRegEx["piece"].upper()]
 
             groupByFile = defaultdict(list)
             for position, piece in board[side].items():
@@ -114,7 +114,7 @@ def boardToStr(board: Board) -> str:
                 else:
                     char = "━╋"
 
-            boardStr += str(board[file, rank].side.name)[0].lower() + board[file, rank].piece.baseAbbreviation if board[file, rank] != None else char
+            boardStr += f"{str(board[file, rank].side.name)[0].lower()}{board[file, rank].piece.abbreviations['base']}" if board[file, rank] != None else char
             boardStr += "━━"
         boardStr = boardStr[:-2]
 

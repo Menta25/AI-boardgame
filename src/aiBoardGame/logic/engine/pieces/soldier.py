@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import ClassVar, List
+from typing import ClassVar, Dict, List
 
 from aiBoardGame.logic.engine.pieces import Piece
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
@@ -10,8 +10,11 @@ _RIVER_RANK = (Piece.rankLength() + 1) / 2
 
 @dataclass(init=False)
 class Soldier(Piece):
-    baseAbbreviation: ClassVar[str] = "S"
-    fenAbbreviation: ClassVar[str] = "P"
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "S",
+        "fen": "P"
+    }
+
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

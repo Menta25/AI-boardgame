@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Type, TypeVar
+from typing import Type, TypeVar, Optional
 
-from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Position
+from aiBoardGame.logic.engine.auxiliary import Position, BoardEntity, Board
 
 
 Piece = TypeVar("Piece")
@@ -35,3 +35,4 @@ class MoveRecord:
             movedPieceEntity=board[start],
             capturedPieceEntity=board[end]
         )
+        

@@ -4,11 +4,10 @@ from typing import Dict, List, Tuple, Union
 from itertools import chain, product, starmap
 from collections import defaultdict
 
-from aiBoardGame.logic.engine.pieces import General, Cannon
+from aiBoardGame.logic.engine.pieces import General, Cannon, Horse
+from aiBoardGame.logic.engine.move import MoveRecord, InvalidMove
 from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Delta, Position, Side
-from aiBoardGame.logic.engine.move import InvalidMove, MoveRecord
-from aiBoardGame.logic.engine.pieces.horse import Horse
-from aiBoardGame.logic.engine.utility import createXiangqiBoard, notationToMove, boardToStr
+from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToMove, boardToStr
 
 
 @dataclass(frozen=True)
@@ -32,12 +31,6 @@ class XiangqiEngine:
         self.currentSide = Side.Red
         self.moveHistory = []
         self._validMoves = self._getAllValidMoves()
-
-    def moveFromNotation(self, notatition: str) -> None:
-        start, end = notationToMove(self.board, self.currentSide, notatition)
-        if start is None or end is None:
-            raise XiangqiError("Could not convert notation to move")
-        self.move(start, end)
 
     # TODO: Do not allow perpetual chasing and checking
     # TODO: Signal end of the game (its kind of already implemented)
@@ -81,6 +74,10 @@ class XiangqiEngine:
 
         if self.board[end].piece == General:
             self.generals[self.board[end].side] = end
+
+    @property
+    def FEN(self) -> str:
+        return f"{self.board.FEN} {self.currentSide.FEN} - - 0 {len(self.moveHistory)//2+1}"
 
     def _undoMove(self) -> None:
         if len(self.moveHistory) > 0:
@@ -217,7 +214,7 @@ if __name__ == "__main__":
                 logging.info(error)
         elif command.startswith("not"):
             notation = command.split(" ")[1]
-            start, end = notationToMove(game.board, game.currentSide, notation)
+            start, end = baseNotationToMove(game.board, game.currentSide, notation)
             if start is not None and end is not None:
                 logging.info(f"From {*start,} to {*end,}")
             else:
@@ -239,7 +236,7 @@ if __name__ == "__main__":
                             continue
                 elif len(commandParts) == 1:
                     try:
-                        game.moveFromNotation(commandParts[0])
+                        game.moveFromBaseNotation(commandParts[0])
                     except XiangqiError as error:
                         logging.info(error)
                     finally:

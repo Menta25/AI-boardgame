@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, ClassVar
+from typing import Dict, List, Tuple, ClassVar
 
 from aiBoardGame.logic.engine.auxiliary import Board, Position, Side
 
@@ -12,8 +12,11 @@ class Piece(ABC):
     fileBounds: ClassVar[Tuple[int, int]] = Board.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = Board.rankBounds
 
-    baseAbbreviation: ClassVar[str] = "X"
-    fenAbbreviation: ClassVar[str] = "X"
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "X",
+        "fen": "X"
+    }
+
 
     @classmethod
     def name(cls) -> str:

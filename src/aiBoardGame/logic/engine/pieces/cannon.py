@@ -1,7 +1,7 @@
 import numpy as np
 
 from dataclasses import dataclass
-from typing import ClassVar, List
+from typing import ClassVar, Dict, List
 from itertools import chain, product, starmap
 
 from aiBoardGame.logic.engine.pieces import Piece
@@ -10,8 +10,10 @@ from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Cannon(Piece):
-    baseAbbreviation: ClassVar[str] = "C"
-    fenAbbreviation: ClassVar[str] = "C"
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "C",
+        "fen": "C"
+    }
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

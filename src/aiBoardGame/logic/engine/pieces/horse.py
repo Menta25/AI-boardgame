@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import ClassVar, List
+from typing import ClassVar, Dict, List
 from itertools import product, chain, starmap
 
 from aiBoardGame.logic.engine.pieces import Piece
@@ -8,8 +8,11 @@ from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Horse(Piece):
-    baseAbbreviation: ClassVar[str] = "H"
-    fenAbbreviation: ClassVar[str] = "N"
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "H",
+        "fen": "N"
+    }
+
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

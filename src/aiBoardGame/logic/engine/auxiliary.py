@@ -17,6 +17,9 @@ class Side(IntEnum):
     def opponent(self) -> Side:
         return Side(-self)
 
+    @property
+    def FEN(self) -> str:
+        return "w" if self == Side.Red else "b"
 
 class Delta(NamedTuple):
     file: Union[int, float]
@@ -117,6 +120,11 @@ class BoardEntity(NamedTuple):
     def __str__(self) -> str:
         return f"{self.side.name}{self.piece.name()}"
 
+    @property
+    def FEN(self) -> str:
+        caseFunction = str.upper if self.side == Side.Red else str.lower
+        return caseFunction(self.piece.abbreviations["fen"])
+
 
 class SideState(Dict[Position, Type[Piece]]):
     def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Type[Piece]]:
@@ -186,4 +194,22 @@ class Board(Dict[Side, SideState]):
         for side, sideState in self.items():
             for position, piece in sideState.items():
                 yield position, BoardEntity(side, piece)
-                
+
+    @property
+    def FEN(self) -> str:
+        fen = ""
+        for rank in range(self.rankCount-1, -1, -1):
+            emptyCount = 0
+            for file in range(self.fileCount):
+                boardEntity = self[file, rank]
+                if boardEntity is None:
+                    emptyCount += 1
+                else:
+                    if emptyCount != 0:
+                        fen += str(emptyCount)
+                        emptyCount = 0
+                    fen += boardEntity.FEN
+            if emptyCount != 0:
+                fen += str(emptyCount)
+            fen += "/"
+        return fen[:-1]

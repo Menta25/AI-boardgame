@@ -7,8 +7,6 @@ from aiBoardGame.logic.engine.pieces.chariot import Chariot
 from aiBoardGame.logic.engine.pieces.cannon import Cannon
 from aiBoardGame.logic.engine.pieces.soldier import Soldier
 
-from aiBoardGame.logic.engine.pieces.abbreviations import ABBREVIATION_TO_PIECE
-
 
 PIECE_SET = [
     Advisor,
@@ -21,6 +19,13 @@ PIECE_SET = [
 ]
 
 
+BASE_ABBREVIATION_TO_PIECE = {piece.abbreviations["base"]: piece for piece in PIECE_SET}
+FEN_ABBREVIATION_TO_PIECE = {piece.abbreviations["fen"]: piece for piece in PIECE_SET}
+
+BASE_TO_FEN_ABBREVIATION = {piece.abbreviations["base"]: piece.abbreviations["fen"] for piece in PIECE_SET}
+FEN_TO_BASE_ABBREVIATION = {piece.abbreviations["fen"]: piece.abbreviations["base"] for piece in PIECE_SET}
+
+
 __all__ = [
     "Piece",
     "General",
@@ -30,5 +35,7 @@ __all__ = [
     "Chariot",
     "Cannon",
     "Soldier",
-    "ABBREVIATION_TO_PIECE"
+    "BASE_ABBREVIATION_TO_PIECE",
+    "FEN_ABBREVIATION_TO_PIECE",
+    "BASE_TO_FEN_ABBREVIATION", "FEN_TO_BASE_ABBREVIATION",
 ]
