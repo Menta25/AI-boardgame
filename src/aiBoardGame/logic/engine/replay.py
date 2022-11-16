@@ -2,15 +2,20 @@ import logging
 from pathlib import Path
 from time import sleep
 from typing import Optional
-from aiBoardGame.logic.move import InvalidMove
-from aiBoardGame.logic.xiangqiEngine import XiangqiEngine, XiangqiError
+
+from aiBoardGame.logic.engine.move import InvalidMove
+from aiBoardGame.logic.engine.utility import baseNotationToMove
+from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine, XiangqiError
 
 def replayGame(gameRecord: Path, intermission: Optional[int] = None) -> None:
     game = XiangqiEngine()
     with gameRecord.open(mode="r") as gameRecordFile:
         for turn, notation in enumerate(gameRecordFile):
             logging.info(f"\nTurn {turn+1} - {game.currentSide}")
-            game.moveFromNotation(notation.rstrip("\n"))
+            start, end = baseNotationToMove(game.board, game.currentSide, notation.rstrip("\n"))
+            if start is None or end is None:
+                raise XiangqiError("Could not convert notation to move")
+            game.move(start, end)
             if intermission is not None:
                 sleep(intermission)
 

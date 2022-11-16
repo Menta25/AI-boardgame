@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import ClassVar, List, Tuple
+from typing import ClassVar, Dict, List, Tuple
 from itertools import product, starmap
 
-from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
+from aiBoardGame.logic.engine.pieces import Piece
+from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 
 NEW_RANK_LENGTH = Piece.rankLength() // 2
@@ -13,9 +13,12 @@ NEW_RANK_LENGTH = Piece.rankLength() // 2
 class Elephant(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = Piece.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
+    
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "E",
+        "fen": "B"
+    }
 
-    baseAbbreviation: ClassVar[str] = "E"
-    fenAbbreviation: ClassVar[str] = "B"
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:

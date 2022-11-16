@@ -1,9 +1,8 @@
 from pathlib import Path
 import cv2 as cv
 
-from aiBoardGame.logic.utility import boardToStr
-from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
-from aiBoardGame.vision.camera import RobotCamera, Resolution
+from aiBoardGame.logic.engine.utility import boardToStr
+from aiBoardGame.vision import XiangqiPieceClassifier, RobotCamera, Resolution
 
 def main():
     classifier = XiangqiPieceClassifier(weights=Path("newModelParams.pt"))

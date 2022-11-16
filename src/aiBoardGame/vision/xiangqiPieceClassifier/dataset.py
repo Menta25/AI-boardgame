@@ -9,8 +9,8 @@ from torchvision.datasets import ImageFolder
 from typing import ClassVar, List, Optional, Tuple
 from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 
-from aiBoardGame.logic.pieces import PIECE_SET
-from aiBoardGame.logic.auxiliary import Side, BoardEntity
+from aiBoardGame.logic.engine import Side, BoardEntity
+from aiBoardGame.logic.engine.pieces import PIECE_SET
 
 
 XIANGQI_PIECE_CLASSES = sorted(chain((BoardEntity(side, piece) for side in Side for piece in PIECE_SET), [None]), key=str)

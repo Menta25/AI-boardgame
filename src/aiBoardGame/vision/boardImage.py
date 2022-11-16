@@ -6,7 +6,8 @@ import cv2 as cv
 from typing import ClassVar, Tuple, Union
 from dataclasses import dataclass, field
 
-from aiBoardGame.logic.auxiliary import Board, Position
+from aiBoardGame.logic.engine import Board, Position
+
 
 _boardLogger = logging.getLogger(__name__)
 
@@ -111,9 +112,9 @@ if __name__ == "__main__":
     from pathlib import Path
     from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
     
-    from aiBoardGame.logic.utility import boardToStr
+    from aiBoardGame.logic.engine.utility import boardToStr
 
-    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board1.jpg")
+    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board3.jpg")
     boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
 
     classifier = XiangqiPieceClassifier(Path("newModelParams.pt"))
@@ -140,8 +141,8 @@ if __name__ == "__main__":
     #         cv.waitKey(0)
     #         cv.destroyAllWindows()
 
-    cv.imshow(f"{classifier.predictTile(boardImage[7,5])}", boardImage[7,5])
-    cv.waitKey(0)
+    # cv.imshow(f"{classifier.predictTile(boardImage[7,5])}", boardImage[7,5])
+    # cv.waitKey(0)
 
     boardImage.showPieces()
 

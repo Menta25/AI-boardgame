@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import ClassVar, List, Tuple
+from typing import ClassVar, Dict, List, Tuple
 from itertools import product, starmap
 
-from aiBoardGame.logic.pieces import Piece
-from aiBoardGame.logic.auxiliary import Board, Delta, Position, Side
+from aiBoardGame.logic.engine.pieces import Piece
+from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 
 NEW_FILE_LENGTH = 3
@@ -17,8 +17,11 @@ class Advisor(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = (Piece.fileBounds[0] + FILE_MARGIN, Piece.fileBounds[1] - FILE_MARGIN)
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
 
-    baseAbbreviation: ClassVar[str] = "A"
-    fenAbbreviation: ClassVar[str] = "A"
+    abbreviations: ClassVar[Dict[str, str]] = {
+        "base": "A",
+        "fen": "A"
+    }
+
 
     @classmethod
     def _isValidMove(cls, board: Board, side: Side, start: Position, end: Position) -> bool:
