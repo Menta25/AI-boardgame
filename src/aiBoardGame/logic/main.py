@@ -1,15 +1,9 @@
 import logging
-from pathlib import Path
 from typing import Tuple
 
 from aiBoardGame.logic.engine import XiangqiEngine, XiangqiError, Position, InvalidMove
+from aiBoardGame.logic.engine.utility import boardToStr
 from aiBoardGame.logic.stockfish import FairyStockfish
-
-
-def main() -> None:
-    game = XiangqiEngine()
-    stockfish = FairyStockfish(binaryPath=Path("/home/Menta/Workspace/Projects/AI-boardgame/src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_x86-64"))
-    play(game, stockfish)
 
 
 def play(game: XiangqiEngine, stockfish: FairyStockfish) -> None:
@@ -43,8 +37,7 @@ def playerTurn(game: XiangqiEngine) -> Tuple[bool, bool]:
                     if len(startPositionStrs) == 2 and len(endPositionStrs) == 2:
                         start = Position(int(startPositionStrs[0]), int(startPositionStrs[1]))
                         end = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
-                        game.move(start, end)
-                        logging.info(f"From {*start,} to {*end,}\n")
+                        moveOnBoard(game, start, end)
                         return True, False
                 logging.info("Invalid command")
         except (XiangqiError, InvalidMove) as error:
@@ -56,11 +49,28 @@ def playerTurn(game: XiangqiEngine) -> Tuple[bool, bool]:
 def robotTurn(game: XiangqiEngine, stockfish: FairyStockfish) -> None:
     fen =  game.FEN
     start, end = stockfish.nextMove(fen)
+    moveOnBoard(game, start, end)
+
+
+def moveOnBoard(game: XiangqiEngine, start: Position, end: Position) -> None:
     game.move(start, end)
+    logging.info(boardToStr(game.board))
     logging.info(f"From {*start,} to {*end,}\n")
 
 
 if __name__ == "__main__":
+    from pathlib import Path
+
     logging.basicConfig(format="", level=logging.INFO)
 
-    main()
+    game = XiangqiEngine()
+    stockfish = FairyStockfish(binaryPath=Path("/home/Menta/Workspace/Projects/AI-boardgame/src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_x86-64"))
+    play(game, stockfish)
+    # from aiBoardGame.logic.engine.utility import createXiangqiBoard
+    # from aiBoardGame.logic.engine.pieces import Chariot, Horse
+    # from aiBoardGame.logic.engine import Side
+    # nextBoard, _ = createXiangqiBoard()
+    # nextBoard[1,0] = None
+    # nextBoard[Side.Red][2,2] = Horse
+    # game.update(nextBoard)
+    # logging.info(boardToStr(game.board))

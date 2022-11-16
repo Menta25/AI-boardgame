@@ -7,7 +7,7 @@ from collections import defaultdict
 from aiBoardGame.logic.engine.pieces import General, Cannon, Horse
 from aiBoardGame.logic.engine.move import MoveRecord, InvalidMove
 from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Delta, Position, Side
-from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToMove, boardToStr
+from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToMove
 
 
 @dataclass(frozen=True)
@@ -49,8 +49,6 @@ class XiangqiEngine:
 
         self._move(start, end)
 
-        print(boardToStr(self.board))
-
         self.currentSide = self.currentSide.opponent
         self._validMoves = self._getAllValidMoves()
 
@@ -65,7 +63,19 @@ class XiangqiEngine:
         self._undoMove()
         self.currentSide = self.currentSide.opponent
         self._validMoves = self._getAllValidMoves()
-        print(boardToStr(self.board))
+
+    def update(self, board: Board) -> None:
+        selfPiecesAsSet = set(self.board.pieces)
+        otherPiecesAsSet = set(board.pieces)
+        
+        selfDifference = list(selfPiecesAsSet - otherPiecesAsSet)
+        otherDifference = list(otherPiecesAsSet - selfPiecesAsSet)
+
+        if not (len(selfDifference) == 1 and len(otherDifference) == 1):
+            raise InvalidMove(None, None, None, "Cannot update because multiple piece were moved")
+            
+        start, end = selfDifference[0][0], otherDifference[0][0]
+        self.move(start, end)
 
     def _move(self, start: Position, end: Position) -> None:
         self.moveHistory.append(MoveRecord.make(self.board, start, end))
@@ -201,7 +211,9 @@ class XiangqiEngine:
         return possibleMoves
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    from aiBoardGame.logic.engine.utility import boardToStr
+
+    logging.basicConfig(format="", level=logging.INFO)
 
     game = XiangqiEngine()
 
@@ -230,17 +242,11 @@ if __name__ == "__main__":
                         end = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
                         try:
                             game.move(start, end)
+                            logging.info(boardToStr(game.board))
                         except InvalidMove as error:
                             logging.info(error)
                         finally:
                             continue
-                elif len(commandParts) == 1:
-                    try:
-                        game.moveFromBaseNotation(commandParts[0])
-                    except XiangqiError as error:
-                        logging.info(error)
-                    finally:
-                        continue
             except:
                 pass
             logging.info("Invalid command")
