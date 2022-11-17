@@ -55,7 +55,7 @@ class XiangqiPieceClassifier:
         self.model.load_state_dict(weights)
 
     def saveWeights(self, savePath: Path) -> None:
-        torch.save(self.model.state_dict(), savePath.with_suffix("pt"))
+        torch.save(self.model.state_dict(), savePath.with_suffix(".pt"))
 
     def trainFromScratch(self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader) -> XiangqiPieceClassifier:       
         criterion = CrossEntropyLoss()
@@ -235,7 +235,7 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     logging.info(f"Using {device} device")
 
-    xiangqiDatasetRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs")
+    xiangqiDatasetRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")
     train, validation, test = XiangqiPieceDataset.split(root=xiangqiDatasetRoot, batchSize=XiangqiPieceClassifier.batchSize, numWorkers=4)
 
 
@@ -254,7 +254,7 @@ if __name__ == "__main__":
 
     logging.info("")
 
-    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/None/cut_15.jpg")
+    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes/None/cut_15.jpg")
     pieceImage = cv.imread(pieceImagePath.as_posix())
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
 
-    prediction = classifier.predict(transform(pieceImage))
+    prediction = classifier.predict(transform(pieceImage))[0]
     logging.info(f"Label: {pieceImagePath.parent.name}, Prediction: {prediction}")
 
     saveModelWeights = input("Do you want to save model weights? (yes/other) ") == "yes"

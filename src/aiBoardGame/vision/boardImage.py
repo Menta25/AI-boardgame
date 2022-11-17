@@ -23,7 +23,7 @@ class BoardImage:
     rankStep: np.float64 = field(init=False)
     tileSize: np.ndarray = field(init=False)
 
-    offsetMultiplier: ClassVar[float] = 1.15
+    offsetMultiplier: ClassVar[float] = 1.2
 
     def __post_init__(self) -> None:
         imageHSV = cv.cvtColor(self.data, cv.COLOR_BGR2HSV)
@@ -114,10 +114,10 @@ if __name__ == "__main__":
     
     from aiBoardGame.logic.engine.utility import boardToStr
 
-    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board3.jpg")
+    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board5.jpg")
     boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
 
-    classifier = XiangqiPieceClassifier(Path("newModelParams.pt"))
+    classifier = XiangqiPieceClassifier(Path("finalWeights.pt"))
 
     # from PIL import Image
     # from torchvision import transforms

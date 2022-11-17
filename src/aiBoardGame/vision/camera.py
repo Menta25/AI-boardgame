@@ -255,3 +255,10 @@ class RobotCamera(RobotCameraInterface):
 
     def __del__(self) -> None:
         self._capture.release()
+
+
+if __name__ == "__main__":
+    camera = RobotCameraInterface(Resolution(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz"))
+    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/0.jpg")
+    board = camera.detectBoard(cv.imread(boardImagePath.as_posix()))
+    cv.imwrite(Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/top0.jpg").as_posix(), cv.resize(board.data, (900,1000)))
