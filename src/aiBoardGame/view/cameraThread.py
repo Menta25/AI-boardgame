@@ -2,7 +2,7 @@ import numpy as np
 from typing import ClassVar, Optional
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
-from aiBoardGame.vision.camera import RobotCamera
+from aiBoardGame.vision import RobotCamera, Resolution
 
 class CameraThread(QThread):
     newCameraImageSignal: ClassVar[pyqtSignal] = pyqtSignal(np.ndarray)
@@ -33,7 +33,7 @@ class CameraThread(QThread):
         self._isUndistorted = value
 
     def run(self):
-        self._camera = RobotCamera(self.captureIndex)
+        self._camera = RobotCamera(self.captureIndex, Resolution(1920, 1080))
         self._camera.calibrated.connect(self.onCameraCalibrated)
         self._isUndistorted = False
         self._isRunning = True

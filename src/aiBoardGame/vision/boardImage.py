@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import numpy as np
 import cv2 as cv
-from typing import ClassVar, Tuple, Union
+from typing import ClassVar, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 
 from aiBoardGame.logic.engine import Board, Position
@@ -17,29 +17,33 @@ class BoardImage:
     """A game board represented by a ndarray"""
     data: np.ndarray
 
+    _x: Optional[int] = None
+    _y: Optional[int] = None
+    _width: Optional[int] = None
+    _height: Optional[int] = None
+
     positions: np.ndarray = field(init=False)
 
     fileStep: np.float64 = field(init=False)
     rankStep: np.float64 = field(init=False)
     tileSize: np.ndarray = field(init=False)
 
-    offsetMultiplier: ClassVar[float] = 1.2
+    tileSizeMultiplier: ClassVar[float] = 1.5
+    pieceSizeMultiplier: ClassVar[float] = 1.2
+
+    hsvRange: ClassVar[np.ndarray] = np.array([15,89,153])[np.newaxis,:] + np.array([[10,80,120], [5,166,50]]) * np.array([[-1],[1]])
+
 
     def __post_init__(self) -> None:
-        imageHSV = cv.cvtColor(self.data, cv.COLOR_BGR2HSV)
-        offsetHSV = np.array([10,80,80], np.uint8)
-        boardHSV = np.array([15,89,153], np.uint8)
-        boardMask = cv.inRange(imageHSV, boardHSV-offsetHSV, boardHSV+offsetHSV)
-
-        erosionKernel = np.ones((5, 5), np.uint8)
-        erosion = cv.erode(boardMask, erosionKernel, iterations=3)
-
-        boardContours, _ = cv.findContours(erosion, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        x, y, width, height = cv.boundingRect(np.vstack(boardContours))
+        if any([attribute is None for attribute in [self._x, self._y, self._width, self._height]]):
+            print("what")
+            x, y, width, height = self._fallbackBoardDetection(self.data)
+        else:
+            x, y, width, height = self._x, self._y, self._width, self._height
 
         fileStep = int(width / Board.fileCount)
         rankStep = int(height / Board.rankCount)
-        tileSize = (np.array([fileStep, rankStep]) * self.offsetMultiplier).astype(np.uint16)
+        tileSize = (np.array([fileStep, rankStep]) * self.tileSizeMultiplier).astype(np.uint16)
 
         files = np.linspace(x, x+width, num=Board.fileCount+1, dtype=np.uint16)[:-1] + int(fileStep/2)
         ranks = np.linspace(y, y+height, num=Board.rankCount+1, dtype=np.uint16)[:-1] + int(rankStep/2)
@@ -54,7 +58,18 @@ class BoardImage:
         object.__setattr__(self, "rankStep", rankStep)
         object.__setattr__(self, "tileSize", tileSize)
 
-        _boardLogger.info(f"Created Board from {self.data.shape} array")
+
+    @classmethod
+    def _fallbackBoardDetection(cls, data: np.ndarray) -> Tuple[int, int, int, int]:
+        imageHSV = cv.cvtColor(data, cv.COLOR_BGR2HSV)
+        boardMask = cv.inRange(imageHSV, cls.hsvRange[0], cls.hsvRange[1])
+
+        kernel = np.ones((5, 5), np.uint8)
+        erosion = cv.erode(boardMask, kernel, iterations=3)
+        dilate = cv.dilate(erosion, kernel, iterations=3)
+
+        boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        return cv.boundingRect(np.vstack(boardContours))
 
     @property
     def tiles(self) -> np.ndarray:
@@ -84,28 +99,46 @@ class BoardImage:
         bottomRightCorner = (self.positions[-1,-1] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
 
-    # NOTE: Obsolete
-    def _pieces(self) -> np.ndarray:
-        blurredBoard = cv.medianBlur(self.data, 5)
-        grayBlurredBoard = cv.cvtColor(blurredBoard, cv.COLOR_BGR2GRAY)
+    @staticmethod
+    def _detectCircles(image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
+        blurredTile = cv.medianBlur(image, 3)
+        grayBlurredTile = cv.cvtColor(blurredTile, cv.COLOR_BGR2GRAY)
+        pieces = cv.HoughCircles(grayBlurredTile, cv.HOUGH_GRADIENT, dp=2.45, minDist=minDist, param1=10, param2=88, minRadius=minRadius, maxRadius=maxRadius)
+        return pieces[0] if pieces is not None else np.array([])
 
-        pieces = cv.HoughCircles(grayBlurredBoard, cv.HOUGH_GRADIENT, dp=1.5, minDist=int(self.fileStep-self.fileStep/10), param1=30, param2=46, minRadius=int(self.fileStep/2 - self.fileStep/10), maxRadius=int(self.fileStep/2 + self.fileStep/10))
-        if pieces is None:
-            print("No piece found")
-            return
+    
+    def _detectCircles2(self, blur: int, dp: float, param1: int, param2: int) -> np.ndarray:
+        blurredTile = cv.medianBlur(self.roi, blur)
+        grayBlurredTile = cv.cvtColor(blurredTile, cv.COLOR_BGR2GRAY)
+        pieces = cv.HoughCircles(grayBlurredTile, cv.HOUGH_GRADIENT, dp=dp, minDist=int(self.fileStep*0.9), param1=param1, param2=param2, minRadius=int(self.fileStep*0.4), maxRadius=int(self.fileStep*0.5))
+        return pieces[0] if pieces is not None else np.array([])
 
-        return pieces[0,:].astype(np.uint16)
+    @property
+    def pieces(self) -> List[Tuple[Position, np.ndarray]]:
+        pieces = []
+        for file, tilesInfile in enumerate(self.positions):
+            for rank, tileCenter in enumerate(tilesInfile[::-1]):
+                tile = self._tile(tileCenter)
+                detectedCircles = self._detectCircles(tile, tile.shape[0], tile.shape[0]//3, tile.shape[0]//2)
 
-    def showPieces(self) -> None:
-        dataCopy = self.data.copy()
-        for piece in self._pieces():
-            center = piece[0:2]
-            radius = piece[2]
-            cv.circle(dataCopy, center, 2, (0,0,255), 3)
-            cv.circle(dataCopy, center, radius, (0,255,0), 3)
+                if len(detectedCircles) == 0:
+                    continue
 
-        cv.imshow("pieces", dataCopy)
-        cv.waitKey(0)
+                if len(detectedCircles) == 1:
+                    x, y, radius = detectedCircles[0]
+                    offset = radius*self.pieceSizeMultiplier
+                    tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
+                pieces.append((Position(file, rank), tile))
+        return pieces
+
+    def drawwPieces(self) -> np.ndarray:
+        roiCopy = self.roi.copy()
+        for *center, radius in self._detectCircles(roiCopy, int(self.fileStep*0.9), int(self.fileStep*0.4), int(self.fileStep*0.5)):
+            center = np.around(center).astype(int)
+            cv.circle(roiCopy, center, int(radius), (0,255,0), thickness=3)
+            cv.circle(roiCopy, center, 0, (0,0,255), thickness=3)
+        return roiCopy
+
 
 if __name__ == "__main__":
     import time
@@ -125,8 +158,8 @@ if __name__ == "__main__":
     # print(classifier.predict(transforms.ToTensor()(tile)))
 
     start = time.time()
-    tiles = boardImage.tiles
-    board = classifier.predictTiles(tiles)
+    pieces = boardImage.pieces
+    board = classifier.predictPieces(pieces)
     print(f"predict time: {time.time() - start:.4f}s")
 
     print(boardToStr(board))
@@ -141,9 +174,10 @@ if __name__ == "__main__":
     #         cv.waitKey(0)
     #         cv.destroyAllWindows()
 
-    # cv.imshow(f"{classifier.predictTile(boardImage[7,5])}", boardImage[7,5])
-    # cv.waitKey(0)
+    cv.imshow(f"{classifier.predictTile(boardImage[8,5])}", boardImage[8,5])
+    cv.imwrite("test.jpg", boardImage[8,5])
+    cv.waitKey(0)
 
-    boardImage.showPieces()
+    # boardImage.showPieces()
 
     cv.destroyAllWindows()

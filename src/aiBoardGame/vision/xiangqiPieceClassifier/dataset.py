@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
-    datasetPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs")
+    datasetPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")
     train, validation, test = XiangqiPieceDataset.split(root=datasetPath, batchSize=1, numWorkers=2)
     i = 0
     for inputs, labels in train:

@@ -1,6 +1,8 @@
 1. nagy tileok (1.3-1.4) -> 1 kör felismerése -> kör bounding box * szorzó kivágás (max 20%) -> hálóba -> ha None -> elhisszük
                                               -> ha nincs kör => üres tile
                                               -> ha több kör => natúrba hálóba (no kör bounding box !!!)
+    //várjunk vele
+2. durvább augmentáció (gauss) + normalizálás (főkomponens analízissel) + forgatás invariancia
 
 stockfish (state-of-the-art sakkbot)
     alfa-béta fa keresés -> levélnode-okon -> ezek kiértékelése

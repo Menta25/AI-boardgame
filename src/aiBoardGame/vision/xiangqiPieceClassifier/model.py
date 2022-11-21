@@ -10,12 +10,13 @@ from torch import Tensor, tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
-from typing import Dict, List, Optional, Union, ClassVar
+from typing import Dict, List, Optional, Tuple, Union, ClassVar
 from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
 from torchvision import transforms
+from PIL import Image
 
-from aiBoardGame.logic.engine import BoardEntity, Board
+from aiBoardGame.logic.engine import BoardEntity, Board, Position
 from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataset, XiangqiPieceDataLoader, XIANGQI_PIECE_CLASSES
 from aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping import EarlyStopping
 from aiBoardGame.vision.boardImage import BoardImage
@@ -210,19 +211,31 @@ class XiangqiPieceClassifier:
                 tilePredict = tilePredicts[file*Board.rankCount+rank]
                 if tilePredict is not None:
                     side, piece = tilePredict
-                    board[side][file, rank] = piece
+                board[side][file, rank] = piece
 
         return board
 
-    def predictBoard(self, boardImage: BoardImage) -> Board:
-        return self.predictTiles(boardImage.tiles)
+    def predictPieces(self, pieces: List[Tuple[Position, np.ndarray]]) -> Board:
+        positions, tiles = zip(*pieces)
+
+        tilePredicts = self.predict(self._cvImagesToTensor(tiles))
+        
+        board = Board()
+        for position, tilePredict in zip(positions, tilePredicts):
+            print(position, tilePredict)
+            if tilePredict is not None:
+                side, piece = tilePredict
+                board[side][position] = piece
+
+        return board
+
+    def predictBoard(self, boardImage: BoardImage, allTiles: bool = False) -> Board:
+        return self.predictTiles(boardImage.tiles) if allTiles else self.predictPieces(boardImage.pieces)
 
     @staticmethod
-    def _cvImagesToTensor(cvImages: np.ndarray) -> Tensor:
-        if len(cvImages.shape) > 4:
-            cvImages = cvImages.reshape(-1, *cvImages.shape[-3:])
-        pilImagesAsBatch = np.rollaxis(np.flip(cvImages, -1), -1, -3).astype(np.float32)/255
-        return tensor(pilImagesAsBatch)
+    def _cvImagesToTensor(cvImages: Tuple[np.ndarray]) -> Tensor:
+        tensors = [XiangqiPieceDataset.basicTransform(Image.fromarray(cv.cvtColor(cvImage, cv.COLOR_BGR2RGB))) for cvImage in cvImages]
+        return torch.stack(tensors)
     
 
 if __name__ == "__main__":

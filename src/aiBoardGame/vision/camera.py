@@ -72,12 +72,10 @@ class AbstractCameraInterface(QObject):
             raise CameraError("Camera is not calibrated yet")
         return FocalLength(self._intrinsicMatrix[0][0], self._intrinsicMatrix[1][1])
 
-    def _undistort(self, image: np.ndarray) -> np.ndarray:
+    def undistort(self, image: np.ndarray) -> np.ndarray:
         if not self.isCalibrated:
                 raise CameraError("Camera is not calibrated yet")
-        undistortedImage = cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
-        x, y, width, height = self._regionOfInterest
-        return undistortedImage[y:y+height, x:x+width]
+        return cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
 
     @staticmethod
     def isSuitableForCalibration(image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
@@ -93,14 +91,12 @@ class AbstractCameraInterface(QObject):
 
             :raises CameraError: Not enough valid pattern input or reprojection error is too high
         """
-        _cameraLogger.debug("[Calibrate camera]")
         objp = np.zeros((np.prod(checkerBoardShape),3), np.float32)
         objp[:,:2] = np.mgrid[0:checkerBoardShape[0],0:checkerBoardShape[1]].T.reshape(-1,2)
 
         objPoints = []
         imgPoints = []
 
-        _cameraLogger.debug(f"Iterating over source feed to search for checkered board patterns (required checkered board image: {self.calibrationMinPatternCount})")
         patternCount = 0
         for image in checkerBoardImages:
             if patternCount >= self.calibrationMinPatternCount:
@@ -110,7 +106,6 @@ class AbstractCameraInterface(QObject):
             isPatternFound, corners = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
             if isPatternFound:
                 patternCount += 1
-                _cameraLogger.debug(f"Found checkered board image, need {self.calibrationMinPatternCount - patternCount} more")
                 objPoints.append(objp)
 
                 cv.cornerSubPix(grayImage, corners, (11,11), (-1,-1), self._calibrationCritera)
@@ -119,7 +114,6 @@ class AbstractCameraInterface(QObject):
         if patternCount < self.calibrationMinPatternCount:
             raise CameraError(f"Not enough pattern found for calibration, found only {patternCount} out of {self.calibrationMinPatternCount}")
 
-        _cameraLogger.debug("Calibrate camera")
         reprojectionError, cameraMatrix, distortionCoefficients, _, _ = cv.calibrateCamera(objPoints, imgPoints, self.resolution, None, None)
 
         if not 0 <= reprojectionError <= 1:
@@ -127,14 +121,9 @@ class AbstractCameraInterface(QObject):
 
         self._intrinsicMatrix = cameraMatrix
         self._distortionCoefficients = distortionCoefficients
-        _cameraLogger.debug(f"Intrinsic matrix:\n{self._intrinsicMatrix}")
-        _cameraLogger.debug(f"Distortion coefficients: {self._distortionCoefficients}")
 
         self._undistortedIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
-        _cameraLogger.debug(f"New intrinsic matrix:\n{self._undistortedIntrinsicMatrix}")
-        _cameraLogger.debug(f"Region of intereset: {self._regionOfInterest}")
 
-        _cameraLogger.debug("Calibration finished")
         self.calibrated.emit()
 
     def saveParameters(self, filePath: Path) -> None:
@@ -151,7 +140,7 @@ class AbstractCameraInterface(QObject):
         np.savez(filePath, **parameters)
 
     def loadParameters(self, filePath: Path) -> None:
-        _cameraLogger.debug(f"Load camera parameters from {filePath}")
+        errorMessage = "Invalid parameter file, cannot load calibration"
         try:
             with np.load(filePath, mmap_mode="r") as parameters:
                 if self.resolution == Resolution(parameters["cameraWidth"], parameters["cameraHeight"]):
@@ -161,15 +150,16 @@ class AbstractCameraInterface(QObject):
                     self._regionOfInterest = parameters["regionOfInterest"]
                     self.calibrated.emit()
                 else:
-                    _cameraLogger.error("Camera resolutions do not match, cannot import parameters")
+                    raise CameraError(errorMessage)
         except AttributeError as attributeError:
-            raise CameraError(f"Invalid parameter file, cannot load calibration\n{attributeError}")
+            raise CameraError(f"{errorMessage}\n{attributeError}")
 
 
 class RobotCameraInterface(AbstractCameraInterface):
     """Camera subclass used for playing board games"""
 
     _boardImageRatio: ClassVar[float] = 3/4
+
 
     def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(resolution, intrinsicsFile, parent)
@@ -179,7 +169,51 @@ class RobotCameraInterface(AbstractCameraInterface):
         self._boardWidth = int(self._boardHeight * Board.fileCount / Board.rankCount)
         self._boardWidth -= self._boardHeight % Board.fileCount
 
+        self._boardOffset = np.around(np.array([self._boardWidth, self._boardHeight], dtype=np.float32) * 0.1)
+
         self._robotToCameraTransform: Optional[np.ndarray] = None
+    
+    @staticmethod
+    def _orderPointsClockwise(corners: np.ndarray) -> np.ndarray:
+        coordinateSums = np.sum(corners, axis=1)
+        sortedCoordinateSums = np.argsort(coordinateSums)
+        topLeft, bottomRight = corners[sortedCoordinateSums[0]], corners[sortedCoordinateSums[-1]]
+
+        coordinateDiffs = np.diff(corners, axis=1).squeeze(1)
+        sortedCoordinateDiffs = np.argsort(coordinateDiffs)
+        topRight, bottomLeft = corners[sortedCoordinateDiffs[0]], corners[sortedCoordinateDiffs[-1]]
+
+        return np.array([topRight, bottomRight, bottomLeft, topLeft], dtype=np.float32)
+
+    @classmethod
+    def _detectCorners(cls, image: np.ndarray) -> np.ndarray:
+        imageHSV = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+        boardMask = cv.inRange(imageHSV, BoardImage.hsvRange[0], BoardImage.hsvRange[1])
+
+        kernel = np.ones((5, 5), np.uint8)
+        erosion = cv.erode(boardMask, kernel, iterations=3)
+        dilate = cv.dilate(erosion, kernel, iterations=3)
+
+        boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        boardHull = cv.convexHull(np.vstack(boardContours))
+        approxBoardHull = cv.approxPolyDP(boardHull, epsilon=0.01* cv.arcLength(boardHull, True), closed=True).squeeze(1)
+        
+        return cls._orderPointsClockwise(approxBoardHull)
+
+    @staticmethod
+    def _detectArUcoCorners(image: np.ndarray) -> np.ndarray:
+        arucoDict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
+        arucoParams = cv.aruco.DetectorParameters_create()
+
+        grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        markerCorners, markerIDs, _ = cv.aruco.detectMarkers(grayImage, arucoDict, parameters=arucoParams)
+
+        if markerIDs is None or len(markerIDs) != 4:
+            raise CameraError(f"Not enough ArUco marker found, found only {len(markerIDs) if markerIDs is not None else 0} out of 4")
+
+        markers = zip(markerIDs, markerCorners)
+        markers = {markerId[0]-1: markerCorners.squeeze(0) for markerId, markerCorners in markers}
+        return np.array([markers[i][(i+2)%4] for i in range(4)])
 
     def detectBoard(self, image: np.ndarray) -> BoardImage:
         """
@@ -189,33 +223,23 @@ class RobotCameraInterface(AbstractCameraInterface):
         """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
-        _cameraLogger.debug("[Detect board on image]")
 
-        _cameraLogger.debug("Get ArUco dictionary")
-        arucoDict = cv.aruco.getPredefinedDictionary(cv.aruco.DICT_4X4_50)
-        arucoParams = cv.aruco.DetectorParameters_create()
-
-        _cameraLogger.debug("Detecting ArUco markers")
-        markerCorners, markerIDs, _ = cv.aruco.detectMarkers(image, arucoDict, parameters=arucoParams)
-
-        if markerIDs is None or len(markerIDs) != 4:
-            raise CameraError(f"Not enough ArUco marker found, found only {len(markerIDs) if markerIDs is not None else 0} out of 4")
-
-        _cameraLogger.debug(f"Marker IDs: {markerIDs.flatten()}")
-
-        markers = zip(markerIDs, markerCorners)
-        markers = {markerId[0]-1: markerCorners for markerId, markerCorners in markers}
-
-        _cameraLogger.debug("Transforming detected board image")
-        board = np.array([markers[i][0][i] for i in range(4)])
-        mat = cv.getPerspectiveTransform(board, np.float32([
+        corners = self._detectCorners(image)
+        if len(corners) != 4:
+            corners = self._detectArUcoCorners(image)
+        
+        transformedCorners = np.array([
             [0, 0],
             [self._boardWidth, 0],
             [self._boardWidth, self._boardHeight],
             [0, self._boardHeight]
-        ]))
-        warpedBoard = cv.warpPerspective(image, mat, (self._boardWidth, self._boardHeight), flags=cv.INTER_LINEAR)
-        return BoardImage(warpedBoard)
+        ], dtype=np.float32) + self._boardOffset
+
+        warpMatrix = cv.getPerspectiveTransform(corners, transformedCorners)
+
+        warpSize = (np.array([self._boardWidth, self._boardHeight]) + 2*self._boardOffset).astype(int)
+        warpedBoard = cv.warpPerspective(image, warpMatrix, warpSize, flags=cv.INTER_LINEAR)
+        return BoardImage(warpedBoard, int(self._boardOffset[0]), int(self._boardOffset[1]), int(self._boardWidth), int(self._boardHeight))
 
     # TODO: Implement
     def calculateRobotToCameraTransform(self, robotPoints: np.ndarray, board: BoardImage) -> None:
@@ -243,7 +267,7 @@ class RobotCamera(RobotCameraInterface):
     def read(self, undistorted: bool = True) -> Optional[np.ndarray]:
         wasSuccessful, image = self._capture.read()
         if wasSuccessful:
-            return image if undistorted is False else self._undistort(image)
+            return image if undistorted is False else self.undistort(image)
         else:
             return None
 
