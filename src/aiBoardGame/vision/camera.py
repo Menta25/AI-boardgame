@@ -191,7 +191,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         boardMask = cv.inRange(imageHSV, BoardImage.hsvRange[0], BoardImage.hsvRange[1])
 
         kernel = np.ones((5, 5), np.uint8)
-        erosion = cv.erode(boardMask, kernel, iterations=3)
+        erosion = cv.erode(boardMask, kernel, iterations=4)
         dilate = cv.dilate(erosion, kernel, iterations=3)
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)

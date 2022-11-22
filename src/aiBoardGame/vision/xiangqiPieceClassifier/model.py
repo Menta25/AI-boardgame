@@ -229,8 +229,8 @@ class XiangqiPieceClassifier:
 
         return board
 
-    def predictBoard(self, boardImage: BoardImage, allTiles: bool = False) -> Board:
-        return self.predictTiles(boardImage.tiles) if allTiles else self.predictPieces(boardImage.pieces)
+    def predictBoard(self, boardImage: BoardImage, filterEmptyTiles: bool = True) -> Board:
+        return self.predictPieces(boardImage.pieces) if filterEmptyTiles else self.predictTiles(boardImage.tiles)
 
     @staticmethod
     def _cvImagesToTensor(cvImages: Tuple[np.ndarray]) -> Tensor:

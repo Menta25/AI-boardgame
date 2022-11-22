@@ -28,15 +28,14 @@ class BoardImage:
     rankStep: np.float64 = field(init=False)
     tileSize: np.ndarray = field(init=False)
 
-    tileSizeMultiplier: ClassVar[float] = 1.5
+    tileSizeMultiplier: ClassVar[float] = 1.6
     pieceSizeMultiplier: ClassVar[float] = 1.2
 
-    hsvRange: ClassVar[np.ndarray] = np.array([15,89,153])[np.newaxis,:] + np.array([[10,80,120], [5,166,50]]) * np.array([[-1],[1]])
+    hsvRange: ClassVar[np.ndarray] = np.array([15,89,153])[np.newaxis,:] + np.array([[10,80,120], [10,166,50]]) * np.array([[-1],[1]])
 
 
     def __post_init__(self) -> None:
         if any([attribute is None for attribute in [self._x, self._y, self._width, self._height]]):
-            print("what")
             x, y, width, height = self._fallbackBoardDetection(self.data)
         else:
             x, y, width, height = self._x, self._y, self._width, self._height
@@ -98,19 +97,13 @@ class BoardImage:
         topLeftCorner = (self.positions[0,0] - self.tileSize/2).astype(np.uint16)
         bottomRightCorner = (self.positions[-1,-1] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
-
-    @staticmethod
-    def _detectCircles(image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
-        blurredTile = cv.medianBlur(image, 3)
-        grayBlurredTile = cv.cvtColor(blurredTile, cv.COLOR_BGR2GRAY)
-        pieces = cv.HoughCircles(grayBlurredTile, cv.HOUGH_GRADIENT, dp=2.45, minDist=minDist, param1=10, param2=88, minRadius=minRadius, maxRadius=maxRadius)
-        return pieces[0] if pieces is not None else np.array([])
-
     
-    def _detectCircles2(self, blur: int, dp: float, param1: int, param2: int) -> np.ndarray:
-        blurredTile = cv.medianBlur(self.roi, blur)
-        grayBlurredTile = cv.cvtColor(blurredTile, cv.COLOR_BGR2GRAY)
-        pieces = cv.HoughCircles(grayBlurredTile, cv.HOUGH_GRADIENT, dp=dp, minDist=int(self.fileStep*0.9), param1=param1, param2=param2, minRadius=int(self.fileStep*0.4), maxRadius=int(self.fileStep*0.5))
+    def _detectCircles(self, image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
+        grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+        clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(2,2))
+        claheImage = clahe.apply(grayImage)
+        blurredImage = cv.GaussianBlur(claheImage, (3,3), cv.BORDER_DEFAULT)
+        pieces = cv.HoughCircles(blurredImage, cv.HOUGH_GRADIENT, dp=2.5, minDist=minDist, param1=30, param2=85, minRadius=minRadius, maxRadius=maxRadius)
         return pieces[0] if pieces is not None else np.array([])
 
     @property
@@ -119,25 +112,25 @@ class BoardImage:
         for file, tilesInfile in enumerate(self.positions):
             for rank, tileCenter in enumerate(tilesInfile[::-1]):
                 tile = self._tile(tileCenter)
-                detectedCircles = self._detectCircles(tile, tile.shape[0], tile.shape[0]//3, tile.shape[0]//2)
+                detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.42), int(self.fileStep*0.5))
 
                 if len(detectedCircles) == 0:
                     continue
 
-                if len(detectedCircles) == 1:
-                    x, y, radius = detectedCircles[0]
-                    offset = radius*self.pieceSizeMultiplier
-                    tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
+                tileCenter = np.asarray(tile.shape[0:2])/2.0
+                detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(tileCenter - np.asarray(circle[0:1])))
+                *pieceCenter, pieceRadius = detectedCircles[0]
+                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/2.7:
+                    continue
+
+                # cv.circle(tile, np.asarray(pieceCenter, dtype=int), int(pieceRadius), (0,255,0), 3)
+                # cv.circle(tile, np.asarray(pieceCenter, dtype=int), 2, (0,0,255), 3)
+
+                x, y = pieceCenter
+                offset = pieceRadius*self.pieceSizeMultiplier
+                tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
                 pieces.append((Position(file, rank), tile))
         return pieces
-
-    def drawwPieces(self) -> np.ndarray:
-        roiCopy = self.roi.copy()
-        for *center, radius in self._detectCircles(roiCopy, int(self.fileStep*0.9), int(self.fileStep*0.4), int(self.fileStep*0.5)):
-            center = np.around(center).astype(int)
-            cv.circle(roiCopy, center, int(radius), (0,255,0), thickness=3)
-            cv.circle(roiCopy, center, 0, (0,0,255), thickness=3)
-        return roiCopy
 
 
 if __name__ == "__main__":
@@ -147,7 +140,7 @@ if __name__ == "__main__":
     
     from aiBoardGame.logic.engine.utility import boardToStr
 
-    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board5.jpg")
+    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board2.jpg")
     boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
 
     classifier = XiangqiPieceClassifier(Path("finalWeights.pt"))
@@ -158,14 +151,18 @@ if __name__ == "__main__":
     # print(classifier.predict(transforms.ToTensor()(tile)))
 
     start = time.time()
-    pieces = boardImage.pieces
-    board = classifier.predictPieces(pieces)
+    board = classifier.predictBoard(boardImage)
     print(f"predict time: {time.time() - start:.4f}s")
 
     print(boardToStr(board))
 
     cv.imshow("roi", boardImage.roi)
     cv.waitKey(0)
+
+    for position, tile in boardImage.pieces:
+        cv.imshow(f"{position}", tile)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
 
     # tiles = boardImage.tiles
     # for rank in range(Board.rankCount):
@@ -174,9 +171,9 @@ if __name__ == "__main__":
     #         cv.waitKey(0)
     #         cv.destroyAllWindows()
 
-    cv.imshow(f"{classifier.predictTile(boardImage[8,5])}", boardImage[8,5])
-    cv.imwrite("test.jpg", boardImage[8,5])
-    cv.waitKey(0)
+    # cv.imshow(f"{classifier.predictTile(boardImage[8,5])}", boardImage[8,5])
+    # cv.imwrite("test.jpg", boardImage[8,5])
+    # cv.waitKey(0)
 
     # boardImage.showPieces()
 
