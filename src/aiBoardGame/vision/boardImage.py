@@ -31,7 +31,7 @@ class BoardImage:
     tileSizeMultiplier: ClassVar[float] = 1.6
     pieceSizeMultiplier: ClassVar[float] = 1.2
 
-    hsvRange: ClassVar[np.ndarray] = np.array([15,89,153])[np.newaxis,:] + np.array([[10,80,120], [10,166,50]]) * np.array([[-1],[1]])
+    hsvRange: ClassVar[np.ndarray] = np.array([15,128,150])[np.newaxis,:] + np.array([[10,128,150], [10,127,100]]) * np.array([[-1],[1]])
 
 
     def __post_init__(self) -> None:
@@ -39,6 +39,9 @@ class BoardImage:
             x, y, width, height = self._fallbackBoardDetection(self.data)
         else:
             x, y, width, height = self._x, self._y, self._width, self._height
+
+        # for corner in np.array([[x,y],[x+width,y],[x+width,y+height],[x,y+height]]):
+        #     cv.circle(self.data, corner.astype(int), 2, (0,255,255),2)
 
         fileStep = int(width / Board.fileCount)
         rankStep = int(height / Board.rankCount)
@@ -57,6 +60,9 @@ class BoardImage:
         object.__setattr__(self, "rankStep", rankStep)
         object.__setattr__(self, "tileSize", tileSize)
 
+        # for file in self.positions: 
+        #     for tileCenter in file:
+        #         cv.circle(self.data, tileCenter, 1, (255,0,0), 2)
 
     @classmethod
     def _fallbackBoardDetection(cls, data: np.ndarray) -> Tuple[int, int, int, int]:
@@ -112,7 +118,7 @@ class BoardImage:
         for file, tilesInfile in enumerate(self.positions):
             for rank, tileCenter in enumerate(tilesInfile[::-1]):
                 tile = self._tile(tileCenter)
-                detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.42), int(self.fileStep*0.5))
+                detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
 
                 if len(detectedCircles) == 0:
                     continue
@@ -122,7 +128,7 @@ class BoardImage:
                 *pieceCenter, pieceRadius = detectedCircles[0]
                 if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/2.7:
                     continue
-
+                # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)))
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), int(pieceRadius), (0,255,0), 3)
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), 2, (0,0,255), 3)
 
@@ -143,26 +149,26 @@ if __name__ == "__main__":
     boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board2.jpg")
     boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
 
-    classifier = XiangqiPieceClassifier(Path("finalWeights.pt"))
+    # classifier = XiangqiPieceClassifier(Path("finalWeights.pt"))
 
     # from PIL import Image
     # from torchvision import transforms
     # tile = Image.fromarray(boardImage.tiles[8,9][...,::-1])
     # print(classifier.predict(transforms.ToTensor()(tile)))
 
-    start = time.time()
-    board = classifier.predictBoard(boardImage)
-    print(f"predict time: {time.time() - start:.4f}s")
+    # start = time.time()
+    # board = classifier.predictBoard(boardImage)
+    # print(f"predict time: {time.time() - start:.4f}s")
 
-    print(boardToStr(board))
+    # print(boardToStr(board))
 
     cv.imshow("roi", boardImage.roi)
     cv.waitKey(0)
 
-    for position, tile in boardImage.pieces:
-        cv.imshow(f"{position}", tile)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+    # for position, tile in boardImage.pieces:
+    #     cv.imshow(f"{position}", tile)
+    #     cv.waitKey(0)
+    #     cv.destroyAllWindows()
 
     # tiles = boardImage.tiles
     # for rank in range(Board.rankCount):

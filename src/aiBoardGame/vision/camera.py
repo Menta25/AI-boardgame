@@ -40,8 +40,11 @@ class AbstractCameraInterface(QObject):
     calibrationMinPatternCount: ClassVar[int] = 5
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
+
+        if isinstance(resolution, tuple):
+            resolution = Resolution(*resolution)
 
         self.resolution = resolution
 
@@ -174,14 +177,17 @@ class RobotCameraInterface(AbstractCameraInterface):
         self._robotToCameraTransform: Optional[np.ndarray] = None
     
     @staticmethod
-    def _orderPointsClockwise(corners: np.ndarray) -> np.ndarray:
-        coordinateSums = np.sum(corners, axis=1)
-        sortedCoordinateSums = np.argsort(coordinateSums)
-        topLeft, bottomRight = corners[sortedCoordinateSums[0]], corners[sortedCoordinateSums[-1]]
+    def _generateCorners(hull: np.ndarray) -> np.ndarray:
+        if len(hull) > 5:
+            return np.array([])
 
-        coordinateDiffs = np.diff(corners, axis=1).squeeze(1)
+        coordinateSums = np.sum(hull, axis=1)
+        sortedCoordinateSums = np.argsort(coordinateSums)
+        topLeft, bottomRight = hull[sortedCoordinateSums[0]], hull[sortedCoordinateSums[-1]]
+
+        coordinateDiffs = np.diff(hull, axis=1).squeeze(1)
         sortedCoordinateDiffs = np.argsort(coordinateDiffs)
-        topRight, bottomLeft = corners[sortedCoordinateDiffs[0]], corners[sortedCoordinateDiffs[-1]]
+        topRight, bottomLeft = hull[sortedCoordinateDiffs[0]], hull[sortedCoordinateDiffs[-1]]
 
         return np.array([topRight, bottomRight, bottomLeft, topLeft], dtype=np.float32)
 
@@ -198,7 +204,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         boardHull = cv.convexHull(np.vstack(boardContours))
         approxBoardHull = cv.approxPolyDP(boardHull, epsilon=0.01* cv.arcLength(boardHull, True), closed=True).squeeze(1)
         
-        return cls._orderPointsClockwise(approxBoardHull)
+        return cls._generateCorners(approxBoardHull)
 
     @staticmethod
     def _detectArUcoCorners(image: np.ndarray) -> np.ndarray:
@@ -227,7 +233,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         corners = self._detectCorners(image)
         if len(corners) != 4:
             corners = self._detectArUcoCorners(image)
-        
+
         transformedCorners = np.array([
             [0, 0],
             [self._boardWidth, 0],
