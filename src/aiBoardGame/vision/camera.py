@@ -196,13 +196,35 @@ class RobotCameraInterface(AbstractCameraInterface):
         imageHSV = cv.cvtColor(image, cv.COLOR_BGR2HSV)
         boardMask = cv.inRange(imageHSV, BoardImage.hsvRange[0], BoardImage.hsvRange[1])
 
-        kernel = np.ones((5, 5), np.uint8)
-        erosion = cv.erode(boardMask, kernel, iterations=4)
-        dilate = cv.dilate(erosion, kernel, iterations=3)
+        # cv.imshow("mask", boardMask)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+
+        kernel = np.ones((3,3), np.uint8)
+        erosion = cv.erode(boardMask, kernel, iterations=5)
+        dilate = cv.dilate(erosion, np.ones((9,9), np.uint8), iterations=3)
+
+        # cv.imshow("dilate", dilate)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+        boardContours = np.vstack([boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000])
+
+        # testContours = np.zeros(image.shape[0:2])
+        # cv.drawContours(testContours, boardContours, -1, (255), 1)
+        # cv.imshow("testContours", testContours)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+
         boardHull = cv.convexHull(np.vstack(boardContours))
         approxBoardHull = cv.approxPolyDP(boardHull, epsilon=0.01* cv.arcLength(boardHull, True), closed=True).squeeze(1)
+
+        # for hullPoint in approxBoardHull:
+        #     cv.circle(image, hullPoint, 1, (255,0,0), 2)
+        # cv.imshow("image", image)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
         
         return cls._generateCorners(approxBoardHull)
 

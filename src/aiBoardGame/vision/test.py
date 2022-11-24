@@ -9,21 +9,23 @@ from aiBoardGame.vision.boardImage import BoardImage
 
 def searchParams(camera: RobotCameraInterface, imagesPath: Path) -> Tuple[int, float, int, int]:
     for imagePath in imagesPath.iterdir():
-        # if imagePath.stem in ["31"]:
+        # if imagePath.stem in ["40"]:
         image = cv.imread(imagePath.as_posix())
         image = camera.undistort(image)
+        try:
+            board = camera.detectBoard(image)
+            # board = BoardImage(data=cv.imread(imagePath.as_posix()).copy())
+            board.pieces
 
-        board = camera.detectBoard(image)
-        # board = BoardImage(data=cv.imread(imagePath.as_posix()).copy())
-        board.pieces
+            # for file in board.positions: 
+            #     for tileCenter in file:
+            #         cv.circle(board.data, tileCenter, 1, (255,0,0), 2)
 
-        # for file in board.positions: 
-        #     for tileCenter in file:
-        #         cv.circle(board.data, tileCenter, 1, (255,0,0), 2)
-
-        cv.imshow(f"{imagePath}", board.roi)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+            cv.imshow(f"{imagePath}", board.roi)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
+        except:
+            print(imagePath, " Error")
 
 
 if __name__ == "__main__":
@@ -32,8 +34,8 @@ if __name__ == "__main__":
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackAdvisor")
     # searchParams(camera, imagesPath)
 
-    imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/RedSoldier")
-    searchParams(camera, imagesPath)
+    # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/RedCannon")
+    # searchParams(camera, imagesPath)
 
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board")
     # searchParams(camera, imagesPath)
@@ -45,4 +47,10 @@ if __name__ == "__main__":
     # bruh(camera, imagePath)
     
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/RedSoldier")
+    # searchParams(camera, imagesPath)
+
+    imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackSoldier")
+    searchParams(camera, imagesPath)
+
+    # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackCannon")
     # searchParams(camera, imagesPath)

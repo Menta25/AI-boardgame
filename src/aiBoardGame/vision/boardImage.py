@@ -106,10 +106,10 @@ class BoardImage:
     
     def _detectCircles(self, image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
         grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-        clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(2,2))
+        clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(4,4))
         claheImage = clahe.apply(grayImage)
-        blurredImage = cv.GaussianBlur(claheImage, (3,3), cv.BORDER_DEFAULT)
-        pieces = cv.HoughCircles(blurredImage, cv.HOUGH_GRADIENT, dp=2.5, minDist=minDist, param1=30, param2=85, minRadius=minRadius, maxRadius=maxRadius)
+        blurredImage = cv.medianBlur(claheImage, 13)
+        pieces = cv.HoughCircles(blurredImage, cv.HOUGH_GRADIENT, dp=2, minDist=minDist, param1=15, param2=45, minRadius=minRadius, maxRadius=maxRadius)
         return pieces[0] if pieces is not None else np.array([])
 
     @property
@@ -126,9 +126,9 @@ class BoardImage:
                 tileCenter = np.asarray(tile.shape[0:2])/2.0
                 detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(tileCenter - np.asarray(circle[0:1])))
                 *pieceCenter, pieceRadius = detectedCircles[0]
-                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/2.7:
+                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/3.1:
+                    # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)), " = ", self.fileStep/3.1)
                     continue
-                # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)))
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), int(pieceRadius), (0,255,0), 3)
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), 2, (0,0,255), 3)
 
