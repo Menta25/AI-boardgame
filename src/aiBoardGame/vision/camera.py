@@ -200,9 +200,10 @@ class RobotCameraInterface(AbstractCameraInterface):
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 
-        kernel = np.ones((3,3), np.uint8)
-        erosion = cv.erode(boardMask, kernel, iterations=5)
-        dilate = cv.dilate(erosion, np.ones((9,9), np.uint8), iterations=3)
+        erosionKernel = np.ones((3,3), np.uint8)
+        dilationKernel = np.ones((9,9), np.uint8)
+        erosion = cv.erode(boardMask, erosionKernel, iterations=4)
+        dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
         # cv.imshow("dilate", dilate)
         # cv.waitKey(0)

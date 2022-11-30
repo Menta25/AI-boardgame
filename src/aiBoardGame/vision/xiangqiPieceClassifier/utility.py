@@ -66,6 +66,7 @@ def generateTrainDataset(rawImagesRoot: Path, destinationRoot: Path, camera: Opt
 
 
 def savePieces(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -> None:
+    object.__setattr__(boardImage, "pieceThresholdDivisor", 2.1)
     pieceImagesDir = Path(destinationRoot, rawImagePath.parent.name)
     if not pieceImagesDir.exists():
         pieceImagesDir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +114,6 @@ def saveROI(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -
 if __name__ == "__main__":
     camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
     rawImagesRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic")
-    destinationRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes2")
-    generate = GenerateMode.PIECES
+    destinationRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes4")
+    generate = GenerateMode.DATA
     generateTrainDataset(rawImagesRoot, destinationRoot, camera, generate)

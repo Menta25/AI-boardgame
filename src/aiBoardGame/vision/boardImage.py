@@ -24,14 +24,15 @@ class BoardImage:
 
     positions: np.ndarray = field(init=False)
 
-    fileStep: np.float64 = field(init=False)
-    rankStep: np.float64 = field(init=False)
+    fileStep: int = field(init=False)
+    rankStep: int = field(init=False)
     tileSize: np.ndarray = field(init=False)
 
     tileSizeMultiplier: ClassVar[float] = 1.6
     pieceSizeMultiplier: ClassVar[float] = 1.2
+    pieceThresholdDivisor: ClassVar[float] = 3.1
 
-    hsvRange: ClassVar[np.ndarray] = np.array([15,128,150])[np.newaxis,:] + np.array([[10,128,150], [10,127,100]]) * np.array([[-1],[1]])
+    hsvRange: ClassVar[np.ndarray] = np.array([15,128,150])[np.newaxis,:] + np.array([[14.4,128,150], [10,127,100]]) * np.array([[-1],[1]])
 
 
     def __post_init__(self) -> None:
@@ -69,12 +70,22 @@ class BoardImage:
         imageHSV = cv.cvtColor(data, cv.COLOR_BGR2HSV)
         boardMask = cv.inRange(imageHSV, cls.hsvRange[0], cls.hsvRange[1])
 
-        kernel = np.ones((5, 5), np.uint8)
-        erosion = cv.erode(boardMask, kernel, iterations=3)
-        dilate = cv.dilate(erosion, kernel, iterations=3)
+        # cv.imshow("mask", boardMask)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
+
+        erosionKernel = np.ones((3,3), np.uint8)
+        dilationKernel = np.ones((9,9), np.uint8)
+        erosion = cv.erode(boardMask, erosionKernel, iterations=4)
+        dilate = cv.dilate(erosion, dilationKernel, iterations=2)
+
+        # cv.imshow("dilate", dilate)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-        return cv.boundingRect(np.vstack(boardContours))
+        boardContours = np.vstack([boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000])
+        return cv.boundingRect(boardContours)
 
     @property
     def tiles(self) -> np.ndarray:
@@ -108,8 +119,8 @@ class BoardImage:
         grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(4,4))
         claheImage = clahe.apply(grayImage)
-        blurredImage = cv.medianBlur(claheImage, 13)
-        pieces = cv.HoughCircles(blurredImage, cv.HOUGH_GRADIENT, dp=2, minDist=minDist, param1=15, param2=45, minRadius=minRadius, maxRadius=maxRadius)
+        blurredImage = cv.medianBlur(claheImage, 7)
+        pieces = cv.HoughCircles(blurredImage, cv.HOUGH_GRADIENT, dp=2, minDist=minDist, param1=20, param2=50, minRadius=minRadius, maxRadius=maxRadius)
         return pieces[0] if pieces is not None else np.array([])
 
     @property
@@ -126,8 +137,8 @@ class BoardImage:
                 tileCenter = np.asarray(tile.shape[0:2])/2.0
                 detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(tileCenter - np.asarray(circle[0:1])))
                 *pieceCenter, pieceRadius = detectedCircles[0]
-                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/3.1:
-                    # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)), " = ", self.fileStep/3.1)
+                # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)), " = ", self.fileStep/self.pieceThresholdDivisor)
+                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/self.pieceThresholdDivisor:
                     continue
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), int(pieceRadius), (0,255,0), 3)
                 # cv.circle(tile, np.asarray(pieceCenter, dtype=int), 2, (0,0,255), 3)
@@ -161,7 +172,7 @@ if __name__ == "__main__":
     # print(f"predict time: {time.time() - start:.4f}s")
 
     # print(boardToStr(board))
-
+    
     cv.imshow("roi", boardImage.roi)
     cv.waitKey(0)
 
