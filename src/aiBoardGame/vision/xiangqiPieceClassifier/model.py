@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
     logging.info("")
 
-    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes/None/cut_15.jpg")
+    pieceImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes/BlackChariot/15.jpg")
     pieceImage = cv.imread(pieceImagePath.as_posix())
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 

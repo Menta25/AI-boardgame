@@ -23,7 +23,8 @@ class XiangqiPieceDataLoader(DataLoader):
 class XiangqiPieceDataset(ImageFolder):
     basicTransform: ClassVar[transforms.Compose] = transforms.Compose([
         transforms.Resize((128, 128)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
     ])
     trainTransform: ClassVar[transforms.Compose] = transforms.Compose([
         basicTransform.transforms[0],
@@ -31,7 +32,7 @@ class XiangqiPieceDataset(ImageFolder):
         transforms.ColorJitter(brightness=(0.9, 1.5), contrast=0.2, saturation=0.1, hue=0.04),
         transforms.RandomAdjustSharpness(sharpness_factor=1.5, p=0.3),
         transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 0.8)),
-        basicTransform.transforms[-1]
+        *basicTransform.transforms[-2:]
     ])
     splitSizeFractions: ClassVar[List[float]] = [0.8, 0.1, 0.1]
 

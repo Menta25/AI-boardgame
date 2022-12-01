@@ -9,7 +9,7 @@ from aiBoardGame.vision.boardImage import BoardImage
 
 def searchParams(camera: RobotCameraInterface, imagesPath: Path) -> Tuple[int, float, int, int]:
     for imagePath in imagesPath.iterdir():
-        if imagePath.stem in ["40"]:
+        if imagePath.stem in ["start"]:
             image = cv.imread(imagePath.as_posix())
             image = camera.undistort(image)
             try:
@@ -31,8 +31,8 @@ def searchParams(camera: RobotCameraInterface, imagesPath: Path) -> Tuple[int, f
 if __name__ == "__main__":
     camera = RobotCameraInterface(resolution=Resolution(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
 
-    # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackAdvisor")
-    # searchParams(camera, imagesPath)
+    imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs")
+    searchParams(camera, imagesPath)
 
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/RedCannon")
     # searchParams(camera, imagesPath)
@@ -52,8 +52,8 @@ if __name__ == "__main__":
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackSoldier")
     # searchParams(camera, imagesPath)
 
-    imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackCannon")
-    searchParams(camera, imagesPath)
+    # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/BlackCannon")
+    # searchParams(camera, imagesPath)
 
     # imagesPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic/None")
     # searchParams(camera, imagesPath)

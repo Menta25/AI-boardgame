@@ -32,7 +32,11 @@ class BoardImage:
     pieceSizeMultiplier: ClassVar[float] = 1.2
     pieceThresholdDivisor: ClassVar[float] = 3.1
 
-    hsvRange: ClassVar[np.ndarray] = np.array([15,128,150])[np.newaxis,:] + np.array([[14.4,128,150], [10,127,100]]) * np.array([[-1],[1]])
+    hsvRanges: ClassVar[Tuple[np.ndarray]] = (
+        np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+        np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+        np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
+    )
 
 
     def __post_init__(self) -> None:
@@ -68,7 +72,7 @@ class BoardImage:
     @classmethod
     def _fallbackBoardDetection(cls, data: np.ndarray) -> Tuple[int, int, int, int]:
         imageHSV = cv.cvtColor(data, cv.COLOR_BGR2HSV)
-        boardMask = cv.inRange(imageHSV, cls.hsvRange[0], cls.hsvRange[1])
+        boardMask = cv.inRange(imageHSV, cls.hsvRanges[0], cls.hsvRanges[1])
 
         # cv.imshow("mask", boardMask)
         # cv.waitKey(0)
