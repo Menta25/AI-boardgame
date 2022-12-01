@@ -1,8 +1,7 @@
 import logging
 from enum import IntFlag
-from time import sleep
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from threading import Thread
 from functools import partial
 from queue import Queue, Empty, Full
@@ -52,8 +51,20 @@ class RobotArm:
         return info if isinstance(info, dict) else {}
 
     @property
+    def position(self) -> List[float]:
+        return self.swift.get_position(wait=True) if self.isAllAttached else []
+
+    @property
+    def polar(self) -> List[float]:
+        return self.swift.get_polar(wait=True) if self.isAllAttached else []
+
+    @property
+    def angle(self) -> List[float]:
+        return self.swift.get_servo_angle(wait=True) if self.isAllAttached else []
+
+    @property
     def isAllAttached(self) -> bool:
-        return self.swift.get_servo_attach(wait=True)
+        return self.swift.get_servo_attach(wait=True) == True
 
     @property
     def isPumpActive(self) -> bool:
@@ -62,9 +73,6 @@ class RobotArm:
     @property
     def isGrabbing(self) -> bool:
         return self.swift.get_pump_status() == 2
-
-    def isAttached(self, servo: Servo) -> bool:
-        return self.swift.get_servo_attach(servo.value, wait=True)
 
     def connect(self) -> None:
         try:
@@ -77,33 +85,23 @@ class RobotArm:
             self.swift.set_mode(mode=0)
             self.resetPosition(speed=500000)
 
-    def disconnect(self) -> bool:
+    def disconnect(self) -> None:
         if self.isConnected:
             self.detach(safe=True)
             self.swift.disconnect()
-        
-    def start(self) -> None:
-        if not self.isConnected:
-            self.connect()
 
-        self.isRunning = True
-        self.thread.start()
+    def isAttached(self, servo: Servo) -> bool:
+        return self.swift.get_servo_attach(servo.value, wait=True) == True
 
-    def stop(self) -> None:
-        if self.isRunning:
-            self.isRunning = False
-            if self.thread is not None:
-                self.thread.join()
-            self.disconnect()
+    def detach(self, safe: bool = True) -> None:
+        if self.isAllAttached:
+            if safe is True:
+                self.resetPosition(lowerDown=True)
+            self.swift.set_servo_detach()
 
-    def _loop(self) -> None:
-        while self.isRunning:
-            pass
-
-    def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False) -> None:
-        self.move(position=(200.0, 0.0, 150.0), speed=speed, wait=True, isPolar=True)
-        if lowerDown is True:
-            self.setAngle(servo=Servo.Right, angle=66.82, wait=True)
+    def attach(self) -> None:
+        if not self.isAllAttached:
+            self.swift.set_servo_attach()
 
     def move(self, position: Tuple[float, float, float], speed: Optional[int] = None, wait: bool = True, isPolar: bool = False) -> None:
         if not self.isAllAttached:
@@ -132,17 +130,68 @@ class RobotArm:
         if wait is True:
             self.swift.flush_cmd(wait_stop=True)
 
-    def detach(self, safe: bool = True) -> None:
-        if self.isAllAttached:
-            if safe is True:
-                self.resetPosition(lowerDown=True)
-            self.swift.set_servo_detach()
+    def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False) -> None:
+        self.move(position=(200.0, 0.0, 150.0), speed=speed, wait=True, isPolar=True)
+        if lowerDown is True:
+            self.setAngle(servo=Servo.Right, angle=66.82, wait=True)
 
-    def attach(self) -> None:
-        if not self.isAllAttached:
-            self.swift.set_servo_attach()
+    def start(self) -> None:
+        if not self.isConnected:
+            self.connect()
+
+        self.isRunning = True
+        self.thread.start()
+
+    def stop(self) -> None:
+        if self.isRunning:
+            self.isRunning = False
+            if self.thread is not None:
+                self.thread.join()
+            self.disconnect()
+
+    def _loop(self) -> None:
+        while self.isRunning:
+            pass
+
+
+def savePoints() -> None:
+    from pathlib import Path
+
+    robot = None
+    try:
+        robot = RobotArm(speed=500000)
+        robot.connect()
+
+        robot.detach(safe=True)
+        isRunning = True
+        saves = []
+        while isRunning:
+            print("[0] Exit\n[1] Save\n[2] Write save")
+            try:
+                command = int(input("Command: "))
+                if command == 0:
+                    isRunning = False
+                elif command == 1:
+                    robot.attach()
+                    saves.append({
+                        "position": robot.position,
+                        "polar": robot.polar,
+                        "angle": robot.angle
+                    })
+                    robot.detach(safe=False)
+                elif command == 2:
+                    path = Path(input("Save path: ")).with_suffix(".txt")
+                    with path.open(mode="w") as file:
+                        file.writelines(str(saves))
+            except ValueError:
+                continue
+    except RobotArmException as error:
+        print(error)
+    finally:
+        if robot is not None:
+            robot.attach()
+            robot.disconnect()
 
 
 if __name__ == "__main__":
-    robot = RobotArm()
-    robot.start()
+    savePoints()
