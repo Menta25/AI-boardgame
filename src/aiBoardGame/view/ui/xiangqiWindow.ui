@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>xiangqiWindow</class>
+ <widget class="QMainWindow" name="xiangqiWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Xiangqi</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QStackedWidget" name="stackedWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="mainPage">
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <widget class="QTabWidget" name="tabWidget">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <widget class="QWidget" name="cameraTab">
+           <attribute name="title">
+            <string>Camera</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_2">
+            <item row="0" column="0">
+             <layout class="QVBoxLayout" name="cameraLayout" stretch="0,1,0">
+              <item>
+               <widget class="QComboBox" name="cameraInputComboBox">
+                <property name="currentText">
+                 <string/>
+                </property>
+                <property name="currentIndex">
+                 <number>-1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="selectCameraView">
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(35, 34, 34);</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="calibrationMethodLayout">
+                <item>
+                 <widget class="QPushButton" name="manualCalibrationButton">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Manual Calibration</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="loadCalibrationButton">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="text">
+                   <string>Load Calibration</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="gameTab">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <attribute name="title">
+            <string>Game</string>
+           </attribute>
+           <layout class="QGridLayout" name="gridLayout_5">
+            <item row="0" column="0">
+             <layout class="QVBoxLayout" name="gameLayout" stretch="0,1,0,0">
+              <item>
+               <widget class="QPushButton" name="newGameButton">
+                <property name="text">
+                 <string>New Game</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="gameCameraView">
+                <property name="styleSheet">
+                 <string notr="true">background-color: rgb(35, 34, 34);</string>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="difficultyLayout">
+                <item>
+                 <widget class="QLabel" name="difficultyLabel">
+                  <property name="text">
+                   <string>Difficulty</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="difficultyComboBox"/>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="QPushButton" name="readyButton">
+                <property name="text">
+                 <string>Ready</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="calibrationPage">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <layout class="QVBoxLayout" name="calibrationLayout" stretch="0,1,0,0">
+          <item>
+           <layout class="QVBoxLayout" name="calibrationSettingsLayout">
+            <item>
+             <widget class="QLabel" name="checkerboardSizeLabel">
+              <property name="text">
+               <string>Checkerboard Size</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="checkerBoardSizeLayout">
+              <item>
+               <layout class="QHBoxLayout" name="horizontalVerticiesLayout">
+                <item>
+                 <widget class="QLabel" name="horizontalVerticiesLabel">
+                  <property name="text">
+                   <string>Horizontal</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>horizontalVerticiesSpinBox</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="horizontalVerticiesSpinBox">
+                  <property name="layoutDirection">
+                   <enum>Qt::LeftToRight</enum>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="showGroupSeparator" stdset="0">
+                   <bool>false</bool>
+                  </property>
+                  <property name="suffix">
+                   <string/>
+                  </property>
+                  <property name="value">
+                   <number>8</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="verticalVerticiesLayout">
+                <item>
+                 <widget class="QLabel" name="verticalVerticiesLabel">
+                  <property name="text">
+                   <string>Vertical</string>
+                  </property>
+                  <property name="buddy">
+                   <cstring>verticalVerticiesSpinBox</cstring>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSpinBox" name="verticalVerticiesSpinBox">
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="value">
+                   <number>6</number>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="calibrationCameraView">
+            <property name="styleSheet">
+             <string notr="true">background-color: rgb(35, 34, 34);</string>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="calibrateButton">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Calibrate</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QProgressBar" name="calibrationProgressBar">
+            <property name="value">
+             <number>0</number>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="textVisible">
+             <bool>true</bool>
+            </property>
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="invertedAppearance">
+             <bool>false</bool>
+            </property>
+            <property name="textDirection">
+             <enum>QProgressBar::TopToBottom</enum>
+            </property>
+            <property name="format">
+             <string>%p</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>cameraInputComboBox</tabstop>
+  <tabstop>manualCalibrationButton</tabstop>
+  <tabstop>loadCalibrationButton</tabstop>
+  <tabstop>newGameButton</tabstop>
+  <tabstop>difficultyComboBox</tabstop>
+  <tabstop>readyButton</tabstop>
+  <tabstop>horizontalVerticiesSpinBox</tabstop>
+  <tabstop>verticalVerticiesSpinBox</tabstop>
+  <tabstop>calibrateButton</tabstop>
+ </tabstops>
+ <resources/>
+ <connections/>
+</ui>
