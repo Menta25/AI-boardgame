@@ -298,11 +298,6 @@ class RobotCameraInterface(AbstractCameraInterface):
         warpedBoard = cv.warpPerspective(image, warpMatrix, warpSize, flags=cv.INTER_LINEAR)
         return BoardImage(warpedBoard, int(self._boardOffset[0]), int(self._boardOffset[1]), int(self._boardWidth), int(self._boardHeight))
 
-    # TODO: Implement
-    def calculateRobotToCameraTransform(self, robotPoints: np.ndarray, board: BoardImage) -> None:
-        if len(robotPoints) != 4:
-            raise CameraError(f"Robot to camera transform calculation needs 4 points in the robot's coordinate system, got {len(robotPoints)}")
-
 
 class RobotCamera(RobotCameraInterface):
     def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
@@ -326,12 +321,6 @@ class RobotCamera(RobotCameraInterface):
         if not wasSuccessful:
             raise CameraError("Cannot read from camera")
         return image if undistorted is False else self.undistort(image)
-
-    def feed(self, undistorted: bool = True) -> Iterator[np.ndarray]:
-        while True:
-            image = self.read(undistorted)
-            if image is not None:
-                yield image
 
     def __del__(self) -> None:
         self._capture.release()
