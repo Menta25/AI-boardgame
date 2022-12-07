@@ -6,14 +6,13 @@ import logging
 import cv2 as cv
 import numpy as np
 from pathlib import Path
-from torch import Tensor, tensor
+from torch import Tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
-from typing import Dict, List, Literal, Optional, Tuple, Union, ClassVar
+from typing import Dict, List, Literal, Optional, Tuple, Union, ClassVar, cast
 from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
-from torchvision import transforms
 from PIL import Image
 
 from aiBoardGame.logic.engine import BoardEntity, Board, Position
@@ -22,13 +21,17 @@ from aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping import EarlyStoppin
 from aiBoardGame.vision.boardImage import BoardImage
 
 
+_WEIGHTS_PATH = Path("src/aiBoardGame/vision/xiangqiPieceClassifier/xiangqiWts.pt")
+
+
 class XiangqiPieceClassifier:
     batchSize: ClassVar[int] = 32
     epochCount: ClassVar[int] = 150
 
     classes: ClassVar[List[Optional[BoardEntity]]] = XIANGQI_PIECE_CLASSES
+    baseWeightsPath: ClassVar[Path] = _WEIGHTS_PATH
 
-    def __init__(self, weights: Optional[Union[Path, Dict[str, Tensor]]] = None, device: str = "cpu") -> None:
+    def __init__(self, weights: Union[Path, Dict[str, Tensor]] = _WEIGHTS_PATH, device: str = "cpu") -> None:
         self._model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=ResNet18_Weights.DEFAULT if weights is None else None)
         self.model.fc = Linear(self.model.fc.in_features, len(self.classes))
 
@@ -204,50 +207,34 @@ class XiangqiPieceClassifier:
         if not (len(tile.shape) == 3 and tile.shape[-1] == 3):
             raise ValueError(f"Invalid tile shape, must be (..., ..., 3)")
 
-        return self.predict(self._cvImagesToTensor(tile[np.newaxis]))[0]
+        return self.predict(self._cvImagesToInput(tile[np.newaxis]))[0]
 
-    def predictTiles(self, tiles: np.ndarray) -> Board:
-        if not (tiles.shape[:2] == (Board.fileCount, Board.rankCount) and tiles.shape[-1] == 3):
-            raise ValueError(f"Invalid tiles shape, must be ({Board.fileCount}, {Board.rankCount}, ..., ..., 3)")
-    
-        tilePredicts = self.predict(self._cvImagesToTensor(tiles))
+    def predictBoard(self, boardImage: BoardImage, allTiles: bool = False) -> Board:
+        if allTiles:
+            positions, tiles = [Position(file, rank) for file in range(Board.fileCount) for rank in range(Board.rankCount)], boardImage.tiles
+        else:
+            positions, tiles = zip(*boardImage.pieceTiles)
+            positions = cast(List[Position], positions)
+            tiles = cast(np.ndarray, tiles)
         
-        board = Board()
-        for rank in range(Board.rankCount):
-            for file in range(Board.fileCount):
-                tilePredict = tilePredicts[file*Board.rankCount+rank]
-                if tilePredict is not None:
-                    side, piece = tilePredict
-                board[side][file, rank] = piece
+        tilePredicts = self.predict(self._cvImagesToInput(tiles))
 
-        return board
-
-    def predictPieces(self, pieces: List[Tuple[Position, np.ndarray]]) -> Board:
-        positions, tiles = zip(*pieces)
-
-        tilePredicts = self.predict(self._cvImagesToTensor(tiles))
-        
         board = Board()
         for position, tilePredict in zip(positions, tilePredicts):
-            print(position, tilePredict)
             if tilePredict is not None:
                 side, piece = tilePredict
                 board[side][position] = piece
 
         return board
 
-    def predictBoard(self, boardImage: BoardImage, filterEmptyTiles: bool = True) -> Board:
-        return self.predictPieces(boardImage.pieces) if filterEmptyTiles else self.predictTiles(boardImage.tiles)
-
     @staticmethod
-    def _cvImagesToTensor(cvImages: Tuple[np.ndarray]) -> Tensor:
+    def _cvImagesToInput(cvImages: Tuple[np.ndarray]) -> Tensor:
         tensors = [XiangqiPieceDataset.basicTransform(Image.fromarray(cv.cvtColor(cvImage, cv.COLOR_BGR2RGB))) for cvImage in cvImages]
         return torch.stack(tensors)
     
 
 if __name__ == "__main__":
     import cv2 as cv
-    from torchvision import transforms
     from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataset
 
     logging.basicConfig(level=logging.DEBUG)
@@ -278,11 +265,7 @@ if __name__ == "__main__":
     pieceImage = cv.imread(pieceImagePath.as_posix())
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 
-    transform = transforms.Compose([
-        transforms.ToTensor()
-    ])
-
-    prediction = classifier.predict(transform(pieceImage))[0]
+    prediction = classifier.predictTile(pieceImage)
     logging.info(f"Label: {pieceImagePath.parent.name}, Prediction: {prediction}")
 
     saveModelWeights = input("Do you want to save model weights? (yes/other) ") == "yes"

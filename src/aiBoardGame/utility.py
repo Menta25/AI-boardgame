@@ -13,6 +13,7 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
                 except exceptions as exception:
                     attempt += 1
                     logging.error(f"Exception thrown when attempting to run {function.__name__}, attempt {attempt} of {times}")
+                    logging.error(str(exception))
                     sleep(attempt*log10(attempt))
             if callback is not None:
                 callback(newFunction, function.__name__)

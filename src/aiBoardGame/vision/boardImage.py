@@ -9,8 +9,6 @@ from dataclasses import dataclass, field
 from aiBoardGame.logic.engine import Board, Position
 
 
-_boardLogger = logging.getLogger(__name__)
-
 
 @dataclass(frozen=True)
 class BoardImage:
@@ -130,72 +128,72 @@ class BoardImage:
     @property
     def pieces(self) -> List[Tuple[Position, np.ndarray]]:
         pieces = []
-        for file, tilesInfile in enumerate(self.positions):
-            for rank, tileCenter in enumerate(tilesInfile[::-1]):
-                tile = self._tile(tileCenter)
-                detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
-
-                if len(detectedCircles) == 0:
-                    continue
-
-                tileCenter = np.asarray(tile.shape[0:2])/2.0
-                detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(tileCenter - np.asarray(circle[0:1])))
-                *pieceCenter, pieceRadius = detectedCircles[0]
-                # print(tileCenter, " --- ", pieceCenter, " : ", np.linalg.norm(tileCenter - np.asarray(pieceCenter)), " = ", self.fileStep/self.pieceThresholdDivisor)
-                if np.linalg.norm(tileCenter - np.asarray(pieceCenter)) > self.fileStep/self.pieceThresholdDivisor:
-                    continue
-                # cv.circle(tile, np.asarray(pieceCenter, dtype=int), int(pieceRadius), (0,255,0), 3)
-                # cv.circle(tile, np.asarray(pieceCenter, dtype=int), 2, (0,0,255), 3)
-
-                x, y = pieceCenter
-                offset = pieceRadius*self.pieceSizeMultiplier
-                tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
-                pieces.append((Position(file, rank), tile))
+        for file in range(Board.fileCount):
+            for rank in range(Board.rankCount):
+                position = Position(file, rank)
+                piece = self.findPiece(position)
+                if piece is not None:
+                    pieces.append((position, piece))
         return pieces
+
+    @property
+    def pieceTiles(self) -> List[Tuple[Position, np.ndarray]]:
+        pieceTiles = []
+        for position, (x, y, radius) in self.pieces:
+            offset = radius * self.pieceSizeMultiplier
+            tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
+            pieceTiles.append((position, tile))
+        return pieceTiles
+
+    def findPiece(self, position: Position) -> Optional[np.ndarray]:
+        tileCenter = self.positions[position.file, position.rank]
+        tile = self._tile(tileCenter)
+        detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
+
+        if len(detectedCircles) == 0:
+            return None
+
+        normalizedTileCenter = np.asarray(tile.shape[0:2])/2.0
+        detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(normalizedTileCenter - np.asarray(circle[0:1])))
+        circle = np.asarray(detectedCircles[0])
+        circle[:2] += (tileCenter - self.tileSize/2).astype(np.uint16)
+        logging.debug(f"{tileCenter} ---> {circle[:2]} : {np.linalg.norm(tileCenter - circle[:2])} <= {self.fileStep/self.pieceThresholdDivisor} ?")
+        if np.linalg.norm(tileCenter - circle[:2]) > self.fileStep/self.pieceThresholdDivisor:
+            return None
+
+        return circle[:3]
 
 
 if __name__ == "__main__":
     import time
     from pathlib import Path
-    from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
     
     from aiBoardGame.logic.engine.utility import boardToStr
 
-    boardImagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/board2.jpg")
-    boardImage = BoardImage(data=cv.imread(boardImagePath.as_posix()).copy())
+    from aiBoardGame.vision.camera import RobotCameraInterface, CameraError
+    from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
 
-    # classifier = XiangqiPieceClassifier(Path("finalWeights.pt"))
+    classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
+    camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
 
-    # from PIL import Image
-    # from torchvision import transforms
-    # tile = Image.fromarray(boardImage.tiles[8,9][...,::-1])
-    # print(classifier.predict(transforms.ToTensor()(tile)))
+    imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
+    image = camera.undistort(cv.imread(imagePath.as_posix()))
+    try:
+        boardImage = camera.detectBoard(image)
 
-    # start = time.time()
-    # board = classifier.predictBoard(boardImage)
-    # print(f"predict time: {time.time() - start:.4f}s")
+        cv.imshow("roi", boardImage.roi)
+        cv.waitKey(0)
 
-    # print(boardToStr(board))
-    
-    cv.imshow("roi", boardImage.roi)
-    cv.waitKey(0)
+        # for position, tile in boardImage.pieceTiles:
+        #     cv.imshow(f"{position}", tile)
+        #     cv.waitKey(0)
+        #     cv.destroyAllWindows()
 
-    # for position, tile in boardImage.pieces:
-    #     cv.imshow(f"{position}", tile)
-    #     cv.waitKey(0)
-    #     cv.destroyAllWindows()
+        start = time.time()
+        board = classifier.predictBoard(boardImage)
+        logging.info(f"predict time: {time.time() - start:.4f}s")
 
-    # tiles = boardImage.tiles
-    # for rank in range(Board.rankCount):
-    #     for file in range(Board.fileCount):
-    #         cv.imshow(f"({file},{rank})", tiles[file][rank])
-    #         cv.waitKey(0)
-    #         cv.destroyAllWindows()
+        logging.info(boardToStr(board))
 
-    # cv.imshow(f"{classifier.predictTile(boardImage[8,5])}", boardImage[8,5])
-    # cv.imwrite("test.jpg", boardImage[8,5])
-    # cv.waitKey(0)
-
-    # boardImage.showPieces()
-
-    cv.destroyAllWindows()
+    except CameraError:
+        logging.exception("Cannot test board image")

@@ -1,8 +1,8 @@
-from aiBoardGame.logic.engine import XiangqiEngine, InvalidMove, Board, Side
+from aiBoardGame.logic.engine import XiangqiEngine, InvalidMove, Board, Side, Position
 from aiBoardGame.logic.stockfish import FairyStockfish, Difficulty
 
 __all__ = [
     "XiangqiEngine", "InvalidMove",
-    "Board", "Side",
+    "Board", "Side", "Position",
     "FairyStockfish", "Difficulty"
 ]

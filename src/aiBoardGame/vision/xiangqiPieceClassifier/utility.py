@@ -71,7 +71,7 @@ def savePieces(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path
     if not pieceImagesDir.exists():
         pieceImagesDir.mkdir(parents=True, exist_ok=True)
     offset = len([path for path in pieceImagesDir.iterdir() if path.suffix == ".jpg"])
-    pieces = boardImage.pieces
+    pieces = boardImage.pieceTiles
     if len(pieces) == 0:
         print(rawImagePath, "None")
     for j, (_, pieceImage) in enumerate(pieces, start=offset):

@@ -1,6 +1,5 @@
 import logging
-import time
-from enum import IntEnum, Enum, auto, unique
+from enum import IntEnum, unique
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, ClassVar, Callable, Literal, overload
 from threading import Thread
@@ -10,18 +9,15 @@ from uarm.wrapper import SwiftAPI
 from uarm.tools.list_ports import get_ports
 from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAND
 
+from aiBoardGame.logic import Position
+
+
 @unique
 class Servo(IntEnum):
     Bottom = SERVO_BOTTOM
     Left = SERVO_LEFT
     Right = SERVO_RIGHT
     Hand = SERVO_HAND
-
-
-@unique
-class MoveType(Enum):
-    Position = auto()
-    Polar = auto()
 
 
 @dataclass(frozen=True)
@@ -162,6 +158,9 @@ class RobotArm:
         while isRelative and not self.isTouching:
             self.swift.set_position(z=-1, relative=True, speed=1000)
             self.swift.flush_cmd(wait_stop=True)
+
+    def moveOnBoard(self, x: float, y: float) -> None:
+        self.move(to=(x, y, None), speed=None, safe=True, isPolar=False)
             
     def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None, wait: bool = True) -> None:
         if not self.isAttached(servo):
@@ -200,7 +199,7 @@ class RobotArm:
             pass
 
 
-def savePoints() -> None:
+if __name__ == "__main__":
     import json
     from pathlib import Path
 
@@ -238,7 +237,3 @@ def savePoints() -> None:
         if robot is not None:
             robot.attach()
             robot.disconnect()
-
-
-if __name__ == "__main__":
-    savePoints()
