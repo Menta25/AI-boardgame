@@ -10,7 +10,7 @@ from torch import Tensor, tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
-from typing import Dict, List, Optional, Tuple, Union, ClassVar
+from typing import Dict, List, Literal, Optional, Tuple, Union, ClassVar
 from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
 from torchvision import transforms
@@ -32,6 +32,7 @@ class XiangqiPieceClassifier:
         self._model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=ResNet18_Weights.DEFAULT if weights is None else None)
         self.model.fc = Linear(self.model.fc.in_features, len(self.classes))
 
+        self.isTrained = False
         if weights is not None:
             self.loadWeights(weights)
 
@@ -50,10 +51,15 @@ class XiangqiPieceClassifier:
         self._device = value
         self.model.to(self._device)
 
+    @staticmethod
+    def getAvailableDevice() -> Literal["cuda", "cpu"]:
+        return "cuda" if torch.cuda.is_available() else "cpu"
+
     def loadWeights(self, weights: Union[Path, Dict[str, Tensor]]) -> None:
         if isinstance(weights, Path):
             weights: Dict[str, Tensor] = torch.load(weights)
         self.model.load_state_dict(weights)
+        self.isTrained = True
 
     def saveWeights(self, savePath: Path) -> None:
         torch.save(self.model.state_dict(), savePath.with_suffix(".pt"))
@@ -72,7 +78,7 @@ class XiangqiPieceClassifier:
         optimizer = SGD(self.model.parameters(), lr=1e-2, momentum=0.9)
         scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
 
-        self.train(trainDataLoader, validationDataLoader, criterion, optimizer, scheduler)
+        self._train(trainDataLoader, validationDataLoader, criterion, optimizer, scheduler)
 
 
         # NOTE: Fine Tuning
@@ -83,12 +89,13 @@ class XiangqiPieceClassifier:
         optimizer = SGD(self.model.parameters(), lr=1e-3, momentum=0.9)
         scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
 
-        self.train(trainDataLoader, validationDataLoader, criterion, optimizer, scheduler)
+        self._train(trainDataLoader, validationDataLoader, criterion, optimizer, scheduler)
 
-
+        self.isTrained = True
+        
         return self
 
-    def train(
+    def _train(
         self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader,
         criterion: Module, optimizer: Optimizer, scheduler: _LRScheduler
     ) -> XiangqiPieceClassifier:
@@ -245,7 +252,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.DEBUG)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = XiangqiPieceClassifier.getAvailableDevice()
     logging.info(f"Using {device} device")
 
     xiangqiDatasetRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")

@@ -1,10 +1,13 @@
 from enum import Enum, auto, unique
 from pathlib import Path
 from subprocess import Popen, PIPE
-from typing import List, Tuple
+from typing import List, Tuple, ClassVar
 from time import sleep
 
 from aiBoardGame.logic.engine import Position
+
+
+_BINARY_PATH = Path("src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_x86-64")
 
 
 @unique
@@ -23,7 +26,9 @@ _GO_ARGS = {
 
 
 class FairyStockfish:
-    def __init__(self, binaryPath: Path, difficulty: Difficulty = Difficulty.Medium) -> None:
+    baseBinaryPath: ClassVar[Path] = _BINARY_PATH
+
+    def __init__(self, binaryPath: Path = _BINARY_PATH, difficulty: Difficulty = Difficulty.Medium) -> None:
         self._process = Popen(
             args=[binaryPath.as_posix()],
             stdin=PIPE, stdout=PIPE,
