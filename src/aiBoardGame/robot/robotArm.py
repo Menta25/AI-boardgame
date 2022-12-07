@@ -1,7 +1,8 @@
 import logging
-from enum import IntFlag
+import time
+from enum import IntEnum, Enum, auto, unique
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, ClassVar, Callable, Literal, overload
 from threading import Thread
 from functools import partial
 from queue import Queue, Empty, Full
@@ -9,12 +10,18 @@ from uarm.wrapper import SwiftAPI
 from uarm.tools.list_ports import get_ports
 from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAND
 
-
-class Servo(IntFlag):
+@unique
+class Servo(IntEnum):
     Bottom = SERVO_BOTTOM
     Left = SERVO_LEFT
     Right = SERVO_RIGHT
     Hand = SERVO_HAND
+
+
+@unique
+class MoveType(Enum):
+    Position = auto()
+    Polar = auto()
 
 
 @dataclass(frozen=True)
@@ -31,6 +38,8 @@ class RobotArm:
     isRunning: bool
     speed: int
 
+    freeMoveHeightLimit: ClassVar[float] = 60.0
+
     def __init__(self, hardwareID: str = "USB VID:PID=2341:0042", speed: int = 1000) -> None:
         filters = {"hwid": hardwareID}
         if len(get_ports(filters=filters)) == 0:
@@ -46,21 +55,21 @@ class RobotArm:
         return bool(self.swift.connected)
 
     @property
-    def info(self) -> Dict[str, str]:
+    def info(self) -> Optional[Dict[str, str]]:
         info = self.swift.get_device_info()
-        return info if isinstance(info, dict) else {}
+        return info if isinstance(info, dict) else None
 
     @property
-    def position(self) -> List[float]:
-        return self.swift.get_position(wait=True) if self.isAllAttached else []
+    def position(self) -> Optional[List[float]]:
+        return self._getBase(self.swift.get_position)
 
     @property
-    def polar(self) -> List[float]:
-        return self.swift.get_polar(wait=True) if self.isAllAttached else []
+    def polar(self) -> Optional[List[float]]:
+        return self._getBase(self.swift.get_polar)
 
     @property
-    def angle(self) -> List[float]:
-        return self.swift.get_servo_angle(wait=True) if self.isAllAttached else []
+    def angle(self) -> Optional[List[float]]:
+        return self._getBase(self.swift.get_servo_angle)
 
     @property
     def isAllAttached(self) -> bool:
@@ -68,11 +77,18 @@ class RobotArm:
 
     @property
     def isPumpActive(self) -> bool:
-        return self.swift.get_pump_status() in [1,2]
+        return self.swift.get_pump_status(wait=True) in [1,2]
 
     @property
-    def isGrabbing(self) -> bool:
-        return self.swift.get_pump_status() == 2
+    def isTouching(self) -> bool:
+        return self.swift.get_limit_switch(wait=True) == True
+
+    def _getBase(self, getFunc: Callable) -> Optional[List[float]]:
+        if self.isAllAttached:
+            info = getFunc(wait=True)
+            return info if isinstance(info, list) else None
+        else:
+            return None
 
     def connect(self) -> None:
         try:
@@ -83,7 +99,7 @@ class RobotArm:
             raise RobotArmException("Cannot connect to uArm Swift")
         else:
             self.swift.set_mode(mode=0)
-            self.resetPosition(speed=500000)
+            self.resetPosition(speed=500000, safe=False)
 
     def disconnect(self) -> None:
         if self.isConnected:
@@ -103,23 +119,50 @@ class RobotArm:
         if not self.isAllAttached:
             self.swift.set_servo_attach()
 
-    def move(self, position: Tuple[float, float, float], speed: Optional[int] = None, wait: bool = True, isPolar: bool = False) -> None:
+    @overload
+    def move(self, to: Tuple[float, float, Literal[None]], speed: Optional[int], safe: Literal[True], isPolar: bool) -> None:
+        ...
+
+    @overload
+    def move(self, to: Tuple[float, float, float], speed: Optional[int], safe: bool, isPolar: bool) -> None:
+        ...
+
+    def move(self, to: Tuple[float, float, Optional[float]], speed: Optional[int] = None, safe: bool = True, isPolar: bool = False) -> None:
         if not self.isAllAttached:
             raise RobotArmException("Servo(s) not attached, cannot move")
 
+        isRelative = to[2] == None
+        if isRelative:
+            to = (to[0], to[1], self.freeMoveHeightLimit/2.5)
         if speed is None:
             speed = self.speed
 
-        if not isPolar:
-            x, y, z = position
-            movePartial = partial(self.swift.set_position, x=x, y=y, z=z)
-        else:
-            stretch, rotation, height = position
-            movePartial = partial(self.swift.set_polar, stretch=stretch, rotation=rotation, height=height)
-        movePartial(speed=speed)
-        if wait is True:
+        position = self.position
+        if safe is True and (position is None or position[-1] < self.freeMoveHeightLimit):
+            self.swift.set_position(z=self.freeMoveHeightLimit)
             self.swift.flush_cmd(wait_stop=True)
 
+        if not isPolar:
+            moveFunc = self.swift.set_position
+            horizontalPartial = partial(moveFunc, x=to[0], y=to[1])
+            verticalPartial = partial(moveFunc, z=to[2])
+        else:
+            moveFunc = self.swift.set_polar
+            horizontalPartial = partial(moveFunc, stretch=to[0], rotation=to[1])
+            verticalPartial = partial(moveFunc, height=to[2])
+
+        extraArgs = {
+            "speed": speed
+        }
+
+        horizontalPartial(**extraArgs)
+        self.swift.flush_cmd(wait_stop=True)
+        verticalPartial(**extraArgs)
+        self.swift.flush_cmd(wait_stop=True)
+        while isRelative and not self.isTouching:
+            self.swift.set_position(z=-1, relative=True, speed=1000)
+            self.swift.flush_cmd(wait_stop=True)
+            
     def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None, wait: bool = True) -> None:
         if not self.isAttached(servo):
             raise RobotArmException("Servo(s) not attached, cannot set angle")
@@ -130,10 +173,13 @@ class RobotArm:
         if wait is True:
             self.swift.flush_cmd(wait_stop=True)
 
-    def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False) -> None:
-        self.move(position=(200.0, 0.0, 150.0), speed=speed, wait=True, isPolar=True)
+    def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False, safe: bool = True) -> None:
+        self.move(to=(200.0, 0.0, 150.0), speed=speed, safe=safe, isPolar=True)
         if lowerDown is True:
             self.setAngle(servo=Servo.Right, angle=66.82, wait=True)
+
+    def setPump(self, on: bool = True) -> None:
+        self.swift.set_pump(on=on)
 
     def start(self) -> None:
         if not self.isConnected:
@@ -155,6 +201,7 @@ class RobotArm:
 
 
 def savePoints() -> None:
+    import json
     from pathlib import Path
 
     robot = None
@@ -182,7 +229,7 @@ def savePoints() -> None:
                 elif command == 2:
                     path = Path(input("Save path: ")).with_suffix(".txt")
                     with path.open(mode="w") as file:
-                        file.writelines(str(saves))
+                        file.write(json.dumps(saves, indent=4))
             except ValueError:
                 continue
     except RobotArmException as error:
