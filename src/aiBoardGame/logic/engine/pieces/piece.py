@@ -49,7 +49,7 @@ class Piece(ABC):
     @classmethod
     @abstractmethod
     def _getPossibleMoves(cls, board: Board, side: Side, start: Position) -> List[Position]:
-        raise NotImplementedError(f"{cls.__class__.__name__} has not implemented getPossibleMoves method")
+        raise NotImplementedError(f"{cls.__name__} has not implemented getPossibleMoves method")
 
     @classmethod
     def getPossibleMoves(cls, board: Board, start: Position) -> List[Position]:

@@ -164,7 +164,7 @@ class RobotCameraInterface(AbstractCameraInterface):
     _boardImageRatio: ClassVar[float] = 3/4
 
 
-    def __init__(self, resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(resolution, intrinsicsFile, parent)
 
         self._boardHeight = int(min(self.resolution.width, self.resolution.height) * self._boardImageRatio)
@@ -195,42 +195,42 @@ class RobotCameraInterface(AbstractCameraInterface):
     def _detectCorners(cls, image: np.ndarray) -> np.ndarray:
         imageHSV = cv.cvtColor(image, cv.COLOR_BGR2HSV)
 
-        cv.imshow("hsv", cv.resize(imageHSV, (960,540)))
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("hsv", cv.resize(imageHSV, (960,540)))
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         hsvMask1 = cv.inRange(imageHSV, BoardImage.hsvRanges[0][0], BoardImage.hsvRanges[0][1])
         hsvMask2 = cv.inRange(imageHSV, BoardImage.hsvRanges[1][0], BoardImage.hsvRanges[1][1])
         hsvMask3 = cv.inRange(imageHSV, BoardImage.hsvRanges[2][0], BoardImage.hsvRanges[2][1])
 
 
-        cv.imshow("hsv1", hsvMask1)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("hsv1", hsvMask1)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
         
-        cv.imshow("hsv2", hsvMask2)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("hsv2", hsvMask2)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
-        cv.imshow("hsv3", hsvMask3)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("hsv3", hsvMask3)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardMask = cv.bitwise_or(hsvMask1, hsvMask2)
         boardMask = cv.bitwise_or(boardMask, hsvMask3)
 
-        cv.imshow("mask", boardMask)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("mask", boardMask)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         erosionKernel = np.ones((3,3), np.uint8)
         dilationKernel = np.ones((9,9), np.uint8)
         erosion = cv.erode(boardMask, erosionKernel, iterations=4)
         dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
-        cv.imshow("dilate", dilate)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("dilate", dilate)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         boardContours = [boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000]
@@ -240,11 +240,11 @@ class RobotCameraInterface(AbstractCameraInterface):
 
         boardContours = np.vstack(boardContours)
 
-        testContours = np.zeros(image.shape[0:2])
-        cv.drawContours(testContours, boardContours, -1, (255), 1)
-        cv.imshow("testContours", testContours)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # testContours = np.zeros(image.shape[0:2])
+        # cv.drawContours(testContours, boardContours, -1, (255), 1)
+        # cv.imshow("testContours", testContours)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardHull = cv.convexHull(np.vstack(boardContours))
         approxBoardHull = cv.approxPolyDP(boardHull, epsilon=0.01* cv.arcLength(boardHull, True), closed=True).squeeze(1)
@@ -305,7 +305,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 
 
 class RobotCamera(RobotCameraInterface):
-    def __init__(self, feedInput: Union[int, Path, str], resolution: Resolution, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(resolution, intrinsicsFile, parent)
 
         if isinstance(feedInput, (int, str)):
@@ -318,15 +318,14 @@ class RobotCamera(RobotCameraInterface):
         if not self._capture.isOpened():
             raise CameraError("Cannot open camera, invalid feed input")
 
-        self._capture.set(cv.CAP_PROP_FRAME_WIDTH, resolution.width)
-        self._capture.set(cv.CAP_PROP_FRAME_HEIGHT, resolution.height)
+        self._capture.set(cv.CAP_PROP_FRAME_WIDTH, self.resolution.width)
+        self._capture.set(cv.CAP_PROP_FRAME_HEIGHT, self.resolution.height)
 
-    def read(self, undistorted: bool = True) -> Optional[np.ndarray]:
+    def read(self, undistorted: bool = True) -> np.ndarray:
         wasSuccessful, image = self._capture.read()
-        if wasSuccessful:
-            return image if undistorted is False else self.undistort(image)
-        else:
-            return None
+        if not wasSuccessful:
+            raise CameraError("Cannot read from camera")
+        return image if undistorted is False else self.undistort(image)
 
     def feed(self, undistorted: bool = True) -> Iterator[np.ndarray]:
         while True:

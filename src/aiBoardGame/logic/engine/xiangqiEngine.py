@@ -10,14 +10,6 @@ from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Delta, Positi
 from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToMove
 
 
-@dataclass(frozen=True)
-class XiangqiError(Exception):
-    message: str
-
-    def __str__(self) -> str:
-        return self.message
-
-
 @dataclass(init=False)
 class XiangqiEngine:
     board: Board
@@ -31,6 +23,13 @@ class XiangqiEngine:
         self.currentSide = Side.Red
         self.moveHistory = []
         self._validMoves = self._getAllValidMoves()
+
+    @property
+    def isOver(self) -> bool:
+        return len(self._validMoves) == 0
+
+    def newGame(self) -> None:
+        self.__init__()
 
     # TODO: Do not allow perpetual chasing and checking
     # TODO: Signal end of the game (its kind of already implemented)
@@ -52,7 +51,7 @@ class XiangqiEngine:
         self.currentSide = self.currentSide.opponent
         self._validMoves = self._getAllValidMoves()
 
-        if len(self._validMoves) == 0:
+        if self.isOver:
             logging.info(f"{self.currentSide.opponent} has delivered a mate, {self.currentSide.opponent} won!")
         else:
             checks, _ = self._getChecksAndPins()
@@ -98,7 +97,7 @@ class XiangqiEngine:
             if lastMove.movedPieceEntity.piece == General:
                 self.generals[lastMove.movedPieceEntity.side] = lastMove.start
         else:
-            raise XiangqiError("Cannot undo move, game is in start state")
+            raise InvalidMove("Cannot undo move, game is in start state")
 
     def _getChecksAndPins(self) -> Tuple[List[Position], Dict[Position, List[Position]]]:
         checks = []
@@ -222,7 +221,7 @@ if __name__ == "__main__":
         if command == "undo":
             try:
                 game.undoMove()
-            except XiangqiError as error:
+            except InvalidMove as error:
                 logging.info(error)
         elif command.startswith("not"):
             notation = command.split(" ")[1]

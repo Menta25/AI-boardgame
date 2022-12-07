@@ -1,7 +1,7 @@
 import logging
 from typing import Tuple
 
-from aiBoardGame.logic.engine import XiangqiEngine, XiangqiError, Position, InvalidMove
+from aiBoardGame.logic.engine import XiangqiEngine, Position, InvalidMove
 from aiBoardGame.logic.engine.utility import boardToStr
 from aiBoardGame.logic.stockfish import FairyStockfish
 
@@ -40,7 +40,7 @@ def playerTurn(game: XiangqiEngine) -> Tuple[bool, bool]:
                         moveOnBoard(game, start, end)
                         return True, False
                 logging.info("Invalid command")
-        except (XiangqiError, InvalidMove) as error:
+        except InvalidMove as error:
             logging.info(error)
         except:
             pass
