@@ -17,6 +17,8 @@ dependencies = [
     "PyQt6",
     "numpy",
     "opencv-contrib-python",
+    "torch",
+    "torchvision",
     "uArm-Python-SDK @ git+https://github.com/uArm-Developer/uArm-Python-SDK.git@2.0"
 ]
 

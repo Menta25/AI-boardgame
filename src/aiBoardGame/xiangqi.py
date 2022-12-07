@@ -17,7 +17,7 @@ class GameplayError(Exception):
 
 
 class Xiangqi:
-    def __init__(self, camera: RobotCamera, robotArm: RobotArm, classifierWeights: Path, stockfishPath: Path = FairyStockfish.baseBinaryPath, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, camera: RobotCamera, robotArm: RobotArm, difficulty: Difficulty = Difficulty.Medium, classifierWeights: Path = XiangqiPieceClassifier.baseWeightsPath, stockfishPath: Path = FairyStockfish.baseBinaryPath) -> None:
         if not camera.isCalibrated:
             raise GameplayError("Camera is not calibrated, cannot play game")
         elif not robotArm.isConnected:
