@@ -32,6 +32,8 @@ class Xiangqi:
 
         self.lastBoardInfo: Optional[Tuple[BoardImage, str]] = None
 
+        self.robot.calibrate()
+
     @property
     def difficulty(self) -> Difficulty:
         return self.robot.stockfish.difficulty
@@ -40,17 +42,18 @@ class Xiangqi:
     def difficulty(self, value: Difficulty) -> None:
         self.robot.stockfish.difficulty = value
 
-    def play(self) -> None:
+    def newGame(self) -> None:
+        self.engine = XiangqiEngine()
+        self.lastBoardInfo = None
         self.robot.calibrate()
 
+    def play(self) -> None:
         self._analyseBoard()
         while not self.engine.isOver:
             try:
                 self._playTurn()
             except InvalidMove:
                 pass
-
-        self.robot.arm.resetPosition()
 
     def _playTurn(self) -> None:
         currentPlayer: Player = self.human if self.engine.currentSide == Side.Red else self.robot
@@ -85,7 +88,7 @@ if __name__ == "__main__":
         classifierWeights = Path("/home/Menta/Workspace/Projects/AI-boardgame/newModelParams.pt")
 
         game = Xiangqi(camera=camera, robotArm=robotArm, classifierWeights=classifierWeights, difficulty=Difficulty.Medium)
-
+        input("Press any key if you want to start to play")
         game.play()
 
         robotArm.disconnect()
