@@ -1,15 +1,12 @@
 import logging
+from time import sleep
 from enum import IntEnum, unique
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, ClassVar, Callable, Literal, overload
-from threading import Thread
 from functools import partial
-from queue import Queue, Empty, Full
 from uarm.wrapper import SwiftAPI
 from uarm.tools.list_ports import get_ports
 from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAND
-
-from aiBoardGame.logic import Position
 
 
 @unique
@@ -30,11 +27,10 @@ class RobotArmException(Exception):
 
 class RobotArm:
     swift: SwiftAPI
-    thread: Thread
     isRunning: bool
     speed: int
 
-    freeMoveHeightLimit: ClassVar[float] = 60.0
+    freeMoveHeightLimit: ClassVar[float] = 35.0
 
     def __init__(self, hardwareID: str = "USB VID:PID=2341:0042", speed: int = 1000) -> None:
         filters = {"hwid": hardwareID}
@@ -42,7 +38,6 @@ class RobotArm:
             raise RobotArmException(f"Cannot initialize robot arm with hardware ID: {hardwareID}")
 
         self.swift = SwiftAPI(filters=filters, do_not_open=True)
-        self.thread = Thread(target=self._loop)
         self.isRunning = False
         self.speed = speed
 
@@ -162,41 +157,23 @@ class RobotArm:
     def moveOnBoard(self, x: float, y: float) -> None:
         self.move(to=(x, y, None), speed=None, safe=True, isPolar=False)
             
-    def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None, wait: bool = True) -> None:
+    def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None) -> None:
         if not self.isAttached(servo):
             raise RobotArmException("Servo(s) not attached, cannot set angle")
 
         if speed is None:
             speed = self.speed
         self.swift.set_servo_angle(servo_id=servo.value, angle=angle)
-        if wait is True:
-            self.swift.flush_cmd(wait_stop=True)
+        self.swift.flush_cmd(wait_stop=True)
 
     def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False, safe: bool = True) -> None:
         self.move(to=(200.0, 0.0, 150.0), speed=speed, safe=safe, isPolar=True)
         if lowerDown is True:
-            self.setAngle(servo=Servo.Right, angle=66.82, wait=True)
+            self.setAngle(servo=Servo.Right, angle=66.82)
 
     def setPump(self, on: bool = True) -> None:
         self.swift.set_pump(on=on)
-
-    def start(self) -> None:
-        if not self.isConnected:
-            self.connect()
-
-        self.isRunning = True
-        self.thread.start()
-
-    def stop(self) -> None:
-        if self.isRunning:
-            self.isRunning = False
-            if self.thread is not None:
-                self.thread.join()
-            self.disconnect()
-
-    def _loop(self) -> None:
-        while self.isRunning:
-            pass
+        sleep(0.25)
 
 
 if __name__ == "__main__":

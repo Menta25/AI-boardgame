@@ -30,11 +30,13 @@ class BoardImage:
     pieceSizeMultiplier: ClassVar[float] = 1.2
     pieceThresholdDivisor: ClassVar[float] = 3.1
 
-    hsvRanges: ClassVar[Tuple[np.ndarray]] = (
-        np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-        np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-        np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
-    )
+    # hsvRanges: ClassVar[Tuple[np.ndarray]] = (
+    #     np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+    #     np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+    #     np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
+    # )
+    
+    hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
 
 
     def __post_init__(self) -> None:
@@ -141,12 +143,12 @@ class BoardImage:
         pieceTiles = []
         for position, (x, y, radius) in self.pieces:
             offset = radius * self.pieceSizeMultiplier
-            tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
+            tile = self.data[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
             pieceTiles.append((position, tile))
         return pieceTiles
 
     def findPiece(self, position: Position) -> Optional[np.ndarray]:
-        tileCenter = self.positions[position.file, position.rank]
+        tileCenter = self.positions[position.file, Board.rankCount - position.rank - 1]
         tile = self._tile(tileCenter)
         detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
 
@@ -170,24 +172,29 @@ if __name__ == "__main__":
     
     from aiBoardGame.logic.engine.utility import boardToStr
 
-    from aiBoardGame.vision.camera import RobotCameraInterface, CameraError
+    from aiBoardGame.vision.camera import RobotCameraInterface, RobotCamera, CameraError
     from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
 
-    classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
-    camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
+    logging.basicConfig(level=logging.DEBUG, format="")
 
-    imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
-    image = camera.undistort(cv.imread(imagePath.as_posix()))
+    classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
+    cameraIntrinsicsPath = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
+    # camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=cameraIntrinsicsPath)
+    # imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
+    # image = camera.undistort(cv.imread(imagePath.as_posix()))
+
+    camera = RobotCamera(feedInput=2, resolution=(1920,1080), intrinsicsFile=cameraIntrinsicsPath)
+    image = camera.read()
     try:
         boardImage = camera.detectBoard(image)
 
         cv.imshow("roi", boardImage.roi)
         cv.waitKey(0)
 
-        # for position, tile in boardImage.pieceTiles:
-        #     cv.imshow(f"{position}", tile)
-        #     cv.waitKey(0)
-        #     cv.destroyAllWindows()
+        for position, tile in boardImage.pieceTiles:
+            cv.imshow(f"{position}", tile)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
 
         start = time.time()
         board = classifier.predictBoard(boardImage)

@@ -1,8 +1,9 @@
 import logging
 import numpy as np
 import cv2 as cv
+from pathlib import Path
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
 
 from aiBoardGame.logic import FairyStockfish
@@ -31,6 +32,8 @@ class RobotPlayer(Player):
     stockfish: FairyStockfish
     cornerCoordinates: Optional[np.ndarray] = None
 
+    baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
+
     @retry(times=1, exceptions=(RobotArmException, RuntimeError), callback=rerunAfterCorrection)
     def makeMove(self, lastBoardInfo: Tuple[BoardImage, str]) -> None:
         fromMove, toMove = self.stockfish.nextMove(fen=lastBoardInfo[1])
@@ -52,15 +55,20 @@ class RobotPlayer(Player):
         self.arm.resetPosition(lowerDown=False, safe=True)
 
     def calibrate(self) -> None:
-        self.arm.resetPosition(lowerDown=True, safe=True)
-        coordinates = []
-        for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
-            self.arm.detach(safe=False)
-            input(f"Move robot arm to {corner} corner (from the view of RED side)")
-            self.arm.attach()
-            coordinates.append(self.arm.position)
-        self.robotArmCornerCoordinates = np.asarray(coordinates)
-        object.__setattr__(self, "cornerCoordinates", coordinates)
+        if self.baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") == "yes":
+            with np.load(self.baseCalibPath, mmap_mode="r") as calibration:
+                cornerCoordinates = calibration["cornerCoordinates"]
+        else:
+            self.arm.resetPosition(lowerDown=True, safe=True)
+            coordinates = []
+            for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
+                self.arm.detach(safe=False)
+                input(f"Move robot arm to {corner} corner (from the view of RED side)")
+                self.arm.attach()
+                coordinates.append(self.arm.position)
+            cornerCoordinates = np.asarray(coordinates)
+            np.savez(self.baseCalibPath, cornerCoordinates=cornerCoordinates)
+        object.__setattr__(self, "cornerCoordinates", cornerCoordinates)
         self.arm.resetPosition(lowerDown=False, safe=True)
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:

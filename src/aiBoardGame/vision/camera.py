@@ -199,38 +199,22 @@ class RobotCameraInterface(AbstractCameraInterface):
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 
-        hsvMask1 = cv.inRange(imageHSV, BoardImage.hsvRanges[0][0], BoardImage.hsvRanges[0][1])
-        hsvMask2 = cv.inRange(imageHSV, BoardImage.hsvRanges[1][0], BoardImage.hsvRanges[1][1])
-        hsvMask3 = cv.inRange(imageHSV, BoardImage.hsvRanges[2][0], BoardImage.hsvRanges[2][1])
-
-
-        # cv.imshow("hsv1", hsvMask1)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-        
-        # cv.imshow("hsv2", hsvMask2)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-
-        # cv.imshow("hsv3", hsvMask3)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-
-        boardMask = cv.bitwise_or(hsvMask1, hsvMask2)
-        boardMask = cv.bitwise_or(boardMask, hsvMask3)
-
-        # cv.imshow("mask", boardMask)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        mask = np.zeros(imageHSV.shape[:2], dtype=np.uint8)
+        for hsvRange in BoardImage.hsvRanges:
+            hsvMask = cv.inRange(imageHSV, hsvRange[0], hsvRange[1])
+            mask = cv.bitwise_or(mask, hsvMask)
+            cv.imshow("hsv", hsvMask)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
 
         erosionKernel = np.ones((3,3), np.uint8)
         dilationKernel = np.ones((9,9), np.uint8)
-        erosion = cv.erode(boardMask, erosionKernel, iterations=4)
+        erosion = cv.erode(mask, erosionKernel, iterations=4)
         dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
-        # cv.imshow("dilate", dilate)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        cv.imshow("dilate", dilate)
+        cv.waitKey(0)
+        cv.destroyAllWindows()
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         boardContours = [boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000]

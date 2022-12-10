@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Tuple
 
 from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficulty, FairyStockfish
 from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier, BoardImage
+from aiBoardGame.robot import RobotArm
 
 from aiBoardGame.player import HumanPlayer, RobotPlayer, Player
 from aiBoardGame.utility import retry, rerunAfterCorrection
@@ -28,11 +30,7 @@ class Xiangqi:
 
         self.camera = camera
         self.classifier = XiangqiPieceClassifier(weights=classifierWeights, device=XiangqiPieceClassifier.getAvailableDevice())
-        self.engine = XiangqiEngine()
-
-        self.lastBoardInfo: Optional[Tuple[BoardImage, str]] = None
-
-        self.robot.calibrate()
+        self.newGame()
 
     @property
     def difficulty(self) -> Difficulty:
@@ -44,7 +42,7 @@ class Xiangqi:
 
     def newGame(self) -> None:
         self.engine = XiangqiEngine()
-        self.lastBoardInfo = None
+        self.lastBoardInfo: Optional[Tuple[BoardImage, str]] = None
         self.robot.calibrate()
 
     def play(self) -> None:
@@ -70,24 +68,23 @@ class Xiangqi:
         image = self.camera.read(undistorted=True)
         boardImage = self.camera.detectBoard(image)
         self.lastBoardInfo = (boardImage, self.engine.FEN)
-        return self.classifier.predictBoard(boardImage, allTiles=True)
+        return self.classifier.predictBoard(boardImage)
 
 
 if __name__ == "__main__":
     import logging
-    from pathlib import Path
-    from aiBoardGame.robot import RobotArm, RobotArmException
+    from aiBoardGame.robot import RobotArmException
+
+    logging.basicConfig(level=logging.INFO, format="")
 
     try:
-        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz")
+        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
         camera = RobotCamera(feedInput=2, resolution=(1920, 1080), intrinsicsFile=cameraIntrinsics)
 
         robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
         robotArm.connect()
 
-        classifierWeights = Path("/home/Menta/Workspace/Projects/AI-boardgame/newModelParams.pt")
-
-        game = Xiangqi(camera=camera, robotArm=robotArm, classifierWeights=classifierWeights, difficulty=Difficulty.Medium)
+        game = Xiangqi(camera=camera, robotArm=robotArm, difficulty=Difficulty.Medium)
         input("Press any key if you want to start to play")
         game.play()
 
