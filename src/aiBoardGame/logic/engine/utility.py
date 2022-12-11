@@ -1,15 +1,48 @@
 import re
+from enum import Enum
 from math import floor
 from collections import defaultdict
 from typing import Dict, Literal, Tuple, Union
 
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
-from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, BASE_ABBREVIATION_TO_PIECE
+from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, BASE_ABBREVIATION_TO_PIECE, FEN_ABBREVIATION_TO_PIECE
 
 
 SOLDIER_RANK_OFFSET = 3
 CANNON_RANK_OFFSET = 2
 
+STR_BOARD = """\
+┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓
+┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+┣━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┫
+┃                               ┃
+┣━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┫
+┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
+┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
+┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛\
+"""
+
+class FontFormat(Enum):
+        HEADER = '\033[95m'
+        OKBLUE = '\033[94m'
+        OKCYAN = '\033[96m'
+        OKGREEN = '\033[92m'
+        WARNING = '\033[93m'
+        FAIL = '\033[91m'
+        ENDC = '\033[0m'
+        BOLD = '\033[1m'
+        UNDERLINE = '\033[4m'
 
 def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
     board = Board()
@@ -88,6 +121,31 @@ def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[P
     except:
         return None, None
 
+
+def fenToBoard(fen: str) -> Board:
+    fenParts = fen.split(" ")
+
+    if len(fenParts) != 6:
+        raise ValueError
+
+    boardFenParts = fenParts[0].split("/")
+
+    if len(boardFenParts) != 10:
+        raise ValueError
+
+    board = Board()
+    for rank, rankFEN in enumerate(boardFenParts):
+        file = 0
+        for char in rankFEN:
+            if char.isdigit():
+                file += int(char)
+            else:
+                side = Side.Red if char.isupper() else Side.Black
+                board[side][file, Board.rankCount - rank - 1] = FEN_ABBREVIATION_TO_PIECE[char.upper()]
+                file += 1
+    return board
+
+
 def boardToStr(board: Board) -> str:
     boardStr = ""
     for rank in range(board.rankCount - 1, -1, -1):
@@ -128,3 +186,17 @@ def boardToStr(board: Board) -> str:
             boardStr += "\n ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃\n"
     boardStr = boardStr[:-36]
     return boardStr
+
+
+def boardToStr2(board: Board) -> str:
+    for postion, (side, piece) in board.pieces:
+
+
+
+if __name__ == "__main__":
+    fen = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
+    print(boardToStr(fenToBoard(fen)))
+
+    print(f"start {bcolors.BOLD} warning color {bcolors.ENDC} end")
+
+    print(STR_BOARD)

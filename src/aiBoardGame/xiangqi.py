@@ -109,7 +109,7 @@ if __name__ == "__main__":
         robotArm.connect()
 
         redSide = HumanPlayer()
-        blackSide = RobotArmPlayer(arm=robotArm, difficulty=Difficulty.Medium)
+        blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
 
         game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
         game.play()

@@ -6,11 +6,19 @@ from dataclasses import dataclass
 from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
 
-from aiBoardGame.logic import FairyStockfish, Difficulty, Position
+from aiBoardGame.logic import FairyStockfish, Difficulty, Position, fenToBoard, boardToStr
 from aiBoardGame.robot import RobotArm, RobotArmException
-from aiBoardGame.vision import RobotCamera, BoardImage
+from aiBoardGame.vision import RobotCamera, BoardImage, CameraError
 
 from aiBoardGame.utility import retry, rerunAfterCorrection
+
+
+@dataclass(frozen=True)
+class PlayerError(Exception):
+    message: str
+
+    def __str__(self) -> str:
+        return self.message
 
 
 @dataclass
@@ -41,7 +49,9 @@ class HumanPlayer(Player):
 @dataclass
 class HumanTerminalPlayer(HumanPlayer, TerminalPlayer):
     def makeMove(self, fen: str) -> None:
-        logging.info(fen)  # TODO: Print board
+        logging.info("")
+        logging.info(boardToStr(fenToBoard(fen)))
+        logging.info("")
         while True:
             try:
                 moveStr = input("Move (fromFile,fromRank toFile,toRank): ")
@@ -95,28 +105,39 @@ class RobotArmPlayer(RobotPlayer):
 
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
-    def __init__(self, arm: RobotArm, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.Medium) -> None:
+        if not camera.isCalibrated:
+            raise PlayerError(f"Camera is not calibrated, cannot use it in {self.__class__.__name__}")
+
         super().__init__(difficulty)
         self.arm = arm
+        self.camera = camera
         self.cornerCoordinates = None
 
     def prepare(self) -> None:
         if not self.arm.isConnected:
-            self.arm.connect()
+            try:
+                self.arm.connect()
+            except RobotArmException:
+                raise PlayerError(f"Cannot connect robot arm, failed to prepare {self.__class__.__name__}")
+        elif not self.camera.isActive:
+            self.camera.activate()
         self._calibrate()
 
-    @retry(times=1, exceptions=(RobotArmException, RuntimeError), callback=rerunAfterCorrection)
+    @retry(times=1, exceptions=(RobotArmException, CameraError, RuntimeError), callback=rerunAfterCorrection)
     def makeMove(self, fen: str) -> None:
         fromMove, toMove = self.stockfish.nextMove(fen=fen)
         logging.debug(f"Stockfish move: {*fromMove,} -> {*toMove,}")
 
-        piece = lastBoardInfo[0].findPiece(fromMove)
+        image = self.camera.read(undistorted=True)
+        boardImage = self.camera.detectBoard(image)
+        piece = boardImage.findPiece(fromMove)
         if piece is None:
             raise RuntimeError
 
-        matrix = self._calculateAffineTransform(lastBoardInfo[0])
+        matrix = self._calculateAffineTransform(boardImage)
         fromMove = self._imageToRobotCoordinate(piece[:2], matrix)
-        toMove = self._imageToRobotCoordinate(lastBoardInfo[0].positions[toMove.file, toMove.rank], matrix)
+        toMove = self._imageToRobotCoordinate(boardImage.positions[toMove.file, toMove.rank], matrix)
 
         self.arm.moveOnBoard(*fromMove)
         self.arm.setPump(on=True)

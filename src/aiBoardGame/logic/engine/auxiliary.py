@@ -3,7 +3,7 @@ from __future__ import annotations
 from math import sqrt
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import ClassVar, Dict, Generator, List, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
+from typing import ClassVar, Dict, List, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 
 Piece = TypeVar("Piece")
