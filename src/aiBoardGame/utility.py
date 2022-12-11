@@ -1,15 +1,8 @@
 import logging
 from time import sleep
 from math import log10
-from typing import List, Dict, Any, Tuple, Type, Callable, Optional, overload, Literal
+from typing import List, Dict, Any, Tuple, Type, Callable, Optional
 
-@overload
-def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Literal[None], callbackArgs: Literal[None]):
-    ...
-
-@overload
-def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Callable[[Callable[..., Any], str], Any], callbackArgs: Optional[List[Any]]):
-    ...
 
 def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional[Callable[[Callable[..., Any], str], Any]] = None) -> Callable:
     def decorator(function: Callable) -> Callable:

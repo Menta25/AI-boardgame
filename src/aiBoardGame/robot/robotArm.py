@@ -32,7 +32,10 @@ class RobotArm:
 
     freeMoveHeightLimit: ClassVar[float] = 35.0
 
-    def __init__(self, hardwareID: str = "USB VID:PID=2341:0042", speed: int = 1000) -> None:
+    def __init__(self, speed: int = 1000, hardwareID: Optional[str] = None) -> None:
+        if hardwareID is None:
+            hardwareID = "USB VID:PID=2341:0042"
+
         filters = {"hwid": hardwareID}
         if len(get_ports(filters=filters)) == 0:
             raise RobotArmException(f"Cannot initialize robot arm with hardware ID: {hardwareID}")

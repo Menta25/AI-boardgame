@@ -183,7 +183,8 @@ if __name__ == "__main__":
     # imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
     # image = camera.undistort(cv.imread(imagePath.as_posix()))
 
-    camera = RobotCamera(feedInput=2, resolution=(1920,1080), intrinsicsFile=cameraIntrinsicsPath)
+    camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
+    camera.activate()
     image = camera.read()
     try:
         boardImage = camera.detectBoard(image)
