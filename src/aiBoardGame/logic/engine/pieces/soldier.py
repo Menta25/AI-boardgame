@@ -5,7 +5,7 @@ from aiBoardGame.logic.engine.pieces import Piece
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 
-_RIVER_RANK = (Piece.rankLength() + 1) / 2
+_RIVER_RANK = (Piece.rankLength() + 1) // 2
 
 
 @dataclass(init=False)

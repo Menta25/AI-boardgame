@@ -1,7 +1,7 @@
 from enum import Enum, auto, unique
 from pathlib import Path
 from subprocess import Popen, PIPE
-from typing import List, Tuple, ClassVar
+from typing import List, Tuple, ClassVar, Optional
 from time import sleep
 
 from aiBoardGame.logic.engine import Position
@@ -19,9 +19,9 @@ class Difficulty(Enum):
 
 #  TODO: Define valid arguments for difficulties
 _GO_ARGS = {
-    Difficulty.Easy: (2, 500),
-    Difficulty.Medium: (5, 1000),
-    Difficulty.Hard: (10, 3000)
+    Difficulty.Easy: (10, 1000),
+    Difficulty.Medium: (20, 2000),
+    Difficulty.Hard: (40, 4000)
 }
 
 
@@ -74,14 +74,15 @@ class FairyStockfish:
             "go",
             "depth", str(depth),
             "movetime", str(movetime)
-        ], wait=movetime)
+        ], wait=movetime+10)
         if len(out) == 0:
             raise RuntimeError("An error occurred during calculating next move")
         return out[-1].split(" ")[1]
 
-    def nextMove(self, fen: str) -> Tuple[Position, Position]:
+    def nextMove(self, fen: str) -> Optional[Tuple[Position, Position]]:
         self.position(fen)
-        return self._algebraicMoveToPositions(self.go())
+        go = self.go()
+        return self._algebraicMoveToPositions(go) if go != "(none)" else None
 
     @staticmethod
     def _algebraicMoveToPositions(algebraicMove: str) -> Tuple[Position, Position]:

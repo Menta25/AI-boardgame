@@ -2,13 +2,13 @@ import logging
 from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional
 
-from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficulty, FairyStockfish
-from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier, BoardImage
+from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficulty, prettyBoard, Position
+from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier
 from aiBoardGame.robot import RobotArm, RobotArmException
 
-from aiBoardGame.player import HumanPlayer, RobotArmPlayer, Player
+from aiBoardGame.player import Player, HumanPlayer, RobotArmPlayer, HumanTerminalPlayer, RobotTerminalPlayer
 from aiBoardGame.utility import retry, rerunAfterCorrection
 
 
@@ -41,13 +41,23 @@ class XiangqiBase(ABC):
     def play(self) -> None:
         self._engine.newGame()
         self._prepare()
+        logging.info("Starting game")
+        moves = 0
         while not self._engine.isOver:
+            if moves % 2 == 0:
+                logging.info(f"Turn {moves//2}.")
             try:
                 self.currentPlayer.makeMove(self._engine.FEN)
+                if self.currentPlayer.isConceding:
+                    logging.info(f"{self._engine.currentSide.name} {self.currentPlayer.__class__.__name__} has conceded")
+                    break
                 self._updateEngine()
             except InvalidMove as error:
                 logging.error(str(error))
                 self._handleInvalidMove()
+            else:
+                moves += 1
+        logging.info("The game has ended")
 
     @abstractmethod
     def _updateEngine(self) -> None:
@@ -56,6 +66,29 @@ class XiangqiBase(ABC):
     @abstractmethod
     def _handleInvalidMove(self) -> None:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented _handleInvalidMove() method")
+
+
+class TerminalXiangqi(XiangqiBase):
+    def __init__(self, redSide: Union[HumanTerminalPlayer, RobotTerminalPlayer], blackSide: Union[HumanTerminalPlayer, RobotTerminalPlayer]) -> None:
+        super().__init__(redSide, blackSide)
+
+    def _prepare(self) -> None:
+        super()._prepare()
+        logging.info("")
+        logging.info(prettyBoard(self._engine.board, colors=True))
+        logging.info("")
+
+    def _updateEngine(self) -> None:
+        move: Optional[Tuple[Position, Position]] = self.currentPlayer.move
+        if move is None:
+            raise InvalidMove(None, None, None, f"Cannot get {self.currentPlayer.__class__.__name__}'s last move")
+        self._engine.move(*move)
+        logging.info("")
+        logging.info(prettyBoard(self._engine.board, colors=True, lastMove=move))
+        logging.info("")
+
+    def _handleInvalidMove(self) -> None:
+        pass
 
 class Xiangqi(XiangqiBase):
     def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
@@ -71,7 +104,6 @@ class Xiangqi(XiangqiBase):
             self._camera.activate()
         
         super()._prepare()
-        input("Press ENTER to start the game")
         self._analyseBoard()
 
     @retry(times=3, exceptions=(InvalidMove))
@@ -100,21 +132,30 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="")
 
+    # try:
+    #     cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
+    #     camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
+    #     robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
+
+    #     camera.activate()
+    #     robotArm.connect()
+
+    #     redSide = HumanPlayer()
+    #     blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
+
+    #     game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
+    #     game.play()
+
+    #     robotArm.disconnect()
+    #     camera.deactivate()
+    # except (CameraError, RobotArmException, GameplayError) as error:
+    #     logging.error(str(error))
+
     try:
-        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
-        camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
-        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
+        redSide = RobotTerminalPlayer(difficulty=Difficulty.Hard)
+        blackSide = RobotTerminalPlayer(difficulty=Difficulty.Medium)
 
-        camera.activate()
-        robotArm.connect()
-
-        redSide = HumanPlayer()
-        blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
-
-        game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
+        game = TerminalXiangqi(redSide=redSide, blackSide=blackSide)
         game.play()
-
-        robotArm.disconnect()
-        camera.deactivate()
-    except (CameraError, RobotArmException, GameplayError) as error:
+    except GameplayError as error:
         logging.error(str(error))

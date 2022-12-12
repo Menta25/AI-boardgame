@@ -34,7 +34,6 @@ class XiangqiEngine:
     # TODO: Do not allow perpetual chasing and checking
     # TODO: Signal end of the game (its kind of already implemented)
     # TODO: Calculate approximate values for each side
-    # TODO: Generate appropriate games state for AlphaZero
     def move(self, start: Union[Position, Tuple[int, int]], end: Union[Position, Tuple[int, int]]) -> None:
         if not isinstance(start, Position):
             start = Position(*start)
@@ -52,11 +51,11 @@ class XiangqiEngine:
         self._validMoves = self._getAllValidMoves()
 
         if self.isOver:
-            logging.info(f"{self.currentSide.opponent} has delivered a mate, {self.currentSide.opponent} won!")
+            logging.info(f"{self.currentSide.opponent.name} has delivered a mate and won!")
         else:
             checks, _ = self._getChecksAndPins()
             if len(checks) > 0:
-                logging.info(f"{self.currentSide} is in check!")
+                logging.info(f"{self.currentSide.name} is in check!")
 
     def undoMove(self) -> None:
         self._undoMove()
@@ -165,7 +164,7 @@ class XiangqiEngine:
                     else:
                         pinningGeneralDeltaNorm = (pinning[0] - self.generals[self.currentSide]).normalize()
                         for end in list(possibleMoves[pinned]):
-                            if end != pinning:
+                            if end != pinning[0]:
                                 pinningEndDeltaNorm = (pinning[0] - end).normalize()
                                 generalEndDeltaNorm = (self.generals[self.currentSide] - end).normalize()
                                 if not (pinningGeneralDeltaNorm == pinningEndDeltaNorm and pinningGeneralDeltaNorm != generalEndDeltaNorm):
@@ -176,7 +175,7 @@ class XiangqiEngine:
                 checkGeneralDelta = checks[0] - self.generals[self.currentSide]
                 if self.board[checks[0]].piece == Horse:
                     checkGeneralDeltaNorm = (checkGeneralDelta/2).round()
-                    validEnds.append([self.generals[self.currentSide] + checkGeneralDeltaNorm])
+                    validEnds.append(self.generals[self.currentSide] + checkGeneralDeltaNorm)
                 else:
                     checkGeneralDeltaNorm = checkGeneralDelta.normalize()
                     end = self.generals[self.currentSide]
@@ -210,7 +209,7 @@ class XiangqiEngine:
         return possibleMoves
 
 if __name__ == "__main__":
-    from aiBoardGame.logic.engine.utility import boardToStr
+    from aiBoardGame.logic.engine.utility import prettyBoard
 
     logging.basicConfig(format="", level=logging.INFO)
 
@@ -241,7 +240,7 @@ if __name__ == "__main__":
                         end = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
                         try:
                             game.move(start, end)
-                            logging.info(boardToStr(game.board))
+                            logging.info(prettyBoard(game.board, colors=True, lastMove=(start, end)))
                         except InvalidMove as error:
                             logging.info(error)
                         finally:

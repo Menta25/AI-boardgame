@@ -170,7 +170,7 @@ if __name__ == "__main__":
     import time
     from pathlib import Path
     
-    from aiBoardGame.logic.engine.utility import boardToStr
+    from aiBoardGame.logic.engine.utility import prettyBoard
 
     from aiBoardGame.vision.camera import RobotCameraInterface, RobotCamera, CameraError
     from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         board = classifier.predictBoard(boardImage)
         logging.info(f"predict time: {time.time() - start:.4f}s")
 
-        logging.info(boardToStr(board))
+        logging.info(prettyBoard(board, colors=True))
 
     except CameraError:
         logging.exception("Cannot test board image")

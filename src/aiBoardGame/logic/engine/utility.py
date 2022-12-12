@@ -1,8 +1,7 @@
 import re
-from enum import Enum
 from math import floor
 from collections import defaultdict
-from typing import Dict, Literal, Tuple, Union
+from typing import Dict, Literal, Optional, Tuple, Union, overload, Iterable, List, TypeVar, Callable
 
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, BASE_ABBREVIATION_TO_PIECE, FEN_ABBREVIATION_TO_PIECE
@@ -11,38 +10,41 @@ from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, C
 SOLDIER_RANK_OFFSET = 3
 CANNON_RANK_OFFSET = 2
 
-STR_BOARD = """\
-┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓
-┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
-┣━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┫
-┃                               ┃
-┣━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┫
-┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
-┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
-┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
-┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛\
+_STR_BOARD = """\
+9 ┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓
+  ┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
+8 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
+7 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+6 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+5 ┣━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┫
+  ┃                               ┃
+4 ┣━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┫
+  ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+3 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃
+2 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
+1 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫
+  ┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃
+0 ┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛
+  0   1   2   3   4   5   6   7   8\
 """
 
-class FontFormat(Enum):
-        HEADER = '\033[95m'
-        OKBLUE = '\033[94m'
-        OKCYAN = '\033[96m'
-        OKGREEN = '\033[92m'
-        WARNING = '\033[93m'
-        FAIL = '\033[91m'
-        ENDC = '\033[0m'
-        BOLD = '\033[1m'
-        UNDERLINE = '\033[4m'
+
+class FontFormat:
+        HEADER = "\033[95m"
+        OKBLUE = "\033[94m"
+        OKCYAN = "\033[96m"
+        OKGREEN = "\033[92m"
+        WARNING = "\033[93m"
+        FAIL = "\033[91m"
+        ENDC = "\033[0m"
+        BOLD = "\033[1m"
+        UNDERLINE = "\033[4m"
+
 
 def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
     board = Board()
@@ -67,10 +69,12 @@ def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
 
     return board, generals
 
+
 _OPERATOR_MAP = {
     "+": lambda x: x,
     "-": lambda x: -x
 }
+
 
 def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
     try:
@@ -124,12 +128,10 @@ def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[P
 
 def fenToBoard(fen: str) -> Board:
     fenParts = fen.split(" ")
-
     if len(fenParts) != 6:
         raise ValueError
 
     boardFenParts = fenParts[0].split("/")
-
     if len(boardFenParts) != 10:
         raise ValueError
 
@@ -146,57 +148,80 @@ def fenToBoard(fen: str) -> Board:
     return board
 
 
-def boardToStr(board: Board) -> str:
-    boardStr = ""
-    for rank in range(board.rankCount - 1, -1, -1):
-        for file in range(board.fileCount):
-            if file == board.fileBounds[0]:
-                if rank == board.rankBounds[0]:
-                    char = " ┗"
-                elif rank == board.rankBounds[1] - 1:
-                    char = " ┏"
+@overload
+def prettyBoard(board: Union[Board, str], colors: Literal[False], lastMove: Literal[None]) -> str:
+    ...
+
+@overload
+def prettyBoard(board: Union[Board, str], colors: Literal[True], lastMove: Optional[Tuple[Position, Position]]) -> str:
+    ...
+
+def prettyBoard(board: Union[Board, str], colors: bool = False, lastMove: Optional[Tuple[Position, Position]] = None) -> str:
+    if isinstance(board, Board):
+        pieces = sorted(board.pieces, key=lambda item: item[0][0], reverse=True)
+        pieces = sorted(pieces, key=lambda item: item[0][1])
+        positions, pieces = zip(*pieces)
+        getSide = lambda boardEntity: boardEntity.side
+        getChar = lambda boardEntity: boardEntity.piece.abbreviations["fen"]
+    elif isinstance(board, str):
+        fenParts = board.split(" ")
+        if len(fenParts) not in [1, 6]:
+            raise ValueError("Invalid FEN")
+
+        boardFenParts = fenParts[0].split("/")
+        if len(boardFenParts) != 10:
+            raise ValueError("Invalid FEN")
+
+        positions = []
+        pieces = []
+        for rank, rankFen in enumerate(boardFenParts[::-1]):
+            file = Board.fileCount - 1
+            for char in rankFen[::-1]:
+                if char.isdigit():
+                    file -= int(char)
                 else:
-                    char = " ┣"
-            elif file == board.fileBounds[1] - 1:
-                if rank == board.rankBounds[0]:
-                    char = "━┛"
-                elif rank == board.rankBounds[1] - 1:
-                    char = "━┓"
-                else:
-                    char = "━┫"
+                    positions.append(Position(file, rank))
+                    pieces.append(char)
+                    file -= 1
+
+        getSide = lambda char: Side.Red if char.isupper() else Side.Black
+        getChar = lambda char: char
+    else:
+        raise TypeError("Invalid board type, must be Board or string")
+
+    return _prettyBoard(positions, pieces, getSide, getChar, colors, lastMove)
+
+
+T = TypeVar("T")
+
+
+def _prettyBoard(positions: List[Position], pieces: Iterable[T], getSide: Callable[[T], Side], getChar: Callable[[T], str], colors: bool, lastMove: Optional[Tuple[Position, Position]]) -> str:
+    if lastMove is not None:
+        lastMoveStartIndex = (Board.rankCount - lastMove[0].rank - 1) * Board.fileCount * 8 + 2 + lastMove[0].file * 4
+        boardStr = _STR_BOARD[:lastMoveStartIndex] + FontFormat.OKGREEN + _STR_BOARD[lastMoveStartIndex] + FontFormat.ENDC + _STR_BOARD[lastMoveStartIndex + 1:]
+    else:
+        boardStr = _STR_BOARD
+    for position, piece in zip(positions, pieces):
+        side = getSide(piece)
+        convert = str.upper if side == Side.Red else str.lower
+        char = convert(getChar(piece))
+        if colors is True:
+            if lastMove is not None and position == lastMove[1]:
+                colorStart = FontFormat.OKGREEN
             else:
-                if rank in [board.rankBounds[0], board.rankCount//2]:
-                    char = "━┻"
-                elif rank in [board.rankBounds[1] - 1, board.rankCount//2-1]:
-                    char = "━┳"
-                else:
-                    char = "━╋"
-
-            boardStr += f"{str(board[file, rank].side.name)[0].lower()}{board[file, rank].piece.abbreviations['base']}" if board[file, rank] != None else char
-            boardStr += "━━"
-        boardStr = boardStr[:-2]
-
-        if rank == board.rankCount//2:
-            boardStr += "\n ┃                               ┃\n"
-        elif rank == board.rankBounds[1] - 1 or rank == board.rankBounds[0] + 2:
-            boardStr += "\n ┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃\n"
-        elif rank == board.rankBounds[1] - 2 or rank == board.rankBounds[0] + 1:
-            boardStr += "\n ┃   ┃   ┃   ┃ / ┃ \ ┃   ┃   ┃   ┃\n"
+                colorStart = FontFormat.FAIL if side == Side.Red else FontFormat.OKBLUE
+            colorStart += FontFormat.BOLD
+            colorEnd = FontFormat.ENDC
         else:
-            boardStr += "\n ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃   ┃\n"
-    boardStr = boardStr[:-36]
+            colorStart = colorEnd = ""
+        index = (Board.rankCount - position.rank - 1) * Board.fileCount * 8 + 2 + position.file * 4
+        if lastMove is not None and (lastMove[0].rank > position.rank or lastMove[0].rank == position.rank and lastMove[0].file < position.file):
+            index += len(FontFormat.OKGREEN) + len(FontFormat.ENDC)
+        boardStr = boardStr[:index] + f"{colorStart}{char}{colorEnd}" + boardStr[index + 1:]
     return boardStr
-
-
-def boardToStr2(board: Board) -> str:
-    for postion, (side, piece) in board.pieces:
-
 
 
 if __name__ == "__main__":
     fen = "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1"
-    print(boardToStr(fenToBoard(fen)))
 
-    print(f"start {bcolors.BOLD} warning color {bcolors.ENDC} end")
-
-    print(STR_BOARD)
+    print(prettyBoard(fen, colors=True, lastMove=(Position(4,1),Position(4,3))))

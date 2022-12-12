@@ -2,11 +2,11 @@ import logging
 import numpy as np
 import cv2 as cv
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
 
-from aiBoardGame.logic import FairyStockfish, Difficulty, Position, fenToBoard, boardToStr
+from aiBoardGame.logic import FairyStockfish, Difficulty, Position, prettyBoard
 from aiBoardGame.robot import RobotArm, RobotArmException
 from aiBoardGame.vision import RobotCamera, BoardImage, CameraError
 
@@ -23,6 +23,8 @@ class PlayerError(Exception):
 
 @dataclass
 class Player(ABC):
+    isConceding: bool = field(default=False, init=False)
+
     @abstractmethod
     def prepare(self) -> None:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented prepare() method")
@@ -34,29 +36,31 @@ class Player(ABC):
 
 @dataclass
 class TerminalPlayer(Player):
-    move: Optional[Tuple[Position, Position]] = None
+    move: Optional[Tuple[Position, Position]] = field(default=None, init=False)
 
 
 @dataclass
 class HumanPlayer(Player):
     def prepare(self) -> None:
-        pass
+        input("Press ENTER if you are ready to start the game")
 
     def makeMove(self, fen: str) -> None:
-        input("Press ENTER if you want to finish your turn...")
+        command = input("Press ENTER if you want to finish your turn, or type \"concede\" if you want to concede")
+        if command == "concede":
+            self.isConceding = True
 
 
 @dataclass
 class HumanTerminalPlayer(HumanPlayer, TerminalPlayer):
     def makeMove(self, fen: str) -> None:
-        logging.info("")
-        logging.info(boardToStr(fenToBoard(fen)))
-        logging.info("")
         while True:
             try:
                 moveStr = input("Move (fromFile,fromRank toFile,toRank): ")
                 moveStrParts = moveStr.split(" ")
-                if len(moveStrParts) == 2:
+                if len(moveStrParts) == 1 and moveStrParts[0] == "concede":
+                    self.isConceding = True
+                    break
+                elif len(moveStrParts) == 2:
                     startPositionStrs = moveStrParts[0].split(",")
                     endPositionStrs = moveStrParts[1].split(",")
                     if len(startPositionStrs) == 2 and len(endPositionStrs) == 2:
@@ -95,6 +99,8 @@ class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
 
     def makeMove(self, fen: str) -> None:
         self.move = self.stockfish.nextMove(fen=fen)
+        if self.move is None:
+            self.isConceding = True
 
 
 @dataclass(init=False)
@@ -126,25 +132,29 @@ class RobotArmPlayer(RobotPlayer):
 
     @retry(times=1, exceptions=(RobotArmException, CameraError, RuntimeError), callback=rerunAfterCorrection)
     def makeMove(self, fen: str) -> None:
-        fromMove, toMove = self.stockfish.nextMove(fen=fen)
-        logging.debug(f"Stockfish move: {*fromMove,} -> {*toMove,}")
+        move = self.stockfish.nextMove(fen=fen)
+        if move is not None:
+            fromMove, toMove = move
+            logging.debug(f"Stockfish move: {*fromMove,} -> {*toMove,}")
 
-        image = self.camera.read(undistorted=True)
-        boardImage = self.camera.detectBoard(image)
-        piece = boardImage.findPiece(fromMove)
-        if piece is None:
-            raise RuntimeError
+            image = self.camera.read(undistorted=True)
+            boardImage = self.camera.detectBoard(image)
+            piece = boardImage.findPiece(fromMove)
+            if piece is None:
+                raise RuntimeError
 
-        matrix = self._calculateAffineTransform(boardImage)
-        fromMove = self._imageToRobotCoordinate(piece[:2], matrix)
-        toMove = self._imageToRobotCoordinate(boardImage.positions[toMove.file, toMove.rank], matrix)
+            matrix = self._calculateAffineTransform(boardImage)
+            fromMove = self._imageToRobotCoordinate(piece[:2], matrix)
+            toMove = self._imageToRobotCoordinate(boardImage.positions[toMove.file, toMove.rank], matrix)
 
-        self.arm.moveOnBoard(*fromMove)
-        self.arm.setPump(on=True)
-        self.arm.moveOnBoard(*toMove)
-        self.arm.setPump(on=False)
+            self.arm.moveOnBoard(*fromMove)
+            self.arm.setPump(on=True)
+            self.arm.moveOnBoard(*toMove)
+            self.arm.setPump(on=False)
 
-        self.arm.resetPosition(lowerDown=False, safe=True)
+            self.arm.resetPosition(lowerDown=False, safe=True)
+        else:
+            self.isConceding = True
 
     def _calibrate(self) -> None:
         if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") == "yes":
