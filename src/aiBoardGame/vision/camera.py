@@ -205,18 +205,18 @@ class RobotCameraInterface(AbstractCameraInterface):
         for hsvRange in BoardImage.hsvRanges:
             hsvMask = cv.inRange(imageHSV, hsvRange[0], hsvRange[1])
             mask = cv.bitwise_or(mask, hsvMask)
-            cv.imshow("hsv", hsvMask)
-            cv.waitKey(0)
-            cv.destroyAllWindows()
+            # cv.imshow("hsv", hsvMask)
+            # cv.waitKey(0)
+            # cv.destroyAllWindows()
 
         erosionKernel = np.ones((3,3), np.uint8)
         dilationKernel = np.ones((9,9), np.uint8)
         erosion = cv.erode(mask, erosionKernel, iterations=4)
         dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
-        cv.imshow("dilate", dilate)
-        cv.waitKey(0)
-        cv.destroyAllWindows()
+        # cv.imshow("dilate", dilate)
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         boardContours = [boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000]
@@ -312,7 +312,7 @@ class RobotCamera(RobotCameraInterface):
             self.isActive = True
             self.thread = Thread(target=self._update, daemon=True)
             self.thread.start()
-            sleep(self.interval)
+            sleep(self.interval+0.2)
 
     def deactivate(self) -> None:
         if self.isActive:

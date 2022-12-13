@@ -92,7 +92,7 @@ class TerminalXiangqi(XiangqiBase):
 
 class Xiangqi(XiangqiBase):
     def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
-        if not self._camera.isCalibrated:
+        if not camera.isCalibrated:
             raise GameplayError("Camera is not calibrated, cannot play Xiangqi")
         super().__init__(redSide, blackSide)
 
@@ -130,32 +130,32 @@ class Xiangqi(XiangqiBase):
 if __name__ == "__main__":
     import logging
 
-    logging.basicConfig(level=logging.INFO, format="")
-
-    # try:
-    #     cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
-    #     camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
-    #     robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
-
-    #     camera.activate()
-    #     robotArm.connect()
-
-    #     redSide = HumanPlayer()
-    #     blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
-
-    #     game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
-    #     game.play()
-
-    #     robotArm.disconnect()
-    #     camera.deactivate()
-    # except (CameraError, RobotArmException, GameplayError) as error:
-    #     logging.error(str(error))
+    logging.basicConfig(level=logging.DEBUG, format="")
 
     try:
-        redSide = RobotTerminalPlayer(difficulty=Difficulty.Hard)
-        blackSide = RobotTerminalPlayer(difficulty=Difficulty.Medium)
+        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
+        camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
+        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
 
-        game = TerminalXiangqi(redSide=redSide, blackSide=blackSide)
+        camera.activate()
+        robotArm.connect()
+
+        redSide = HumanPlayer()
+        blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
+
+        game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
         game.play()
-    except GameplayError as error:
+
+        robotArm.disconnect()
+        camera.deactivate()
+    except (CameraError, RobotArmException, GameplayError) as error:
         logging.error(str(error))
+
+    # try:
+    #     redSide = RobotTerminalPlayer(difficulty=Difficulty.Hard)
+    #     blackSide = RobotTerminalPlayer(difficulty=Difficulty.Medium)
+
+    #     game = TerminalXiangqi(redSide=redSide, blackSide=blackSide)
+    #     game.play()
+    # except GameplayError as error:
+    #     logging.error(str(error))

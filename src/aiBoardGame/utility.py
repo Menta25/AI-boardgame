@@ -8,10 +8,12 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
     def decorator(function: Callable) -> Callable:
         def newFunction(*args: List[Any], **kwargs: Dict[str, Any]) -> Any:
             attempt = 0
+            lastException = None
             while attempt < times:
                 try:
                     return function(*args, **kwargs)
                 except exceptions as exception:
+                    lastException = exception
                     attempt += 1
                     logging.error(f"Exception thrown when attempting to run {function.__name__}, attempt {attempt} of {times}")
                     logging.error(str(exception))
@@ -19,12 +21,12 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
             if callback is not None:
                 callback(function.__name__, newFunction, args, kwargs)
             else:
-                raise exception
+                raise lastException
         return newFunction
     return decorator
 
 
-def rerunAfterCorrection(functionName: str, function: Callable[..., Any], *args: List[Any], **kwargs: Dict[str, Any]) -> Any:
+def rerunAfterCorrection(functionName: str, function: Callable[..., Any], args: List[Any], kwargs: Dict[str, Any]) -> Any:
     input(f"Press any key if the correction was made for {functionName}")
     return function(*args, **kwargs)
     

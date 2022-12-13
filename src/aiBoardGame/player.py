@@ -107,7 +107,7 @@ class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
 class RobotArmPlayer(RobotPlayer):
     arm: RobotArm
     camera: RobotCamera
-    cornerCoordinates: Optional[np.ndarray]
+    cornerPolars: Optional[np.ndarray]
 
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
@@ -118,7 +118,7 @@ class RobotArmPlayer(RobotPlayer):
         super().__init__(difficulty)
         self.arm = arm
         self.camera = camera
-        self.cornerCoordinates = None
+        self.cornerPolars = None
 
     def prepare(self) -> None:
         if not self.arm.isConnected:
@@ -142,15 +142,24 @@ class RobotArmPlayer(RobotPlayer):
             piece = boardImage.findPiece(fromMove)
             if piece is None:
                 raise RuntimeError
+            piece = piece.astype(int)
+
+            logging.info(f"image from: {RobotArm.cartesianToPolar(piece[:2])}")
+            logging.info(f"image to: {RobotArm.cartesianToPolar(boardImage.positions[toMove.file, toMove.rank])}")
 
             matrix = self._calculateAffineTransform(boardImage)
-            fromMove = self._imageToRobotCoordinate(piece[:2], matrix)
-            toMove = self._imageToRobotCoordinate(boardImage.positions[toMove.file, toMove.rank], matrix)
+            fromMove = self._imageToRobotPolar(piece[:2], matrix)
+            toMove = self._imageToRobotPolar(boardImage.positions[toMove.file, toMove.rank], matrix)
 
-            self.arm.moveOnBoard(*fromMove)
-            self.arm.setPump(on=True)
-            self.arm.moveOnBoard(*toMove)
-            self.arm.setPump(on=False)
+            # self.arm.moveOnBoard(*fromMove)
+            # self.arm.setPump(on=True)
+            # self.arm.moveOnBoard(*toMove)
+            # self.arm.setPump(on=False)
+
+            logging.info(f"board: {fromMove} -> {toMove}")
+            cv.imshow("data", boardImage.data)
+            cv.waitKey(0)
+            cv.destroyAllWindows()
 
             self.arm.resetPosition(lowerDown=False, safe=True)
         else:
@@ -159,29 +168,30 @@ class RobotArmPlayer(RobotPlayer):
     def _calibrate(self) -> None:
         if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") == "yes":
             with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
-                cornerCoordinates = calibration["cornerCoordinates"]
+                cornerPolars = calibration["cornerPolars"]
         else:
             self.arm.resetPosition(lowerDown=True, safe=True)
-            coordinates = []
+            polars = []
             for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
                 self.arm.detach(safe=False)
                 input(f"Move robot arm to {corner} corner (from the view of RED side), then press ENTER")
                 self.arm.attach()
-                coordinates.append(self.arm.position)
-            cornerCoordinates = np.asarray(coordinates)
-            np.savez(self._baseCalibPath, cornerCoordinates=cornerCoordinates)
-        object.__setattr__(self, "cornerCoordinates", cornerCoordinates)
+                polars.append(self.arm.polar)
+            cornerPolars = np.asarray(polars)[:,:2]
+            np.savez(self._baseCalibPath, cornerPolars=cornerPolars)
+        object.__setattr__(self, "cornerPolars", cornerPolars)
         self.arm.resetPosition(lowerDown=False, safe=True)
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:
-        boardImageCorners = np.asarray([
-            boardImage.positions[0,0],
+        boardImageCorners = np.asarray([RobotArm.cartesianToPolar(corner) for corner in [
             boardImage.positions[0,-1],
             boardImage.positions[-1,-1],
             boardImage.positions[-1,0],
-        ])
-        return cv.estimateAffine2D(boardImageCorners, self.cornerCoordinates)
+            boardImage.positions[0,0],
+        ]])
+        return cv.estimateAffine2D(boardImageCorners.astype(np.float64), self.cornerPolars)[0]
 
-    def _imageToRobotCoordinate(self, imageCoordinate: np.ndarray, matrix: np.ndarray) -> np.ndarray:
-        return imageCoordinate @ matrix[:,:2] + matrix[:, -1:].squeeze()
+    def _imageCartesianToRobotPolar(self, imageCartesian: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+        imagePolar = RobotArm.cartesianToPolar(imageCartesian)
+        return imagePolar @ matrix[:,:2] + matrix[:, -1:].squeeze()
         

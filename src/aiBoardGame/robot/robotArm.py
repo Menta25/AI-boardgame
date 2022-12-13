@@ -1,4 +1,5 @@
 import logging
+import numpy as np
 from time import sleep
 from enum import IntEnum, unique
 from dataclasses import dataclass
@@ -133,7 +134,7 @@ class RobotArm:
 
         position = self.position
         if safe is True and (position is None or position[-1] < self.freeMoveHeightLimit):
-            self.swift.set_position(z=self.freeMoveHeightLimit)
+            self.swift.set_polar(height=self.freeMoveHeightLimit)
             self.swift.flush_cmd(wait_stop=True)
 
         if not isPolar:
@@ -154,11 +155,11 @@ class RobotArm:
         verticalPartial(**extraArgs)
         self.swift.flush_cmd(wait_stop=True)
         while isRelative and not self.isTouching:
-            self.swift.set_position(z=-1, relative=True, speed=1000)
+            self.swift.set_polar(height=-1, relative=True, speed=1000)
             self.swift.flush_cmd(wait_stop=True)
 
-    def moveOnBoard(self, x: float, y: float) -> None:
-        self.move(to=(x, y, None), speed=None, safe=True, isPolar=False)
+    def moveOnBoard(self, stretch: float, rotation: float) -> None:
+        self.move(to=(stretch, rotation, None), speed=None, safe=True, isPolar=True)
             
     def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None) -> None:
         if not self.isAttached(servo):
@@ -177,6 +178,20 @@ class RobotArm:
     def setPump(self, on: bool = True) -> None:
         self.swift.set_pump(on=on)
         sleep(0.25)
+
+    @staticmethod
+    def cartesianToPolar(cartesian: np.ndarray) -> np.ndarray:
+        x, y = cartesian
+        rho = np.sqrt(**2 + y**2)
+        phi = np.arctan2(y, x)
+        return np.array([rho, phi])
+
+    @staticmethod
+    def polarToCartesian(polar: np.ndarray) -> np.ndarray:
+        rho, phi = polar
+        x = rho * np.cos(phi)
+        y = rho * np.sin(phi)
+        return np.array([x, y])
 
 
 if __name__ == "__main__":

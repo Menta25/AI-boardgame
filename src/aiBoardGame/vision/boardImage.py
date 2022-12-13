@@ -58,7 +58,7 @@ class BoardImage:
         files = np.repeat(files[:, np.newaxis], Board.rankCount, 1)
         ranks = np.repeat(ranks[np.newaxis, :], Board.fileCount, 0)
 
-        positions = np.dstack((files, ranks))
+        positions = np.dstack((files, ranks[:,::-1]))
 
         object.__setattr__(self, "positions", positions)
         object.__setattr__(self, "fileStep", fileStep)
@@ -97,7 +97,7 @@ class BoardImage:
 
     def tile(self, position: Position) -> np.ndarray:
         """Return the given tile's ndarray representation"""
-        imagePosition: np.ndarray = self.positions[position.file, Board.rankCount-1 - position.rank]
+        imagePosition: np.ndarray = self.positions[position.file, position.rank]
         return self._tile(imagePosition)
 
     def _tile(self, tileCenter: np.ndarray) -> np.ndarray:
@@ -115,8 +115,8 @@ class BoardImage:
 
     @property
     def roi(self) -> np.ndarray:
-        topLeftCorner = (self.positions[0,0] - self.tileSize/2).astype(np.uint16)
-        bottomRightCorner = (self.positions[-1,-1] + self.tileSize/2).astype(np.uint16)
+        topLeftCorner = (self.positions[0,-1] - self.tileSize/2).astype(np.uint16)
+        bottomRightCorner = (self.positions[-1,0] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
     
     def _detectCircles(self, image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
@@ -148,7 +148,7 @@ class BoardImage:
         return pieceTiles
 
     def findPiece(self, position: Position) -> Optional[np.ndarray]:
-        tileCenter = self.positions[position.file, Board.rankCount - position.rank - 1]
+        tileCenter = self.positions[position.file, position.rank]
         tile = self._tile(tileCenter)
         detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
 
@@ -185,6 +185,7 @@ if __name__ == "__main__":
 
     camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
     camera.activate()
+    time.sleep(1)
     image = camera.read()
     try:
         boardImage = camera.detectBoard(image)
@@ -192,10 +193,10 @@ if __name__ == "__main__":
         cv.imshow("roi", boardImage.roi)
         cv.waitKey(0)
 
-        for position, tile in boardImage.pieceTiles:
-            cv.imshow(f"{position}", tile)
-            cv.waitKey(0)
-            cv.destroyAllWindows()
+        # for position, tile in boardImage.pieceTiles:
+        #     cv.imshow(f"{position}", tile)
+        #     cv.waitKey(0)
+        #     cv.destroyAllWindows()
 
         start = time.time()
         board = classifier.predictBoard(boardImage)
