@@ -187,7 +187,7 @@ def prettyBoard(board: Union[Board, str], colors: bool = False, lastMove: Option
         getSide = lambda char: Side.Red if char.isupper() else Side.Black
         getChar = lambda char: char
     else:
-        raise TypeError("Invalid board type, must be Board or string")
+        raise TypeError(f"Invalid board type, must be Board or string, was {type(board)}")
 
     return _prettyBoard(positions, pieces, getSide, getChar, colors, lastMove)
 

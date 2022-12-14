@@ -45,7 +45,9 @@ class XiangqiBase(ABC):
         moves = 0
         while not self._engine.isOver:
             if moves % 2 == 0:
+                logging.info("")
                 logging.info(f"Turn {moves//2}.")
+                logging.info("")
             try:
                 self.currentPlayer.makeMove(self._engine.FEN)
                 if self.currentPlayer.isConceding:
@@ -53,8 +55,7 @@ class XiangqiBase(ABC):
                     break
                 self._updateEngine()
             except InvalidMove as error:
-                logging.error(str(error))
-                self._handleInvalidMove()
+                self._handleInvalidMove(error)
             else:
                 moves += 1
         logging.info("The game has ended")
@@ -64,7 +65,7 @@ class XiangqiBase(ABC):
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented _updateEngine() method")
 
     @abstractmethod
-    def _handleInvalidMove(self) -> None:
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented _handleInvalidMove() method")
 
 
@@ -87,8 +88,8 @@ class TerminalXiangqi(XiangqiBase):
         logging.info(prettyBoard(self._engine.board, colors=True, lastMove=move))
         logging.info("")
 
-    def _handleInvalidMove(self) -> None:
-        pass
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
+        logging.error(str(error))
 
 class Xiangqi(XiangqiBase):
     def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
@@ -109,6 +110,7 @@ class Xiangqi(XiangqiBase):
     @retry(times=3, exceptions=(InvalidMove))
     def _updateEngine(self) -> None:
         board = self._analyseBoard()
+        logging.info(prettyBoard(board, colors=True))
         self._engine.update(board)
 
     @retry(times=3, exceptions=(CameraError), callback=rerunAfterCorrection)
@@ -117,7 +119,8 @@ class Xiangqi(XiangqiBase):
         boardImage = self._camera.detectBoard(image)
         return self._classifier.predictBoard(boardImage)
 
-    def _handleInvalidMove(self) -> None:
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
+        logging.error(str(error))
         if isinstance(self.currentPlayer, RobotArmPlayer):
             while True:
                 try:
@@ -130,12 +133,12 @@ class Xiangqi(XiangqiBase):
 if __name__ == "__main__":
     import logging
 
-    logging.basicConfig(level=logging.DEBUG, format="")
+    logging.basicConfig(level=logging.INFO, format="")
 
     try:
         cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
         camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
-        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
+        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=100_000)
 
         camera.activate()
         robotArm.connect()

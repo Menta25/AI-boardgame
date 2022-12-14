@@ -69,10 +69,20 @@ class XiangqiEngine:
         selfDifference = list(selfPiecesAsSet - otherPiecesAsSet)
         otherDifference = list(otherPiecesAsSet - selfPiecesAsSet)
 
-        if not (len(selfDifference) == 1 and len(otherDifference) == 1):
+        if len(selfDifference) == 0 and len(otherDifference) == 0:
+            raise InvalidMove(None, None, None, "Cannot update because no piece were moved")
+        elif not (1 <= len(selfDifference) <= 2 and len(otherDifference) == 1):
             raise InvalidMove(None, None, None, "Cannot update because multiple piece were moved")
             
-        start, end = selfDifference[0][0], otherDifference[0][0]
+        end, movedBoardEntity = otherDifference[0]
+        start = None
+        for position, boardEntity in selfDifference:
+            if boardEntity == movedBoardEntity:
+                start = position
+
+        if start is None:
+            raise InvalidMove(None, None, None, "Moved piece does not match with it's previous state")
+
         self.move(start, end)
 
     def _move(self, start: Position, end: Position) -> None:

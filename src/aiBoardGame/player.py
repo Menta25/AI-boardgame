@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 import cv2 as cv
 from pathlib import Path
@@ -6,7 +5,7 @@ from dataclasses import dataclass, field
 from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
 
-from aiBoardGame.logic import FairyStockfish, Difficulty, Position, prettyBoard
+from aiBoardGame.logic import FairyStockfish, Difficulty, Position
 from aiBoardGame.robot import RobotArm, RobotArmException
 from aiBoardGame.vision import RobotCamera, BoardImage, CameraError
 
@@ -107,7 +106,7 @@ class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
 class RobotArmPlayer(RobotPlayer):
     arm: RobotArm
     camera: RobotCamera
-    cornerPolars: Optional[np.ndarray]
+    cornerCartesians: Optional[np.ndarray]
 
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
@@ -118,7 +117,7 @@ class RobotArmPlayer(RobotPlayer):
         super().__init__(difficulty)
         self.arm = arm
         self.camera = camera
-        self.cornerPolars = None
+        self.cornerCartesians = None
 
     def prepare(self) -> None:
         if not self.arm.isConnected:
@@ -135,63 +134,73 @@ class RobotArmPlayer(RobotPlayer):
         move = self.stockfish.nextMove(fen=fen)
         if move is not None:
             fromMove, toMove = move
-            logging.debug(f"Stockfish move: {*fromMove,} -> {*toMove,}")
 
             image = self.camera.read(undistorted=True)
             boardImage = self.camera.detectBoard(image)
-            piece = boardImage.findPiece(fromMove)
-            if piece is None:
-                raise RuntimeError
-            piece = piece.astype(int)
-
-            logging.info(f"image from: {RobotArm.cartesianToPolar(piece[:2])}")
-            logging.info(f"image to: {RobotArm.cartesianToPolar(boardImage.positions[toMove.file, toMove.rank])}")
-
             matrix = self._calculateAffineTransform(boardImage)
-            fromMove = self._imageToRobotPolar(piece[:2], matrix)
-            toMove = self._imageToRobotPolar(boardImage.positions[toMove.file, toMove.rank], matrix)
 
-            # self.arm.moveOnBoard(*fromMove)
-            # self.arm.setPump(on=True)
-            # self.arm.moveOnBoard(*toMove)
-            # self.arm.setPump(on=False)
+            capturedPiece = boardImage.findPiece(toMove)
+            if capturedPiece is not None:
+                capturedPieceCartesian = self._imageToRobotCartesian(capturedPiece[:2].astype(int), matrix)
+                self._pickUp(capturedPieceCartesian)
+                self._putDown(None)
 
-            logging.info(f"board: {fromMove} -> {toMove}")
-            cv.imshow("data", boardImage.data)
-            cv.waitKey(0)
-            cv.destroyAllWindows()
+            movingPiece = boardImage.findPiece(fromMove)
+            if movingPiece is None:
+                raise RuntimeError
+
+            fromMovingPieceCartesian = self._imageToRobotCartesian(movingPiece[:2].astype(int), matrix)
+            toMovingPieceCartesian = self._imageToRobotCartesian(boardImage.positions[toMove.file, toMove.rank], matrix)
+
+            self._pickUp(fromMovingPieceCartesian)
+            self._putDown(toMovingPieceCartesian)
 
             self.arm.resetPosition(lowerDown=False, safe=True)
         else:
             self.isConceding = True
 
+    def _moveToPosition(self, position: Optional[np.ndarray]) -> None:
+        if position is not None:
+            x, y = position
+            self.arm.move(to=(x, y, None), safe=True, isPolar=False)
+        else:
+            self.arm.resetPosition(safe=True, lowerDown=False)
+        self.arm.lowerDown()
+
+    def _pickUp(self, position: Optional[np.ndarray]) -> None:
+        self._moveToPosition(position)
+        self.arm.setPump(on=True)
+
+    def _putDown(self, position: Optional[np.ndarray]) -> None:
+        self._moveToPosition(position)
+        self.arm.setPump(on=False)
+
     def _calibrate(self) -> None:
         if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") == "yes":
             with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
-                cornerPolars = calibration["cornerPolars"]
+                cornerCartesians = calibration["cornerCartesians"]
         else:
             self.arm.resetPosition(lowerDown=True, safe=True)
-            polars = []
+            cartesians = []
             for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
                 self.arm.detach(safe=False)
                 input(f"Move robot arm to {corner} corner (from the view of RED side), then press ENTER")
                 self.arm.attach()
-                polars.append(self.arm.polar)
-            cornerPolars = np.asarray(polars)[:,:2]
-            np.savez(self._baseCalibPath, cornerPolars=cornerPolars)
-        object.__setattr__(self, "cornerPolars", cornerPolars)
+                cartesians.append(self.arm.position)
+            cornerCartesians = np.asarray(cartesians)[:,:2]
+            np.savez(self._baseCalibPath, cornerCartesians=cornerCartesians)
+        object.__setattr__(self, "cornerCartesians", cornerCartesians)
         self.arm.resetPosition(lowerDown=False, safe=True)
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:
-        boardImageCorners = np.asarray([RobotArm.cartesianToPolar(corner) for corner in [
+        boardImageCorners = np.asarray([
             boardImage.positions[0,-1],
             boardImage.positions[-1,-1],
             boardImage.positions[-1,0],
-            boardImage.positions[0,0],
-        ]])
-        return cv.estimateAffine2D(boardImageCorners.astype(np.float64), self.cornerPolars)[0]
+            boardImage.positions[0,0]
+        ], dtype=np.float64)
+        return cv.estimateAffine2D(boardImageCorners, self.cornerCartesians)[0]
 
-    def _imageCartesianToRobotPolar(self, imageCartesian: np.ndarray, matrix: np.ndarray) -> np.ndarray:
-        imagePolar = RobotArm.cartesianToPolar(imageCartesian)
-        return imagePolar @ matrix[:,:2] + matrix[:, -1:].squeeze()
+    def _imageToRobotCartesian(self, imageCartesian: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+        return imageCartesian @ matrix[:,:2] + matrix[:, -1:].squeeze()
         
