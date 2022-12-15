@@ -158,9 +158,13 @@ def prettyBoard(board: Union[Board, str], colors: Literal[True], lastMove: Optio
 
 def prettyBoard(board: Union[Board, str], colors: bool = False, lastMove: Optional[Tuple[Position, Position]] = None) -> str:
     if isinstance(board, Board):
-        pieces = sorted(board.pieces, key=lambda item: item[0][0], reverse=True)
-        pieces = sorted(pieces, key=lambda item: item[0][1])
-        positions, pieces = zip(*pieces)
+        pieces = board.pieces
+        if len(pieces) > 0:
+            pieces = sorted(board.pieces, key=lambda item: item[0][0], reverse=True)
+            pieces = sorted(pieces, key=lambda item: item[0][1])
+            positions, pieces = zip(*pieces)
+        else:
+            positions = pieces = []
         getSide = lambda boardEntity: boardEntity.side
         getChar = lambda boardEntity: boardEntity.piece.abbreviations["fen"]
     elif isinstance(board, str):

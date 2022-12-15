@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import numpy as np
 import cv2 as cv
+from copy import deepcopy
 from typing import ClassVar, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 
@@ -164,6 +165,13 @@ class BoardImage:
             return None
 
         return circle[:3]
+
+    def markDetectedPieces(self) -> BoardImage:
+        boardImageCopy = deepcopy(self)
+        for _, (*center, radius) in boardImageCopy.pieces:
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), int(radius), color=(0,255,0), thickness=3)
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), 1, color=(255,0,0), thickness=3)
+        return boardImageCopy
 
 
 if __name__ == "__main__":

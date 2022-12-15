@@ -69,6 +69,9 @@ class XiangqiEngine:
         selfDifference = list(selfPiecesAsSet - otherPiecesAsSet)
         otherDifference = list(otherPiecesAsSet - selfPiecesAsSet)
 
+        logging.info(f"self: {selfDifference}")
+        logging.info(f"other: {otherDifference}")
+
         if len(selfDifference) == 0 and len(otherDifference) == 0:
             raise InvalidMove(None, None, None, "Cannot update because no piece were moved")
         elif not (1 <= len(selfDifference) <= 2 and len(otherDifference) == 1):

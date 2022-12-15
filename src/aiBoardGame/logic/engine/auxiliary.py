@@ -147,7 +147,7 @@ class SideState(Dict[Position, Type[Piece]]):
             return super().__setitem__(key, value)
 
 
-@dataclass
+@dataclass(init=False)
 class Board(Dict[Side, SideState]):
     fileBounds: ClassVar[Tuple[int, int]] = (0, 9)
     rankBounds: ClassVar[Tuple[int, int]] = (0, 10)

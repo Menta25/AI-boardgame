@@ -142,8 +142,8 @@ class RobotArmPlayer(RobotPlayer):
             capturedPiece = boardImage.findPiece(toMove)
             if capturedPiece is not None:
                 capturedPieceCartesian = self._imageToRobotCartesian(capturedPiece[:2].astype(int), matrix)
-                self._pickUp(capturedPieceCartesian)
-                self._putDown(None)
+                self._pickUpPiece(capturedPieceCartesian)
+                self._capturePiece()
 
             movingPiece = boardImage.findPiece(fromMove)
             if movingPiece is None:
@@ -152,35 +152,40 @@ class RobotArmPlayer(RobotPlayer):
             fromMovingPieceCartesian = self._imageToRobotCartesian(movingPiece[:2].astype(int), matrix)
             toMovingPieceCartesian = self._imageToRobotCartesian(boardImage.positions[toMove.file, toMove.rank], matrix)
 
-            self._pickUp(fromMovingPieceCartesian)
-            self._putDown(toMovingPieceCartesian)
+            self._pickUpPiece(fromMovingPieceCartesian)
+            self._putDownPiece(toMovingPieceCartesian)
 
-            self.arm.resetPosition(lowerDown=False, safe=True)
+            self.arm.reset(safe=True)
         else:
             self.isConceding = True
 
-    def _moveToPosition(self, position: Optional[np.ndarray]) -> None:
-        if position is not None:
-            x, y = position
-            self.arm.move(to=(x, y, None), safe=True, isPolar=False)
-        else:
-            self.arm.resetPosition(safe=True, lowerDown=False)
+    def _moveToPosition(self, position: np.ndarray) -> None:
+        x, y = position
+        self.arm.move(to=(x, y, None), safe=True, isCartesian=True)
         self.arm.lowerDown()
 
-    def _pickUp(self, position: Optional[np.ndarray]) -> None:
+    def _pickUpPiece(self, position: np.ndarray) -> None:
         self._moveToPosition(position)
         self.arm.setPump(on=True)
 
-    def _putDown(self, position: Optional[np.ndarray]) -> None:
+    def _putDownPiece(self, position: np.ndarray) -> None:
         self._moveToPosition(position)
         self.arm.setPump(on=False)
 
+    def _capturePiece(self) -> None:
+        self.arm.reset(safe=True)
+        capturedPieceDropHeight = 4*RobotArm.freeMoveHeightLimit
+        self.arm.moveVertical(height=capturedPieceDropHeight)
+        self.arm.moveHorizontal(stretch=self.arm.resetPosition[0]+100.0, rotation=self.arm.resetPosition[1])
+        self.arm.setPump(on=False)
+        self.arm.reset(safe=False)
+
     def _calibrate(self) -> None:
-        if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") == "yes":
+        if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") in ["yes", ""]:
             with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
                 cornerCartesians = calibration["cornerCartesians"]
         else:
-            self.arm.resetPosition(lowerDown=True, safe=True)
+            self.arm.detach(safe=True)
             cartesians = []
             for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
                 self.arm.detach(safe=False)
@@ -190,7 +195,7 @@ class RobotArmPlayer(RobotPlayer):
             cornerCartesians = np.asarray(cartesians)[:,:2]
             np.savez(self._baseCalibPath, cornerCartesians=cornerCartesians)
         object.__setattr__(self, "cornerCartesians", cornerCartesians)
-        self.arm.resetPosition(lowerDown=False, safe=True)
+        self.arm.reset(safe=True)
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:
         boardImageCorners = np.asarray([

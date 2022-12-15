@@ -1,4 +1,5 @@
 import logging
+import cv2 as cv
 from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -105,7 +106,10 @@ class Xiangqi(XiangqiBase):
             self._camera.activate()
         
         super()._prepare()
-        self._analyseBoard()
+        while (board := self._analyseBoard()) != self._engine.board:
+            logging.error(prettyBoard(board, colors=True))
+            logging.error("Board is not in starting position")
+        logging.info(prettyBoard(board, colors=True))
 
     @retry(times=3, exceptions=(InvalidMove))
     def _updateEngine(self) -> None:
@@ -117,17 +121,25 @@ class Xiangqi(XiangqiBase):
     def _analyseBoard(self) -> Board:
         image = self._camera.read(undistorted=True)
         boardImage = self._camera.detectBoard(image)
+        markedBoardImage = boardImage.markDetectedPieces()
+        cv.imshow("marked pieces", markedBoardImage.roi)
+        cv.waitKey()
+        cv.destroyAllWindows()
         return self._classifier.predictBoard(boardImage)
 
     def _handleInvalidMove(self, error: InvalidMove) -> None:
-        logging.error(str(error))
+        logging.info("Engine state:")
+        logging.info(prettyBoard(self._engine.board, colors=True))
         if isinstance(self.currentPlayer, RobotArmPlayer):
             while True:
                 try:
+                    logging.error(str(error))
                     input(f"The move made by the previous robot player was invalid, please rectify the board, then press ENTER")
                     self._updateEngine()
-                except InvalidMove as error:
-                    logging.error(str(error))
+                except InvalidMove as newError:
+                    logging.error(str(newError))
+        else:
+            logging.error(str(error))
 
 
 if __name__ == "__main__":
@@ -137,8 +149,8 @@ if __name__ == "__main__":
 
     try:
         cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
-        camera = RobotCamera(feedInput=2, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
-        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=100_000)
+        camera = RobotCamera(feedInput=0, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
+        robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
 
         camera.activate()
         robotArm.connect()

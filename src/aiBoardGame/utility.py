@@ -19,7 +19,7 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
                     logging.error(str(exception))
                     sleep(attempt*log10(attempt))
             if callback is not None:
-                callback(function.__name__, newFunction, args, kwargs)
+                return callback(function.__name__, newFunction, args, kwargs)
             else:
                 raise lastException
         return newFunction
