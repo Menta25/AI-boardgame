@@ -3,7 +3,7 @@ from __future__ import annotations
 from math import sqrt
 from enum import IntEnum
 from dataclasses import dataclass
-from typing import ClassVar, Dict, Generator, List, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
+from typing import ClassVar, Dict, List, NamedTuple, Optional, Type, TypeVar, Union, Tuple, overload
 
 
 Piece = TypeVar("Piece")
@@ -34,22 +34,22 @@ class Delta(NamedTuple):
 
     def __add__(self, other: Union[Delta, Tuple[int, int]]) -> Delta:
         if not isinstance(other, (Delta, tuple)):
-            raise TypeError("Other object must be Delta or tuple")
+            raise TypeError(f"Other object must be Delta or tuple, was {type(other)}")
         return Delta(self.file + other[0], self.rank + other[1])
 
     def __sub__(self, other: Union[Delta, Tuple[int, int]]) -> Delta:
         if not isinstance(other, (Delta, tuple)):
-            raise TypeError("Other object must be Delta or tuple")
+            raise TypeError(f"Other object must be Delta or tuple, was {type(other)}")
         return Delta(self.file - other[0], self.rank - other[1])
 
     def __mul__(self, other: Union[int, float]) -> Delta:
         if not isinstance(other, (int, float)):
-            raise TypeError("Other object must be int or float")
+            raise TypeError(f"Other object must be int or float, was {type(other)}")
         return Delta(self.file*other, self.rank*other)
 
     def __truediv__(self, other: Union[int, float]) -> Delta:
         if not isinstance(other, (int, float)):
-            raise TypeError("Other object must be int or float")
+            raise TypeError(f"Other object must be int or float, was {type(other)}")
         return Delta(self.file/other, self.rank/other)
 
     def __abs__(self) -> float:
@@ -61,7 +61,7 @@ class Position(NamedTuple):
 
     def __add__(self, other: Union[Delta, Tuple[int, int]]) -> Position:
         if not isinstance(other, (Delta, tuple)):
-            raise TypeError("Other object must be Delta or tuple")
+            raise TypeError(f"Other object must be Delta or tuple, was {type(other)}")
         if isinstance(other, Delta):
             other = other.round()
         return Position(self.file + other[0], self.rank + other[1])
@@ -76,7 +76,7 @@ class Position(NamedTuple):
 
     def __sub__(self, other: Union[Position, Delta, Tuple[int, int]]) -> Union[Delta, Position]:
         if not isinstance(other, (Position, Delta, tuple)):
-            raise TypeError("Other object must be Position, Delta or tuple")
+            raise TypeError(f"Other object must be Position, Delta or tuple, was {type(other)}")
         if isinstance(other, Position):
             return Delta(self.file - other.file, self.rank - other.rank)
         elif isinstance(other, Delta):
@@ -85,27 +85,27 @@ class Position(NamedTuple):
 
     def __eq__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
+            raise TypeError(f"Other object must be Position or tuple, was {type(other)}")
         return self.file == other[0] and self.rank == other[1]
 
     def __gt__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
+            raise TypeError(f"Other object must be Position or tuple, was {type(other)}")
         return self.file > other[0] and self.rank > other[1]
 
     def __lt__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
+            raise TypeError(f"Other object must be Position or tuple, was {type(other)}")
         return self.file < other[0] and self.rank < other[1]
 
     def __ge__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
+            raise TypeError(f"Other object must be Position or tuple, was {type(other)}")
         return self.file >= other[0] and self.rank >= other[1]
 
     def __le__(self, other: Union[Position, Tuple[int, int]]) -> bool:
         if not isinstance(other, (Position, tuple)):
-            raise TypeError("Other object must be Position or tuple")
+            raise TypeError(f"Other object must be Position or tuple, was {type(other)}")
         return self.file <= other[0] and self.rank <= other[1]
 
 
@@ -147,7 +147,7 @@ class SideState(Dict[Position, Type[Piece]]):
             return super().__setitem__(key, value)
 
 
-@dataclass
+@dataclass(init=False)
 class Board(Dict[Side, SideState]):
     fileBounds: ClassVar[Tuple[int, int]] = (0, 9)
     rankBounds: ClassVar[Tuple[int, int]] = (0, 10)

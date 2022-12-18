@@ -4,6 +4,7 @@ from PyQt6.QtCore import pyqtSignal, pyqtSlot, QThread
 
 from aiBoardGame.vision import RobotCamera, Resolution
 
+
 class CameraThread(QThread):
     newCameraImageSignal: ClassVar[pyqtSignal] = pyqtSignal(np.ndarray)
     calibrated: ClassVar[pyqtSignal] = pyqtSignal()

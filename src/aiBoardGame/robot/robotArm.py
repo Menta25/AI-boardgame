@@ -1,15 +1,13 @@
 import logging
+import numpy as np
+from math import radians, degrees
+from time import sleep
 from enum import IntEnum, unique
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, ClassVar, Callable, Literal, overload
-from threading import Thread
-from functools import partial
-from queue import Queue, Empty, Full
+from typing import Dict, List, Optional, Tuple, ClassVar, Callable
 from uarm.wrapper import SwiftAPI
 from uarm.tools.list_ports import get_ports
 from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAND
-
-from aiBoardGame.logic import Position
 
 
 @unique
@@ -30,20 +28,20 @@ class RobotArmException(Exception):
 
 class RobotArm:
     swift: SwiftAPI
-    thread: Thread
-    isRunning: bool
     speed: int
 
-    freeMoveHeightLimit: ClassVar[float] = 60.0
+    freeMoveHeightLimit: ClassVar[float] = 35.0
+    resetPosition: ClassVar[Tuple[float, float, float]] = (200.0, 0.0, freeMoveHeightLimit)
 
-    def __init__(self, hardwareID: str = "USB VID:PID=2341:0042", speed: int = 1000) -> None:
+    def __init__(self, speed: int = 1000, hardwareID: Optional[str] = None) -> None:
+        if hardwareID is None:
+            hardwareID = "USB VID:PID=2341:0042"
+
         filters = {"hwid": hardwareID}
         if len(get_ports(filters=filters)) == 0:
             raise RobotArmException(f"Cannot initialize robot arm with hardware ID: {hardwareID}")
 
         self.swift = SwiftAPI(filters=filters, do_not_open=True)
-        self.thread = Thread(target=self._loop)
-        self.isRunning = False
         self.speed = speed
 
     @property
@@ -95,7 +93,9 @@ class RobotArm:
             raise RobotArmException("Cannot connect to uArm Swift")
         else:
             self.swift.set_mode(mode=0)
-            self.resetPosition(speed=500000, safe=False)
+            polar = self.polar
+            safe = polar[-1] < self.freeMoveHeightLimit if polar is not None else True
+            self.reset(safe=safe)
 
     def disconnect(self) -> None:
         if self.isConnected:
@@ -108,132 +108,104 @@ class RobotArm:
     def detach(self, safe: bool = True) -> None:
         if self.isAllAttached:
             if safe is True:
-                self.resetPosition(lowerDown=True)
+                self.reset(safe=True)
+                self.lowerDown(speed=2000)
             self.swift.set_servo_detach()
 
     def attach(self) -> None:
         if not self.isAllAttached:
             self.swift.set_servo_attach()
 
-    @overload
-    def move(self, to: Tuple[float, float, Literal[None]], speed: Optional[int], safe: Literal[True], isPolar: bool) -> None:
-        ...
-
-    @overload
-    def move(self, to: Tuple[float, float, float], speed: Optional[int], safe: bool, isPolar: bool) -> None:
-        ...
-
-    def move(self, to: Tuple[float, float, Optional[float]], speed: Optional[int] = None, safe: bool = True, isPolar: bool = False) -> None:
+    def lowerDown(self, speed: Optional[int] = 1000) -> None:
         if not self.isAllAttached:
-            raise RobotArmException("Servo(s) not attached, cannot move")
+            raise RobotArmException("Servo(s) not attached, cannot lower arm")
 
-        isRelative = to[2] == None
-        if isRelative:
-            to = (to[0], to[1], self.freeMoveHeightLimit/2.5)
+        if speed is None:
+            speed = self.speed
+        while not self.isTouching:
+            self.swift.set_polar(height=-1, relative=True, speed=speed)
+            self.swift.flush_cmd(wait_stop=True)
+
+    def moveVertical(self, height: Optional[float] = None, speed: Optional[int] = None) -> None:
+        if not self.isAllAttached:
+            raise RobotArmException("Servo(s) not attached, cannot raise arm")
+
+        if speed is None:
+            speed = self.speed
+        if height is None:
+            height = self.freeMoveHeightLimit
+
+        stretch, rotation, _ = self.polar
+        self.swift.set_polar(stretch=stretch, rotation=rotation, height=height, speed=speed)
+        self.swift.flush_cmd(wait_stop=True)
+
+    def moveHorizontal(self, stretch: float, rotation: float, speed: Optional[int] = None) -> None:
+        if not self.isAllAttached:
+            raise RobotArmException("Servo(s) not attached, cannot raise arm")
+
         if speed is None:
             speed = self.speed
 
-        position = self.position
-        if safe is True and (position is None or position[-1] < self.freeMoveHeightLimit):
-            self.swift.set_position(z=self.freeMoveHeightLimit)
-            self.swift.flush_cmd(wait_stop=True)
-
-        if not isPolar:
-            moveFunc = self.swift.set_position
-            horizontalPartial = partial(moveFunc, x=to[0], y=to[1])
-            verticalPartial = partial(moveFunc, z=to[2])
-        else:
-            moveFunc = self.swift.set_polar
-            horizontalPartial = partial(moveFunc, stretch=to[0], rotation=to[1])
-            verticalPartial = partial(moveFunc, height=to[2])
-
-        extraArgs = {
-            "speed": speed
-        }
-
-        horizontalPartial(**extraArgs)
+        _, _, height = self.polar
+        self.swift.set_polar(stretch=stretch, rotation=rotation, height=height, speed=speed)
         self.swift.flush_cmd(wait_stop=True)
-        verticalPartial(**extraArgs)
-        self.swift.flush_cmd(wait_stop=True)
-        while isRelative and not self.isTouching:
-            self.swift.set_position(z=-1, relative=True, speed=1000)
-            self.swift.flush_cmd(wait_stop=True)
 
-    def moveOnBoard(self, x: float, y: float) -> None:
-        self.move(to=(x, y, None), speed=None, safe=True, isPolar=False)
+    def move(self, to: Tuple[float, float, Optional[float]], speed: Optional[int] = None, safe: bool = True, isCartesian: bool = False) -> None:
+        if not self.isAllAttached:
+            raise RobotArmException("Servo(s) not attached, cannot move")
+
+        to0, to1, to2 = to
+        isRelative = to2 == None
+        if isCartesian:
+            to0, to1 = self.cartesianToPolar(np.asarray([to0, to1]))
+        if isRelative:
+            to2 = self.freeMoveHeightLimit
+
+        polar = self.polar
+        if safe is True and (polar is None or polar[-1] < self.freeMoveHeightLimit):
+            self.moveVertical(height=self.freeMoveHeightLimit, speed=speed)
+
+        self.moveHorizontal(stretch=to0, rotation=to1, speed=speed)
+        self.moveVertical(height=to2, speed=speed)
             
-    def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None, wait: bool = True) -> None:
+    def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None) -> None:
         if not self.isAttached(servo):
             raise RobotArmException("Servo(s) not attached, cannot set angle")
 
         if speed is None:
             speed = self.speed
         self.swift.set_servo_angle(servo_id=servo.value, angle=angle)
-        if wait is True:
-            self.swift.flush_cmd(wait_stop=True)
+        self.swift.flush_cmd(wait_stop=True)
 
-    def resetPosition(self, speed: Optional[int] = None, lowerDown: bool = False, safe: bool = True) -> None:
-        self.move(to=(200.0, 0.0, 150.0), speed=speed, safe=safe, isPolar=True)
-        if lowerDown is True:
-            self.setAngle(servo=Servo.Right, angle=66.82, wait=True)
+    def reset(self, speed: Optional[int] = None, safe: bool = True) -> None:
+        self.move(to=self.resetPosition, speed=speed, safe=safe)
 
     def setPump(self, on: bool = True) -> None:
         self.swift.set_pump(on=on)
+        sleep(0.25)
 
-    def start(self) -> None:
-        if not self.isConnected:
-            self.connect()
+    @staticmethod
+    def cartesianToPolar(cartesian: np.ndarray) -> np.ndarray:
+        x, y = cartesian
+        rho = np.sqrt(x**2 + y**2)
+        phi = np.arctan2(y, x)
+        phi = degrees(phi)+90.0
+        return np.array([rho, phi])
 
-        self.isRunning = True
-        self.thread.start()
-
-    def stop(self) -> None:
-        if self.isRunning:
-            self.isRunning = False
-            if self.thread is not None:
-                self.thread.join()
-            self.disconnect()
-
-    def _loop(self) -> None:
-        while self.isRunning:
-            pass
+    @staticmethod
+    def polarToCartesian(polar: np.ndarray) -> np.ndarray:
+        rho, phi = polar
+        phi = radians(phi-90.0)
+        x = rho * np.cos(phi)
+        y = rho * np.sin(phi)
+        return np.array([x, y])
 
 
 if __name__ == "__main__":
-    import json
-    from pathlib import Path
-
-    robot = None
-    try:
-        robot = RobotArm(speed=500000)
-        robot.connect()
-
-        robot.detach(safe=True)
-        isRunning = True
-        saves = []
-        while isRunning:
-            print("[0] Exit\n[1] Save\n[2] Write save")
-            try:
-                command = int(input("Command: "))
-                if command == 0:
-                    isRunning = False
-                elif command == 1:
-                    robot.attach()
-                    saves.append({
-                        "position": robot.position,
-                        "polar": robot.polar,
-                        "angle": robot.angle
-                    })
-                    robot.detach(safe=False)
-                elif command == 2:
-                    path = Path(input("Save path: ")).with_suffix(".txt")
-                    with path.open(mode="w") as file:
-                        file.write(json.dumps(saves, indent=4))
-            except ValueError:
-                continue
-    except RobotArmException as error:
-        print(error)
-    finally:
-        if robot is not None:
-            robot.attach()
-            robot.disconnect()
+    arm = RobotArm(speed=100_000)
+    arm.connect()
+    arm.detach()
+    input("ready")
+    arm.attach()
+    arm.reset()
+    arm.disconnect()

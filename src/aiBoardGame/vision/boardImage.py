@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import numpy as np
 import cv2 as cv
+from copy import deepcopy
 from typing import ClassVar, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
 
@@ -30,11 +31,13 @@ class BoardImage:
     pieceSizeMultiplier: ClassVar[float] = 1.2
     pieceThresholdDivisor: ClassVar[float] = 3.1
 
-    hsvRanges: ClassVar[Tuple[np.ndarray]] = (
-        np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-        np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-        np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
-    )
+    # hsvRanges: ClassVar[Tuple[np.ndarray]] = (
+    #     np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+    #     np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+    #     np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
+    # )
+    
+    hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
 
 
     def __post_init__(self) -> None:
@@ -56,7 +59,7 @@ class BoardImage:
         files = np.repeat(files[:, np.newaxis], Board.rankCount, 1)
         ranks = np.repeat(ranks[np.newaxis, :], Board.fileCount, 0)
 
-        positions = np.dstack((files, ranks))
+        positions = np.dstack((files, ranks[:,::-1]))
 
         object.__setattr__(self, "positions", positions)
         object.__setattr__(self, "fileStep", fileStep)
@@ -95,7 +98,7 @@ class BoardImage:
 
     def tile(self, position: Position) -> np.ndarray:
         """Return the given tile's ndarray representation"""
-        imagePosition: np.ndarray = self.positions[position.file, Board.rankCount-1 - position.rank]
+        imagePosition: np.ndarray = self.positions[position.file, position.rank]
         return self._tile(imagePosition)
 
     def _tile(self, tileCenter: np.ndarray) -> np.ndarray:
@@ -113,8 +116,8 @@ class BoardImage:
 
     @property
     def roi(self) -> np.ndarray:
-        topLeftCorner = (self.positions[0,0] - self.tileSize/2).astype(np.uint16)
-        bottomRightCorner = (self.positions[-1,-1] + self.tileSize/2).astype(np.uint16)
+        topLeftCorner = (self.positions[0,-1] - self.tileSize/2).astype(np.uint16)
+        bottomRightCorner = (self.positions[-1,0] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
     
     def _detectCircles(self, image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
@@ -141,7 +144,7 @@ class BoardImage:
         pieceTiles = []
         for position, (x, y, radius) in self.pieces:
             offset = radius * self.pieceSizeMultiplier
-            tile = tile[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
+            tile = self.data[max(int(y-offset), 0):int(y+offset), max(int(x-offset), 0):int(x+offset)]
             pieceTiles.append((position, tile))
         return pieceTiles
 
@@ -163,21 +166,35 @@ class BoardImage:
 
         return circle[:3]
 
+    def markDetectedPieces(self) -> BoardImage:
+        boardImageCopy = deepcopy(self)
+        for _, (*center, radius) in boardImageCopy.pieces:
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), int(radius), color=(0,255,0), thickness=3)
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), 1, color=(255,0,0), thickness=3)
+        return boardImageCopy
+
 
 if __name__ == "__main__":
     import time
     from pathlib import Path
     
-    from aiBoardGame.logic.engine.utility import boardToStr
+    from aiBoardGame.logic.engine.utility import prettyBoard
 
-    from aiBoardGame.vision.camera import RobotCameraInterface, CameraError
+    from aiBoardGame.vision.camera import RobotCameraInterface, RobotCamera, CameraError
     from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
 
-    classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
-    camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
+    logging.basicConfig(level=logging.DEBUG, format="")
 
-    imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
-    image = camera.undistort(cv.imread(imagePath.as_posix()))
+    classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
+    cameraIntrinsicsPath = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
+    # camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=cameraIntrinsicsPath)
+    # imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
+    # image = camera.undistort(cv.imread(imagePath.as_posix()))
+
+    camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
+    camera.activate()
+    time.sleep(1)
+    image = camera.read()
     try:
         boardImage = camera.detectBoard(image)
 
@@ -193,7 +210,7 @@ if __name__ == "__main__":
         board = classifier.predictBoard(boardImage)
         logging.info(f"predict time: {time.time() - start:.4f}s")
 
-        logging.info(boardToStr(board))
+        logging.info(prettyBoard(board, colors=True))
 
     except CameraError:
         logging.exception("Cannot test board image")

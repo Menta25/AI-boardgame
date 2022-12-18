@@ -210,16 +210,20 @@ class XiangqiPieceClassifier:
         return self.predict(self._cvImagesToInput(tile[np.newaxis]))[0]
 
     def predictBoard(self, boardImage: BoardImage, allTiles: bool = False) -> Board:
+        board = Board()
         if allTiles:
             positions, tiles = [Position(file, rank) for file in range(Board.fileCount) for rank in range(Board.rankCount)], boardImage.tiles
         else:
-            positions, tiles = zip(*boardImage.pieceTiles)
-            positions = cast(List[Position], positions)
-            tiles = cast(np.ndarray, tiles)
+            pieceTiles = boardImage.pieceTiles
+            if len(pieceTiles) > 0:
+                positions, tiles = zip(*pieceTiles)
+                positions = cast(List[Position], positions)
+                tiles = cast(np.ndarray, tiles)
+            else:
+                return board
         
         tilePredicts = self.predict(self._cvImagesToInput(tiles))
 
-        board = Board()
         for position, tilePredict in zip(positions, tilePredicts):
             if tilePredict is not None:
                 side, piece = tilePredict

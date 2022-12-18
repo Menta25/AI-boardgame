@@ -1,10 +1,15 @@
+import logging
+import cv2 as cv
+from pathlib import Path
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Union, Tuple, Optional
 
-from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficulty, FairyStockfish
-from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier, BoardImage
+from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficulty, prettyBoard, Position
+from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier
+from aiBoardGame.robot import RobotArm, RobotArmException
 
-from aiBoardGame.player import HumanPlayer, RobotPlayer, Player
+from aiBoardGame.player import Player, HumanPlayer, RobotArmPlayer, HumanTerminalPlayer, RobotTerminalPlayer
 from aiBoardGame.utility import retry, rerunAfterCorrection
 
 
@@ -15,82 +20,157 @@ class GameplayError(Exception):
     def __str__(self) -> str:
         return self.message
 
-
-class Xiangqi:
-    def __init__(self, camera: RobotCamera, robotArm: RobotArm, difficulty: Difficulty = Difficulty.Medium, classifierWeights: Path = XiangqiPieceClassifier.baseWeightsPath, stockfishPath: Path = FairyStockfish.baseBinaryPath) -> None:
-        if not camera.isCalibrated:
-            raise GameplayError("Camera is not calibrated, cannot play game")
-        elif not robotArm.isConnected:
-            raise GameplayError("Robot arm is not connected, cannot play game")
-
-        self.human = HumanPlayer()
-        self.robot = RobotPlayer(arm=robotArm, stockfish=FairyStockfish(binaryPath=stockfishPath, difficulty=difficulty))
-
-        self.camera = camera
-        self.classifier = XiangqiPieceClassifier(weights=classifierWeights, device=XiangqiPieceClassifier.getAvailableDevice())
-        self.engine = XiangqiEngine()
-
-        self.lastBoardInfo: Optional[Tuple[BoardImage, str]] = None
-
-        self.robot.calibrate()
+class XiangqiBase(ABC):
+    def __init__(self, redSide: Player, blackSide: Player) -> None:
+        super().__init__()
+        self.redSide = redSide
+        self.blackSide = blackSide
+        self._engine = XiangqiEngine()
 
     @property
-    def difficulty(self) -> Difficulty:
-        return self.robot.stockfish.difficulty
+    def sides(self) -> Tuple[Player, Player]:
+        return self.redSide, self.blackSide
 
-    @difficulty.setter
-    def difficulty(self, value: Difficulty) -> None:
-        self.robot.stockfish.difficulty = value
+    @property
+    def currentPlayer(self) -> Player:
+        return self.redSide if self._engine.currentSide == Side.Red else self.blackSide
 
-    def newGame(self) -> None:
-        self.engine = XiangqiEngine()
-        self.lastBoardInfo = None
-        self.robot.calibrate()
+    def _prepare(self) -> None:
+        for player in self.sides:
+            player.prepare()
 
     def play(self) -> None:
-        self._analyseBoard()
-        while not self.engine.isOver:
+        self._engine.newGame()
+        self._prepare()
+        logging.info("Starting game")
+        moves = 0
+        while not self._engine.isOver:
+            if moves % 2 == 0:
+                logging.info("")
+                logging.info(f"Turn {moves//2}.")
+                logging.info("")
             try:
-                self._playTurn()
-            except InvalidMove:
-                pass
+                self.currentPlayer.makeMove(self._engine.FEN)
+                if self.currentPlayer.isConceding:
+                    logging.info(f"{self._engine.currentSide.name} {self.currentPlayer.__class__.__name__} has conceded")
+                    break
+                self._updateEngine()
+            except InvalidMove as error:
+                self._handleInvalidMove(error)
+            else:
+                moves += 1
+        logging.info("The game has ended")
 
-    def _playTurn(self) -> None:
-        currentPlayer: Player = self.human if self.engine.currentSide == Side.Red else self.robot
-        currentPlayer.makeMove(self.lastBoardInfo)
-        self._updateEngine()
+    @abstractmethod
+    def _updateEngine(self) -> None:
+        raise NotImplementedError(f"{self.__class__.__name__} has not implemented _updateEngine() method")
 
-    @retry(times=3, exceptions=(InvalidMove), callback=rerunAfterCorrection)
+    @abstractmethod
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
+        raise NotImplementedError(f"{self.__class__.__name__} has not implemented _handleInvalidMove() method")
+
+
+class TerminalXiangqi(XiangqiBase):
+    def __init__(self, redSide: Union[HumanTerminalPlayer, RobotTerminalPlayer], blackSide: Union[HumanTerminalPlayer, RobotTerminalPlayer]) -> None:
+        super().__init__(redSide, blackSide)
+
+    def _prepare(self) -> None:
+        super()._prepare()
+        logging.info("")
+        logging.info(prettyBoard(self._engine.board, colors=True))
+        logging.info("")
+
+    def _updateEngine(self) -> None:
+        move: Optional[Tuple[Position, Position]] = self.currentPlayer.move
+        if move is None:
+            raise InvalidMove(None, None, None, f"Cannot get {self.currentPlayer.__class__.__name__}'s last move")
+        self._engine.move(*move)
+        logging.info("")
+        logging.info(prettyBoard(self._engine.board, colors=True, lastMove=move))
+        logging.info("")
+
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
+        logging.error(str(error))
+
+class Xiangqi(XiangqiBase):
+    def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
+        if not camera.isCalibrated:
+            raise GameplayError("Camera is not calibrated, cannot play Xiangqi")
+        super().__init__(redSide, blackSide)
+
+        self._camera = camera
+        self._classifier = XiangqiPieceClassifier(weights=XiangqiPieceClassifier.baseWeightsPath, device=XiangqiPieceClassifier.getAvailableDevice())
+
+    def _prepare(self) -> None:
+        if not self._camera.isActive:
+            self._camera.activate()
+        
+        super()._prepare()
+        while (board := self._analyseBoard()) != self._engine.board:
+            logging.error(prettyBoard(board, colors=True))
+            logging.error("Board is not in starting position")
+        logging.info(prettyBoard(board, colors=True))
+
+    @retry(times=3, exceptions=(InvalidMove))
     def _updateEngine(self) -> None:
         board = self._analyseBoard()
-        self.engine.update(board)
+        logging.info(prettyBoard(board, colors=True))
+        self._engine.update(board)
 
     @retry(times=3, exceptions=(CameraError), callback=rerunAfterCorrection)
     def _analyseBoard(self) -> Board:
-        image = self.camera.read(undistorted=True)
-        boardImage = self.camera.detectBoard(image)
-        self.lastBoardInfo = (boardImage, self.engine.FEN)
-        return self.classifier.predictBoard(boardImage, allTiles=True)
+        image = self._camera.read(undistorted=True)
+        boardImage = self._camera.detectBoard(image)
+        markedBoardImage = boardImage.markDetectedPieces()
+        cv.imshow("marked pieces", markedBoardImage.roi)
+        cv.waitKey()
+        cv.destroyAllWindows()
+        return self._classifier.predictBoard(boardImage)
+
+    def _handleInvalidMove(self, error: InvalidMove) -> None:
+        logging.info("Engine state:")
+        logging.info(prettyBoard(self._engine.board, colors=True))
+        if isinstance(self.currentPlayer, RobotArmPlayer):
+            while True:
+                try:
+                    logging.error(str(error))
+                    input(f"The move made by the previous robot player was invalid, please rectify the board, then press ENTER")
+                    self._updateEngine()
+                except InvalidMove as newError:
+                    logging.error(str(newError))
+        else:
+            logging.error(str(error))
 
 
 if __name__ == "__main__":
     import logging
-    from pathlib import Path
-    from aiBoardGame.robot import RobotArm, RobotArmException
+
+    logging.basicConfig(level=logging.INFO, format="")
 
     try:
-        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz")
-        camera = RobotCamera(feedInput=2, resolution=(1920, 1080), intrinsicsFile=cameraIntrinsics)
-
+        cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
+        camera = RobotCamera(feedInput=0, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
         robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
+
+        camera.activate()
         robotArm.connect()
 
-        classifierWeights = Path("/home/Menta/Workspace/Projects/AI-boardgame/newModelParams.pt")
+        redSide = HumanPlayer()
+        blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
 
-        game = Xiangqi(camera=camera, robotArm=robotArm, classifierWeights=classifierWeights, difficulty=Difficulty.Medium)
-        input("Press any key if you want to start to play")
+        game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
         game.play()
 
         robotArm.disconnect()
+        camera.deactivate()
     except (CameraError, RobotArmException, GameplayError) as error:
         logging.error(str(error))
+
+    # try:
+    #     redSide = RobotTerminalPlayer(difficulty=Difficulty.Hard)
+    #     blackSide = RobotTerminalPlayer(difficulty=Difficulty.Medium)
+
+    #     game = TerminalXiangqi(redSide=redSide, blackSide=blackSide)
+    #     game.play()
+    # except GameplayError as error:
+    #     logging.error(str(error))

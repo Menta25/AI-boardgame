@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 import numpy as np
 import cv2 as cv
+from time import sleep
 from pathlib import Path
-from typing import ClassVar, Iterator, Tuple, NamedTuple, Optional, Union, List
+from threading import Thread
+from typing import ClassVar, Tuple, NamedTuple, Optional, Union, List
 from PyQt6.QtCore import pyqtSignal, QObject
 
 from aiBoardGame.logic.engine import Board
@@ -199,33 +201,17 @@ class RobotCameraInterface(AbstractCameraInterface):
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 
-        hsvMask1 = cv.inRange(imageHSV, BoardImage.hsvRanges[0][0], BoardImage.hsvRanges[0][1])
-        hsvMask2 = cv.inRange(imageHSV, BoardImage.hsvRanges[1][0], BoardImage.hsvRanges[1][1])
-        hsvMask3 = cv.inRange(imageHSV, BoardImage.hsvRanges[2][0], BoardImage.hsvRanges[2][1])
-
-
-        # cv.imshow("hsv1", hsvMask1)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-        
-        # cv.imshow("hsv2", hsvMask2)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-
-        # cv.imshow("hsv3", hsvMask3)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
-
-        boardMask = cv.bitwise_or(hsvMask1, hsvMask2)
-        boardMask = cv.bitwise_or(boardMask, hsvMask3)
-
-        # cv.imshow("mask", boardMask)
-        # cv.waitKey(0)
-        # cv.destroyAllWindows()
+        mask = np.zeros(imageHSV.shape[:2], dtype=np.uint8)
+        for hsvRange in BoardImage.hsvRanges:
+            hsvMask = cv.inRange(imageHSV, hsvRange[0], hsvRange[1])
+            mask = cv.bitwise_or(mask, hsvMask)
+            # cv.imshow("hsv", hsvMask)
+            # cv.waitKey(0)
+            # cv.destroyAllWindows()
 
         erosionKernel = np.ones((3,3), np.uint8)
         dilationKernel = np.ones((9,9), np.uint8)
-        erosion = cv.erode(boardMask, erosionKernel, iterations=4)
+        erosion = cv.erode(mask, erosionKernel, iterations=4)
         dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
         # cv.imshow("dilate", dilate)
@@ -300,7 +286,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 
 
 class RobotCamera(RobotCameraInterface):
-    def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
+    def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], interval: float = 0.1, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
         super().__init__(resolution, intrinsicsFile, parent)
 
         if isinstance(feedInput, (int, str)):
@@ -316,13 +302,38 @@ class RobotCamera(RobotCameraInterface):
         self._capture.set(cv.CAP_PROP_FRAME_WIDTH, self.resolution.width)
         self._capture.set(cv.CAP_PROP_FRAME_HEIGHT, self.resolution.height)
 
+        self.interval = interval
+        self.isActive = False
+        self._thread: Optional[Thread] = None
+        self._frame: Optional[np.ndarray] = None
+
+    def activate(self) -> None:
+        if not self.isActive:
+            self.isActive = True
+            self.thread = Thread(target=self._update, daemon=True)
+            self.thread.start()
+            sleep(self.interval+0.2)
+
+    def deactivate(self) -> None:
+        if self.isActive:
+            self.isActive = False
+            self.thread.join()
+
+    def _update(self) -> None:
+        while self.isActive:
+            _, self._frame = self._capture.read()
+            sleep(self.interval)
+
     def read(self, undistorted: bool = True) -> np.ndarray:
-        wasSuccessful, image = self._capture.read()
-        if not wasSuccessful:
-            raise CameraError("Cannot read from camera")
-        return image if undistorted is False else self.undistort(image)
+        if not self.isActive:
+            raise CameraError("Camera is not active, cannot read from camera")
+        elif self._frame is None:
+            raise CameraError("Capture device read was not successful")
+        return self.undistort(self._frame) if undistorted else self._frame
 
     def __del__(self) -> None:
+        if self.isActive:
+            self.deactivate()
         self._capture.release()
 
 
