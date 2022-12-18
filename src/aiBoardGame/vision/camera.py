@@ -5,9 +5,8 @@ import numpy as np
 import cv2 as cv
 from time import sleep
 from pathlib import Path
-from threading import Thread
+from threading import Thread, Event
 from typing import ClassVar, Tuple, NamedTuple, Optional, Union, List
-from PyQt6.QtCore import pyqtSignal, QObject
 
 from aiBoardGame.logic.engine import Board
 from aiBoardGame.vision.boardImage import BoardImage
@@ -36,15 +35,13 @@ class CameraError(Exception):
         self.message = message
 
 
-class AbstractCameraInterface(QObject):
+class AbstractCameraInterface:
     """Class for handling camera input"""
-    calibrated: ClassVar[pyqtSignal] = pyqtSignal()
+    calibrated: ClassVar[Event] = Event()
     calibrationMinPatternCount: ClassVar[int] = 5
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
-    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
-        super().__init__(parent)
-
+    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
         if isinstance(resolution, tuple):
             resolution = Resolution(*resolution)
 
@@ -129,7 +126,7 @@ class AbstractCameraInterface(QObject):
 
         self._undistortedIntrinsicMatrix, self._regionOfInterest = cv.getOptimalNewCameraMatrix(cameraMatrix, distortionCoefficients, self.resolution, 1, self.resolution)
 
-        self.calibrated.emit()
+        self.calibrated.set()
 
     def saveParameters(self, filePath: Path) -> None:
         _cameraLogger.debug(f"Saving camera parameters to {filePath}")
@@ -166,8 +163,8 @@ class RobotCameraInterface(AbstractCameraInterface):
     _boardImageRatio: ClassVar[float] = 3/4
 
 
-    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
-        super().__init__(resolution, intrinsicsFile, parent)
+    def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
+        super().__init__(resolution, intrinsicsFile)
 
         self._boardHeight = int(min(self.resolution.width, self.resolution.height) * self._boardImageRatio)
         self._boardHeight -= self._boardHeight % Board.rankCount
@@ -286,8 +283,8 @@ class RobotCameraInterface(AbstractCameraInterface):
 
 
 class RobotCamera(RobotCameraInterface):
-    def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], interval: float = 0.1, intrinsicsFile: Optional[Path] = None, parent: Optional[QObject] = None) -> None:
-        super().__init__(resolution, intrinsicsFile, parent)
+    def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], interval: float = 0.1, intrinsicsFile: Optional[Path] = None) -> None:
+        super().__init__(resolution, intrinsicsFile)
 
         if isinstance(feedInput, (int, str)):
             self._capture = cv.VideoCapture(feedInput, cv.CAP_V4L2)

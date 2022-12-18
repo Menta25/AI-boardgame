@@ -2,7 +2,7 @@ import numpy as np
 import cv2 as cv
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Tuple, Optional, ClassVar
+from typing import Tuple, Optional, ClassVar, Callable
 from abc import ABC, abstractmethod
 
 from aiBoardGame.logic import FairyStockfish, Difficulty, Position
@@ -38,14 +38,20 @@ class TerminalPlayer(Player):
     move: Optional[Tuple[Position, Position]] = field(default=None, init=False)
 
 
+def _waitForHumanPlayerInput() -> bool:
+    command = input("Press ENTER if you want to finish your turn, or type \"concede\" if you want to concede")
+    return command != "concede"
+
 @dataclass
 class HumanPlayer(Player):
+    waitForPrepare: ClassVar[Callable[[], None]] = lambda: input("Press ENTER if you are ready to start the game")
+    waitForMakeMove: ClassVar[Callable[[], bool]] = _waitForHumanPlayerInput
+
     def prepare(self) -> None:
-        input("Press ENTER if you are ready to start the game")
+        self.waitForPrepare()
 
     def makeMove(self, fen: str) -> None:
-        command = input("Press ENTER if you want to finish your turn, or type \"concede\" if you want to concede")
-        if command == "concede":
+        if self.waitForMakeMove() is False:
             self.isConceding = True
 
 
@@ -108,6 +114,7 @@ class RobotArmPlayer(RobotPlayer):
     camera: RobotCamera
     cornerCartesians: Optional[np.ndarray]
 
+    waitForCalibrationReady: ClassVar[Callable[[str], None]] = lambda corner: input(f"Move robot arm to {corner} corner (from the view of RED side)")
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
     def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.Medium) -> None:
@@ -180,22 +187,17 @@ class RobotArmPlayer(RobotPlayer):
         self.arm.setPump(on=False)
         self.arm.reset(safe=False)
 
-    def _calibrate(self) -> None:
-        if self._baseCalibPath.exists() and input("Do you want to use last game's robot arm calibration? (yes/no) ") in ["yes", ""]:
-            with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
-                cornerCartesians = calibration["cornerCartesians"]
-        else:
-            self.arm.detach(safe=True)
-            cartesians = []
-            for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
-                self.arm.detach(safe=False)
-                input(f"Move robot arm to {corner} corner (from the view of RED side), then press ENTER")
-                self.arm.attach()
-                cartesians.append(self.arm.position)
-            cornerCartesians = np.asarray(cartesians)[:,:2]
-            np.savez(self._baseCalibPath, cornerCartesians=cornerCartesians)
-        object.__setattr__(self, "cornerCartesians", cornerCartesians)
-        self.arm.reset(safe=True)
+    def calibrate(self) -> None:
+        self.arm.resetPosition(lowerDown=True, safe=True)
+        coordinates = []
+        for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
+            self.arm.detach(safe=False)
+            self.waitForCalibrationReady(corner)
+            self.arm.attach()
+            coordinates.append(self.arm.position)
+        self.robotArmCornerCoordinates = np.asarray(coordinates)
+        object.__setattr__(self, "cornerCoordinates", coordinates)
+        self.arm.resetPosition(lowerDown=False, safe=True)
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:
         boardImageCorners = np.asarray([
