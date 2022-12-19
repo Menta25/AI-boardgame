@@ -30,7 +30,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         self.camera: Optional[RobotCamera] = None
         self.cameraThread: Optional[Thread] = None
 
-        self.robotArm: RobotArm = RobotArm(speed=500_000)
+        self.robotArm: Optional[RobotArm] = None
 
         self.redSide: Optional[HumanPlayer] = None
         self.blackSide: Optional[RobotArmPlayer] = None
@@ -75,7 +75,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         self.cancelCalibrationButton.clicked.connect(self.showMain)
         self.loadCalibrationFileDialog.fileSelected.connect(self.loadCalibration)
         self.newGameButton.clicked.connect(self.newGame)
-        self.difficultyComboBox.currentTextChanged(self.onDifficultyChange)
+        self.difficultyComboBox.currentTextChanged.connect(self.onDifficultyChange)
 
     @pyqtSlot(str)
     def initCamera(self, capturingDevice: str) -> None:
@@ -95,9 +95,8 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
     @pyqtSlot()
     def newGame(self) -> None:
         try:
-            if not self.robotArm.isConnected:
-                self.robotArm.connect()
             if self.game is None:
+                self.robotArm = RobotArm(speed=500_000)
                 self.redSide = HumanPlayer()
                 self.blackSide = RobotArmPlayer(arm=self.robotArm, camera=self.camera, difficulty=Difficulty[self.difficultyComboBox.currentText()])
                 self.game = Xiangqi(camera=self.camera, redSide=self.redSide, blackSide=self.blackSide)
@@ -293,6 +292,9 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
 if __name__ == "__main__":
     import sys
     from PyQt6.QtWidgets import QApplication
+
+    logging.basicConfig(level=logging.INFO, format="")
+
     app = QApplication([])
     window = XianqiWindow()
     window.show()

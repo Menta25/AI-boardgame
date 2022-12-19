@@ -150,7 +150,7 @@ class AbstractCameraInterface:
                     self._distortionCoefficients = parameters["distortionCoefficients"]
                     self._undistortedIntrinsicMatrix = parameters["newIntrinsicMatrix"]
                     self._regionOfInterest = parameters["regionOfInterest"]
-                    self.calibrated.emit()
+                    self.calibrated.set()
                 else:
                     raise CameraError(errorMessage)
         except AttributeError as attributeError:
@@ -328,10 +328,10 @@ class RobotCamera(RobotCameraInterface):
             raise CameraError("Capture device read was not successful")
         return self.undistort(self._frame) if undistorted else self._frame
 
-    def __del__(self) -> None:
-        if self.isActive:
-            self.deactivate()
-        self._capture.release()
+    # def __del__(self) -> None:
+    #     if self.isActive:
+    #         self.deactivate()
+    #     self._capture.release()
 
 
 if __name__ == "__main__":
