@@ -13,7 +13,7 @@ NEW_RANK_LENGTH = Piece.rankLength() // 2
 class Elephant(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = Piece.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
-    
+
     abbreviations: ClassVar[Dict[str, str]] = {
         "base": "E",
         "fen": "B"

@@ -1,10 +1,10 @@
 import logging
-import numpy as np
 from math import radians, degrees
 from time import sleep
 from enum import IntEnum, unique
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, ClassVar, Callable
+import numpy as np
 from uarm.wrapper import SwiftAPI
 from uarm.tools.list_ports import get_ports
 from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAND
@@ -12,10 +12,10 @@ from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAN
 
 @unique
 class Servo(IntEnum):
-    Bottom = SERVO_BOTTOM
-    Left = SERVO_LEFT
-    Right = SERVO_RIGHT
-    Hand = SERVO_HAND
+    BOTTOM = SERVO_BOTTOM
+    LEFT = SERVO_LEFT
+    RIGHT = SERVO_RIGHT
+    HAND = SERVO_HAND
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,7 @@ class RobotArm:
 
     @property
     def isAllAttached(self) -> bool:
-        return self.swift.get_servo_attach(wait=True) == True
+        return self.swift.get_servo_attach(wait=True) is True
 
     @property
     def isPumpActive(self) -> bool:
@@ -75,7 +75,7 @@ class RobotArm:
 
     @property
     def isTouching(self) -> bool:
-        return self.swift.get_limit_switch(wait=True) == True
+        return self.swift.get_limit_switch(wait=True) is True
 
     def _getBase(self, getFunc: Callable) -> Optional[List[float]]:
         if self.isAllAttached:
@@ -88,9 +88,9 @@ class RobotArm:
         try:
             self.swift.connect()
             self.swift.waiting_ready(timeout=3)
-            logging.debug(f"Device info:\n{self.info}")
-        except Exception:
-            raise RobotArmException("Cannot connect to uArm Swift")
+            logging.debug("Device info:\n{info}", info=self.info)
+        except Exception as exception:
+            raise RobotArmException("Cannot connect to uArm Swift") from exception
         else:
             self.swift.set_mode(mode=0)
             polar = self.polar
@@ -103,7 +103,7 @@ class RobotArm:
             self.swift.disconnect()
 
     def isAttached(self, servo: Servo) -> bool:
-        return self.swift.get_servo_attach(servo.value, wait=True) == True
+        return self.swift.get_servo_attach(servo.value, wait=True) is True
 
     def detach(self, safe: bool = True) -> None:
         if self.isAllAttached:
@@ -150,24 +150,24 @@ class RobotArm:
         self.swift.set_polar(stretch=stretch, rotation=rotation, height=height, speed=speed)
         self.swift.flush_cmd(wait_stop=True)
 
-    def move(self, to: Tuple[float, float, Optional[float]], speed: Optional[int] = None, safe: bool = True, isCartesian: bool = False) -> None:
+    def move(self, position: Tuple[float, float, Optional[float]], speed: Optional[int] = None, safe: bool = True, isCartesian: bool = False) -> None:
         if not self.isAllAttached:
             raise RobotArmException("Servo(s) not attached, cannot move")
 
-        to0, to1, to2 = to
-        isRelative = to2 == None
+        pos0, pos1, pos2 = position
+        isRelative = pos2 is None
         if isCartesian:
-            to0, to1 = self.cartesianToPolar(np.asarray([to0, to1]))
+            pos0, pos1 = self.cartesianToPolar(np.asarray([pos0, pos1]))
         if isRelative:
-            to2 = self.freeMoveHeightLimit
+            pos2 = self.freeMoveHeightLimit
 
         polar = self.polar
         if safe is True and (polar is None or polar[-1] < self.freeMoveHeightLimit):
             self.moveVertical(height=self.freeMoveHeightLimit, speed=speed)
 
-        self.moveHorizontal(stretch=to0, rotation=to1, speed=speed)
-        self.moveVertical(height=to2, speed=speed)
-            
+        self.moveHorizontal(stretch=pos0, rotation=pos1, speed=speed)
+        self.moveVertical(height=pos2, speed=speed)
+
     def setAngle(self, servo: Servo, angle: float, speed: Optional[int] = None) -> None:
         if not self.isAttached(servo):
             raise RobotArmException("Servo(s) not attached, cannot set angle")
@@ -178,7 +178,7 @@ class RobotArm:
         self.swift.flush_cmd(wait_stop=True)
 
     def reset(self, speed: Optional[int] = None, safe: bool = True) -> None:
-        self.move(to=self.resetPosition, speed=speed, safe=safe)
+        self.move(position=self.resetPosition, speed=speed, safe=safe)
 
     def setPump(self, on: bool = True) -> None:
         self.swift.set_pump(on=on)

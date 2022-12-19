@@ -1,3 +1,5 @@
+# pylint: disable=no-name-in-module, no-member
+
 from typing import Optional
 import numpy as np
 import cv2 as cv

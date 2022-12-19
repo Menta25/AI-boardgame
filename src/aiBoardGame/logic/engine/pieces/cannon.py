@@ -1,8 +1,8 @@
-import numpy as np
-
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List
 from itertools import chain, product, starmap
+import numpy as np
+
 
 from aiBoardGame.logic.engine.pieces import Piece
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
@@ -50,3 +50,4 @@ class Cannon(Piece):
                     else:
                         hasFoundPiece = True
         return possibleToPositions
+        

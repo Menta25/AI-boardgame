@@ -1,11 +1,13 @@
+# pylint: disable=no-member
+
 from __future__ import annotations
 
 import logging
-import numpy as np
-import cv2 as cv
 from copy import deepcopy
 from typing import ClassVar, List, Optional, Tuple, Union
 from dataclasses import dataclass, field
+import numpy as np
+import cv2 as cv
 
 from aiBoardGame.logic.engine import Board, Position
 
@@ -36,7 +38,7 @@ class BoardImage:
     #     np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
     #     np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
     # )
-    
+
     hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
 
 
@@ -66,7 +68,7 @@ class BoardImage:
         object.__setattr__(self, "rankStep", rankStep)
         object.__setattr__(self, "tileSize", tileSize)
 
-        # for file in self.positions: 
+        # for file in self.positions:
         #     for tileCenter in file:
         #         cv.circle(self.data, tileCenter, 1, (255,0,0), 2)
 
@@ -119,7 +121,7 @@ class BoardImage:
         topLeftCorner = (self.positions[0,-1] - self.tileSize/2).astype(np.uint16)
         bottomRightCorner = (self.positions[-1,0] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
-    
+
     def _detectCircles(self, image: np.ndarray, minDist: int, minRadius: int, maxRadius: int) -> np.ndarray:
         grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         clahe = cv.createCLAHE(clipLimit=4.0, tileGridSize=(4,4))
@@ -160,7 +162,7 @@ class BoardImage:
         detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(normalizedTileCenter - np.asarray(circle[0:1])))
         circle = np.asarray(detectedCircles[0])
         circle[:2] += (tileCenter - self.tileSize/2).astype(np.uint16)
-        logging.debug(f"{tileCenter} ---> {circle[:2]} : {np.linalg.norm(tileCenter - circle[:2])} <= {self.fileStep/self.pieceThresholdDivisor} ?")
+        logging.debug("{tileCenter} ---> {circleCenter} : {distance} <= {threshold} ?", tileCenter=tileCenter, circleCenter=(circle[0], circle[1]), distance=np.linalg.norm(tileCenter - circle[:2]), threshold=self.fileStep/self.pieceThresholdDivisor)
         if np.linalg.norm(tileCenter - circle[:2]) > self.fileStep/self.pieceThresholdDivisor:
             return None
 
@@ -177,10 +179,10 @@ class BoardImage:
 if __name__ == "__main__":
     import time
     from pathlib import Path
-    
+
     from aiBoardGame.logic.engine.utility import prettyBoard
 
-    from aiBoardGame.vision.camera import RobotCameraInterface, RobotCamera, CameraError
+    from aiBoardGame.vision.camera import RobotCameraInterface, RobotCamera, CameraError  # pylint: disable=unused-import
     from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier
 
     logging.basicConfig(level=logging.DEBUG, format="")
@@ -194,9 +196,9 @@ if __name__ == "__main__":
     camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
     camera.activate()
     time.sleep(1)
-    image = camera.read()
+    img = camera.read()
     try:
-        boardImage = camera.detectBoard(image)
+        boardImage = camera.detectBoard(img)
 
         cv.imshow("roi", boardImage.roi)
         cv.waitKey(0)
@@ -206,9 +208,9 @@ if __name__ == "__main__":
         #     cv.waitKey(0)
         #     cv.destroyAllWindows()
 
-        start = time.time()
+        startTime = time.time()
         board = classifier.predictBoard(boardImage)
-        logging.info(f"predict time: {time.time() - start:.4f}s")
+        logging.info("predict time: {time:.4f}s", time=time.time() - startTime)
 
         logging.info(prettyBoard(board, colors=True))
 

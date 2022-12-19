@@ -1,12 +1,14 @@
+# pylint: disable=no-member
+
 from __future__ import annotations
 
 import logging
-import numpy as np
-import cv2 as cv
 from time import sleep
 from pathlib import Path
 from threading import Thread, Event
 from typing import ClassVar, Tuple, NamedTuple, Optional, Union, List
+import numpy as np
+import cv2 as cv
 
 from aiBoardGame.logic.engine import Board
 from aiBoardGame.vision.boardImage import BoardImage
@@ -76,7 +78,7 @@ class AbstractCameraInterface:
 
     def undistort(self, image: np.ndarray) -> np.ndarray:
         if not self.isCalibrated:
-                raise CameraError("Camera is not calibrated yet")
+            raise CameraError("Camera is not calibrated yet")
         return cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
 
     @staticmethod
@@ -129,7 +131,7 @@ class AbstractCameraInterface:
         self.calibrated.set()
 
     def saveParameters(self, filePath: Path) -> None:
-        _cameraLogger.debug(f"Saving camera parameters to {filePath}")
+        _cameraLogger.debug("Saving camera parameters to {savePath}", savePath=filePath)
         resolution = self.resolution
         parameters = {
             "cameraWidth": resolution.width,
@@ -154,7 +156,7 @@ class AbstractCameraInterface:
                 else:
                     raise CameraError(errorMessage)
         except AttributeError as attributeError:
-            raise CameraError(f"{errorMessage}\n{attributeError}")
+            raise CameraError(f"{errorMessage}\n{attributeError}") from attributeError
 
 
 class RobotCameraInterface(AbstractCameraInterface):
@@ -174,7 +176,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         self._boardOffset = np.around(np.array([self._boardWidth, self._boardHeight], dtype=np.float32) * 0.1)
 
         self._robotToCameraTransform: Optional[np.ndarray] = None
-    
+
     @staticmethod
     def _generateCorners(hull: np.ndarray) -> np.ndarray:
         if len(hull) > 5:
@@ -217,7 +219,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 
         boardContours, _ = cv.findContours(dilate, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
         boardContours = [boardContour for boardContour in boardContours if cv.contourArea(boardContour) > 50_000]
-        
+
         if len(boardContours) == 0:
             return np.array([])
 
@@ -237,7 +239,7 @@ class RobotCameraInterface(AbstractCameraInterface):
         # cv.imshow("image", image)
         # cv.waitKey(0)
         # cv.destroyAllWindows()
-        
+
         return cls._generateCorners(approxBoardHull)
 
     @staticmethod
@@ -307,14 +309,14 @@ class RobotCamera(RobotCameraInterface):
     def activate(self) -> None:
         if not self.isActive:
             self.isActive = True
-            self.thread = Thread(target=self._update, daemon=True)
-            self.thread.start()
+            self._thread = Thread(target=self._update, daemon=True)
+            self._thread.start()
             sleep(self.interval+0.2)
 
     def deactivate(self) -> None:
         if self.isActive:
             self.isActive = False
-            self.thread.join()
+            self._thread.join()
 
     def _update(self) -> None:
         while self.isActive:

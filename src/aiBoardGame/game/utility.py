@@ -1,3 +1,5 @@
+# pylint: disable=no-name-in-module
+
 import logging
 from abc import ABC
 from threading import Event
@@ -15,7 +17,7 @@ class FinalMeta(type(ABC), type(QObject)):
 @dataclass
 class Utils(QObject):
     event: Event = field(default=Event(), init=False)
-    waitForCorrection: pyqtSignal = field(default=pyqtSignal(str), init=False) 
+    waitForCorrection: pyqtSignal = field(default=pyqtSignal(str), init=False)
     statusUpdate: pyqtSignal = field(default=pyqtSignal(str), init=False)
 
     @pyqtSlot()
@@ -37,7 +39,7 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
                 except exceptions as exception:
                     lastException = exception
                     attempt += 1
-                    logging.error(f"Exception thrown when attempting to run {function.__name__}, attempt {attempt} of {times}")
+                    logging.error("Exception thrown when attempting to run {functionName}, attempt {attempt} of {times}", functionName=function.__name__, attempt=attempt, times=times)
                     logging.error(str(exception))
                     sleep(attempt*log10(attempt))
             if callback is not None:

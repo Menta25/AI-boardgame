@@ -1,8 +1,8 @@
 import logging
-import numpy as np
 from pathlib import Path
-from torch import nn, save
 from tempfile import TemporaryDirectory
+import numpy as np
+from torch import nn, save
 
 
 class EarlyStopping:
@@ -16,7 +16,7 @@ class EarlyStopping:
 
         self._tempDir = TemporaryDirectory()
         self.checkpointPath = Path(self._tempDir.name, "checkpoint.pt")
-    
+
     def __del__(self) -> None:
         if self._tempDir is not None:
             self._tempDir.cleanup()
@@ -29,7 +29,7 @@ class EarlyStopping:
             self.saveCheckpoint(model, validationLoss)
         elif accuracy < self.bestScore + self.delta:
             self.counter += 1
-            logging.debug(f"EarlyStopping Counter: {self.counter} out of {self.patience}")
+            logging.debug("EarlyStopping Counter: {counter} out of {patience}", counter=self.counter, patience=self.patience)
             if self.counter >= self.patience:
                 self.isEarlyStop = True
         else:
@@ -38,6 +38,6 @@ class EarlyStopping:
             self.counter = 0
 
     def saveCheckpoint(self, model: nn.Module, validationLoss: float):
-        logging.debug(f"Validation loss decreased, saving model...")
+        logging.debug("Validation loss decreased, saving model...")
         save(model.state_dict(), self.checkpointPath)
         self.validationMinLoss = validationLoss

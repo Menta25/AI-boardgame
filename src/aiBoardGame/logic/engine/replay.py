@@ -8,14 +8,14 @@ from aiBoardGame.logic.engine.utility import baseNotationToMove
 from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine
 
 
-def replayGame(gameRecord: Path, intermission: Optional[int] = None) -> None:
+def replayGame(gameRecordPath: Path, intermission: Optional[int] = None) -> None:
     game = XiangqiEngine()
-    with gameRecord.open(mode="r") as gameRecordFile:
+    with gameRecordPath.open(mode="r") as gameRecordFile:
         for turn, notation in enumerate(gameRecordFile):
-            logging.info(f"\nTurn {turn+1} - {game.currentSide}")
+            logging.info("\nTurn {turn} - {side}", turn=turn+1, side=game.currentSide)
             start, end = baseNotationToMove(game.board, game.currentSide, notation.rstrip("\n"))
             if start is None or end is None:
-                raise InvalidMove("Could not convert notation to move")
+                raise InvalidMove(None, None, None, "Could not convert notation to move")
             game.move(start, end)
             if intermission is not None:
                 sleep(intermission)
@@ -28,5 +28,5 @@ if __name__ == "__main__":
         replayGame(gameRecord, 0)
     except InvalidMove as error:
         logging.info(error)
-    except:
+    except Exception:
         logging.exception("An error occurred during game replay")

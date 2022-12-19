@@ -1,16 +1,18 @@
+# pylint: disable=no-member
+
 from __future__ import annotations
 
 import time
-import torch
 import logging
+from typing import Dict, List, Literal, Optional, Tuple, Union, ClassVar, cast
+from pathlib import Path
 import cv2 as cv
 import numpy as np
-from pathlib import Path
+import torch
 from torch import Tensor
 from torch.nn import Module, Linear, CrossEntropyLoss
 from torch.optim import Optimizer, SGD
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
-from typing import Dict, List, Literal, Optional, Tuple, Union, ClassVar, cast
 from torchvision.models import ResNet18_Weights
 from torchvision.models.resnet import ResNet
 from PIL import Image
@@ -67,7 +69,7 @@ class XiangqiPieceClassifier:
     def saveWeights(self, savePath: Path) -> None:
         torch.save(self.model.state_dict(), savePath.with_suffix(".pt"))
 
-    def trainFromScratch(self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader) -> XiangqiPieceClassifier:       
+    def trainFromScratch(self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader) -> XiangqiPieceClassifier:
         criterion = CrossEntropyLoss()
 
 
@@ -95,7 +97,7 @@ class XiangqiPieceClassifier:
         self._train(trainDataLoader, validationDataLoader, criterion, optimizer, scheduler)
 
         self.isTrained = True
-        
+
         return self
 
     def _train(
@@ -113,7 +115,7 @@ class XiangqiPieceClassifier:
         since = time.time()
 
         for epoch in range(self.epochCount):
-            logging.debug(f"Epoch {epoch+1}/{self.epochCount}")
+            logging.debug("Epoch {epoch}/{epochCount}", epoch=epoch+1, epochCount=self.epochCount)
             logging.debug("-"*10)
 
             for phase, dataLoader in phases.items():
@@ -124,7 +126,7 @@ class XiangqiPieceClassifier:
 
                 runningLoss = 0.0
                 runningCorrects = 0
-                
+
                 for data in dataLoader:
                     inputs, labels = data[0].to(self.device), data[1].to(self.device)
 
@@ -143,16 +145,16 @@ class XiangqiPieceClassifier:
                     runningCorrects += torch.sum(preds == labels.data)
 
                 if phase == "train":
-                    scheduler.step()                  
-                
+                    scheduler.step()
+
                 epochLoss = runningLoss / len(dataLoader.dataset.indices)
                 epochAccuracy = runningCorrects.double() / len(dataLoader.dataset.indices)
 
-                logging.debug(f"{phase.capitalize()} Loss: {epochLoss:.4f} Accuracy: {epochAccuracy:.4f}")
+                logging.debug("{phase} Loss: {loss:.4f} Accuracy: {accuracy:.4f}", phase=phase.capitalize(), loss=epochLoss, accuracy=epochAccuracy)
 
                 if phase == "validation":
                     earlyStopping(self.model, epochLoss)
-                    
+
             if earlyStopping.isEarlyStop:
                 logging.debug("")
                 logging.debug("Early stopping")
@@ -162,7 +164,7 @@ class XiangqiPieceClassifier:
             logging.debug("")
 
         timeElapsed = time.time() - since
-        logging.info(f"Training complete in {timeElapsed // 60:.0f}m {timeElapsed % 60:.0f}s")
+        logging.info("Training complete in {minutes:.0f}m {seconds:.0f}s", minutes=timeElapsed // 60, seconds=timeElapsed % 60)
 
         self.loadWeights(earlyStopping.checkpointPath)
         return self
@@ -185,17 +187,17 @@ class XiangqiPieceClassifier:
 
         for pieceClass, correctCount in correctPredictions.items():
             accuracy = 100 * float(correctCount) / totalPredictions[pieceClass]
-            logging.info(f"Accuracy for class: {pieceClass} is {accuracy:.1f} %")
+            logging.info("Accuracy for class: {pieceClass} is {accuracy:.1f} %", pieceClass=pieceClass, accuracy=accuracy)
 
-    def predict(self, input: Tensor) -> List[Optional[BoardEntity]]:
-        if len(input.shape) == 3:
-            input = input.unsqueeze(0)
-        elif len(input.shape) > 4:
-            input = input.reshape(-1, *input.shape[-3:])
+    def predict(self, inputTensor: Tensor) -> List[Optional[BoardEntity]]:
+        if len(inputTensor.shape) == 3:
+            inputTensor = inputTensor.unsqueeze(0)
+        elif len(inputTensor.shape) > 4:
+            inputTensor = inputTensor.reshape(-1, *inputTensor.shape[-3:])
 
         self.model.eval()
-        input = input.to(self.device)
-        output = self.model(input)
+        inputTensor = inputTensor.to(self.device)
+        output = self.model(inputTensor)
         _, predictions = torch.max(output, 1)
 
         boardEntities = []
@@ -205,7 +207,7 @@ class XiangqiPieceClassifier:
 
     def predictTile(self, tile: np.ndarray) -> Optional[BoardEntity]:
         if not (len(tile.shape) == 3 and tile.shape[-1] == 3):
-            raise ValueError(f"Invalid tile shape, must be (..., ..., 3)")
+            raise ValueError("Invalid tile shape, must be (..., ..., 3)")
 
         return self.predict(self._cvImagesToInput(tile[np.newaxis]))[0]
 
@@ -221,7 +223,7 @@ class XiangqiPieceClassifier:
                 tiles = cast(np.ndarray, tiles)
             else:
                 return board
-        
+
         tilePredicts = self.predict(self._cvImagesToInput(tiles))
 
         for position, tilePredict in zip(positions, tilePredicts):
@@ -235,16 +237,13 @@ class XiangqiPieceClassifier:
     def _cvImagesToInput(cvImages: Tuple[np.ndarray]) -> Tensor:
         tensors = [XiangqiPieceDataset.basicTransform(Image.fromarray(cv.cvtColor(cvImage, cv.COLOR_BGR2RGB))) for cvImage in cvImages]
         return torch.stack(tensors)
-    
+
 
 if __name__ == "__main__":
-    import cv2 as cv
-    from aiBoardGame.vision.xiangqiPieceClassifier.dataset import XiangqiPieceDataset
-
     logging.basicConfig(level=logging.DEBUG)
 
-    device = XiangqiPieceClassifier.getAvailableDevice()
-    logging.info(f"Using {device} device")
+    DEVICE = XiangqiPieceClassifier.getAvailableDevice()
+    logging.info("Using {device} device", device=DEVICE)
 
     xiangqiDatasetRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")
     train, validation, test = XiangqiPieceDataset.split(root=xiangqiDatasetRoot, batchSize=XiangqiPieceClassifier.batchSize, numWorkers=4)
@@ -254,9 +253,9 @@ if __name__ == "__main__":
     if loadModelWeights is True:
         loadPathStr = input("Load Path: ")
         loadPath = Path(loadPathStr)
-        classifier = XiangqiPieceClassifier(weights=loadPath, device=device)
+        classifier = XiangqiPieceClassifier(weights=loadPath, device=DEVICE)
     else:
-        classifier = XiangqiPieceClassifier(device=device)
+        classifier = XiangqiPieceClassifier(device=DEVICE)
         classifier.trainFromScratch(train, validation)
 
     logging.info("")
@@ -269,11 +268,11 @@ if __name__ == "__main__":
     pieceImage = cv.imread(pieceImagePath.as_posix())
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 
-    prediction = classifier.predictTile(pieceImage)
-    logging.info(f"Label: {pieceImagePath.parent.name}, Prediction: {prediction}")
+    pred = classifier.predictTile(pieceImage)
+    logging.info("Label: {label}, Prediction: {prediction}", label=pieceImagePath.parent.name, prediction=pred)
 
     saveModelWeights = input("Do you want to save model weights? (yes/other) ") == "yes"
     if saveModelWeights is True:
         savePathStr = input("Save Path: ")
-        savePath = Path(savePathStr)
-        classifier.saveWeights(savePath)
+        savePth = Path(savePathStr)
+        classifier.saveWeights(savePth)

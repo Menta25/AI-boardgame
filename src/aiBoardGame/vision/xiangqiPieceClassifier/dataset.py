@@ -1,13 +1,13 @@
-import numpy as np
 from pathlib import Path
-from torch import from_numpy
 from itertools import chain
 from math import floor, isclose
 from collections import Counter
+from typing import ClassVar, List, Optional, Tuple
+import numpy as np
+from torch import from_numpy  # pylint: disable=no-name-in-module
+from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-from typing import ClassVar, List, Optional, Tuple
-from torch.utils.data import DataLoader, Subset, WeightedRandomSampler
 
 from aiBoardGame.logic.engine import Side, BoardEntity
 from aiBoardGame.logic.engine.pieces import PIECE_SET
@@ -99,13 +99,13 @@ if __name__ == "__main__":
 
     datasetPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")
     train, validation, test = XiangqiPieceDataset.split(root=datasetPath, batchSize=1, numWorkers=2)
-    i = 0
+    j = 0
     for inputs, labels in train:
-        if i >= 50:
+        if j >= 50:
             break
         image = np.transpose(inputs[0].numpy(), (1, 2, 0))
         image = cv.cvtColor(image, cv.COLOR_RGB2BGR)
         cv.imshow("image", image)
         cv.waitKey(0)
-        i += 1
+        j += 1
     cv.destroyAllWindows()

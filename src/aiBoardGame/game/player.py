@@ -1,9 +1,11 @@
-import numpy as np
-import cv2 as cv
+# pylint: disable=no-name-in-module, no-member
+
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
+import numpy as np
+import cv2 as cv
 from PyQt6.QtCore import pyqtSignal, QObject
 
 from aiBoardGame.logic import FairyStockfish, Difficulty, Position
@@ -82,7 +84,7 @@ class HumanPlayer(Player):
 class RobotPlayer(Player):
     stockfish: FairyStockfish
 
-    def __init__(self, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
         self.stockfish = FairyStockfish(difficulty=difficulty)
 
     @property
@@ -96,7 +98,7 @@ class RobotPlayer(Player):
 
 @dataclass(init=False)
 class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
-    def __init__(self, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
         RobotPlayer.__init__(self, difficulty)
         TerminalPlayer.__init__(self)
 
@@ -115,25 +117,33 @@ class RobotArmPlayer(RobotPlayer):
     camera: RobotCamera
     cornerCartesians: Optional[np.ndarray]
 
-    calibrateCorner: pyqtSignal = field(default=pyqtSignal(str), init=False)
+    calibrateCorner: pyqtSignal
+    loadLastCalibration: pyqtSignal
+
+    _loaded: bool
 
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
-    def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
         if not camera.isCalibrated:
             raise PlayerError(f"Camera is not calibrated, cannot use it in {self.__class__.__name__}")
 
-        super().__init__(self, difficulty)
+        super().__init__(difficulty)
         self.arm = arm
         self.camera = camera
         self.cornerCartesians = None
+
+        self.calibrateCorner = pyqtSignal(str)
+        self.loadLastCalibration = pyqtSignal()
+
+        self._loaded = False
 
     def prepare(self) -> None:
         if not self.arm.isConnected:
             try:
                 self.arm.connect()
-            except RobotArmException:
-                raise PlayerError(f"Cannot connect robot arm, failed to prepare {self.__class__.__name__}")
+            except RobotArmException as exception:
+                raise PlayerError(f"Cannot connect robot arm, failed to prepare {self.__class__.__name__}") from exception
         elif not self.camera.isActive:
             self.camera.activate()
         self._calibrate()
@@ -170,7 +180,7 @@ class RobotArmPlayer(RobotPlayer):
 
     def _moveToPosition(self, position: np.ndarray) -> None:
         x, y = position
-        self.arm.move(to=(x, y, None), safe=True, isCartesian=True)
+        self.arm.move(position=(x, y, None), safe=True, isCartesian=True)
         self.arm.lowerDown()
 
     def _pickUpPiece(self, position: np.ndarray) -> None:
@@ -189,18 +199,30 @@ class RobotArmPlayer(RobotPlayer):
         self.arm.setPump(on=False)
         self.arm.reset(safe=False)
 
-    def calibrate(self) -> None:
-        self.arm.resetPosition(lowerDown=True, safe=True)
-        coordinates = []
-        for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
-            self.arm.detach(safe=False)
-            self.calibrateCorner.emit(corner)
+    def _calibrate(self) -> None:
+        if self._baseCalibPath.exists():
+            self.loadLastCalibration.emit()
             utils.event.set()
-            self.arm.attach()
-            coordinates.append(self.arm.position)
-        self.robotArmCornerCoordinates = np.asarray(coordinates)
-        object.__setattr__(self, "cornerCoordinates", coordinates)
-        self.arm.resetPosition(lowerDown=False, safe=True)
+
+        if not self._loaded:
+            self.arm.detach(safe=True)
+            cartesians = []
+            for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
+                self.arm.detach(safe=False)
+                self.calibrateCorner.emit(corner)
+                utils.event.set()
+                self.arm.attach()
+                cartesians.append(self.arm.position)
+            self.cornerCartesians = np.asarray(cartesians)[:,:2]
+            np.savez(self._baseCalibPath, cornerCartesians=self.cornerCartesians)
+        else:
+            self._loaded = False
+        self.arm.reset(safe=True)
+
+    def loadCalibration(self) -> None:
+        with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
+            self.cornerCartesians = calibration["cornerCartesians"]
+            self._loaded = True
 
     def _calculateAffineTransform(self, boardImage: BoardImage) -> np.ndarray:
         boardImageCorners = np.asarray([

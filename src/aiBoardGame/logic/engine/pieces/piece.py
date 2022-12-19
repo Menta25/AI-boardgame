@@ -32,13 +32,13 @@ class Piece(ABC):
 
     @classmethod
     def isFileInBounds(cls, side: Side, file: int) -> bool:
-        if side == Side.Black:
+        if side == Side.BLACK:
             file = cls.mirrorFile(file)
         return cls.fileBounds[0] <= file < cls.fileBounds[1]
 
     @classmethod
     def isRankInBounds(cls, side: Side, rank: int) -> bool:
-        if side == Side.Black:
+        if side == Side.BLACK:
             rank = cls.mirrorRank(rank)
         return cls.rankBounds[0] <= rank < cls.rankBounds[1]
 

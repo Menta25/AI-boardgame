@@ -1,5 +1,4 @@
 import logging
-from threading import Event
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union, Optional
 from itertools import chain, product, starmap
@@ -24,7 +23,7 @@ class XiangqiEngine:
 
     def __init__(self) -> None:
         self.board, self.generals = createXiangqiBoard()
-        self.currentSide = Side.Red
+        self.currentSide = Side.RED
         self.moveHistory = []
         self._calculateValidMoves()
 
@@ -41,10 +40,9 @@ class XiangqiEngine:
         return self.currentSide.opponent if self.isOver else None
 
     def newGame(self) -> None:
-        self.__init__()
+        self.__init__()  # pylint: disable=unnecessary-dunder-call
 
     # TODO: Do not allow perpetual chasing and checking
-    # TODO: Signal end of the game (its kind of already implemented)
     # TODO: Calculate approximate values for each side
     def move(self, start: Union[Position, Tuple[int, int]], end: Union[Position, Tuple[int, int]]) -> None:
         if not isinstance(start, Position):
@@ -53,8 +51,8 @@ class XiangqiEngine:
             end = Position(*end)
 
         if self.isOver:
-            raise InvalidMove(None, start, end, f"Cannot move beacuse the game is already over, start a new game or undo last move")
-        elif self.board[start] == None:
+            raise InvalidMove(None, start, end, "Cannot move beacuse the game is already over, start a new game or undo last move")
+        elif self.board[start] is None:
             raise InvalidMove(None, start, end, f"No piece found on {*start,}")
         elif start not in self._validMoves or end not in self._validMoves[start]:
             raise InvalidMove(self.board[start].piece, start, end)
@@ -71,7 +69,7 @@ class XiangqiEngine:
     def update(self, board: Board) -> None:
         selfPiecesAsSet = set(self.board.pieces)
         otherPiecesAsSet = set(board.pieces)
-        
+
         selfDifference = list(selfPiecesAsSet - otherPiecesAsSet)
         otherDifference = list(otherPiecesAsSet - selfPiecesAsSet)
 
@@ -79,7 +77,7 @@ class XiangqiEngine:
             raise InvalidMove(None, None, None, "Cannot update because no piece were moved")
         elif not (1 <= len(selfDifference) <= 2 and len(otherDifference) == 1):
             raise InvalidMove(None, None, None, "Cannot update because multiple piece were moved")
-            
+
         end, movedBoardEntity = otherDifference[0]
         start = None
         for position, boardEntity in selfDifference:
@@ -100,8 +98,8 @@ class XiangqiEngine:
             self.generals[self.board[end].side] = end
 
     @property
-    def FEN(self) -> str:
-        return f"{self.board.FEN} {self.currentSide.FEN} - - 0 {len(self.moveHistory)//2+1}"
+    def fen(self) -> str:
+        return f"{self.board.fen} {self.currentSide.fen} - - 0 {len(self.moveHistory)//2+1}"
 
     def _undoMove(self) -> None:
         if len(self.moveHistory) > 0:
@@ -112,7 +110,7 @@ class XiangqiEngine:
             if lastMove.movedPieceEntity.piece == General:
                 self.generals[lastMove.movedPieceEntity.side] = lastMove.start
         else:
-            raise InvalidMove("Cannot undo move, game is in start state")
+            raise InvalidMove(None, None, None, "Cannot undo move, game is in start state")
 
     def _calculateValidMoves(self) -> None:
         self._checks, self._pins = self._getChecksAndPins()
@@ -134,7 +132,7 @@ class XiangqiEngine:
                         if ((foundBoardEntityCount == 1 and foundBoardEntity.piece != Cannon) or (foundBoardEntityCount == 2 and foundBoardEntity.piece == Cannon)) and \
                             foundBoardEntity.piece.isValidMove(self.board, self.currentSide.opponent, position, self.generals[self.currentSide]):
                             checks.append(position)
-                        elif len(possiblePinPositions) > 0 and not ((foundBoardEntityCount == 3) ^ (foundBoardEntity.piece == Cannon)):
+                        elif len(possiblePinPositions) > 0 and not (foundBoardEntityCount == 3) ^ (foundBoardEntity.piece == Cannon):
                             for possiblePinPosition in list(possiblePinPositions):
                                 possiblePinBoardEntity = self.board[possiblePinPosition]
                                 self.board[possiblePinPosition] = None
@@ -169,13 +167,13 @@ class XiangqiEngine:
         return allPossibleMoves
 
     def _getAllValidMoves(self, checks: List[Position], pins: Dict[Position, List[Position]]) -> Dict[Position, List[Position]]:
-        possibleMoves: Dict[Position, List[Position]] = {}        
+        possibleMoves: Dict[Position, List[Position]] = {}
 
         if len(self._checks) > 1:
             possibleMoves[self.generals[self.currentSide]] = General.getPossibleMoves(self.board, self.generals[self.currentSide])
         else:
             possibleMoves = self._getAllPossibleMoves()
-        
+
             for pinned, pinning in pins.items():
                 if pinned in possibleMoves:
                     if len(pinning) >= 2:
@@ -243,9 +241,9 @@ if __name__ == "__main__":
                 logging.info(error)
         elif command.startswith("not"):
             notation = command.split(" ")[1]
-            start, end = baseNotationToMove(game.board, game.currentSide, notation)
-            if start is not None and end is not None:
-                logging.info(f"From {*start,} to {*end,}")
+            startPosition, endPosition = baseNotationToMove(game.board, game.currentSide, notation)
+            if startPosition is not None and endPosition is not None:
+                logging.info("From {start} to {end}", start=(startPosition[0], startPosition[1]), end=(endPosition[0], endPosition[1]))
             else:
                 logging.info("Cannot convert notation to move")
         else:
@@ -255,16 +253,16 @@ if __name__ == "__main__":
                     startPositionStrs = commandParts[0].split(",")
                     endPositionStrs = commandParts[1].split(",")
                     if len(startPositionStrs) == 2 and len(endPositionStrs) == 2:
-                        start = Position(int(startPositionStrs[0]), int(startPositionStrs[1]))
-                        end = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
+                        startPosition = Position(int(startPositionStrs[0]), int(startPositionStrs[1]))
+                        endPosition = Position(int(endPositionStrs[0]), int(endPositionStrs[1]))
                         try:
-                            game.move(start, end)
-                            logging.info(prettyBoard(game.board, colors=True, lastMove=(start, end)))
+                            game.move(startPosition, endPosition)
+                            logging.info(prettyBoard(game.board, colors=True, lastMove=(startPosition, endPosition)))
                         except InvalidMove as error:
                             logging.info(error)
                         finally:
                             continue
-            except:
+            except Exception:
                 pass
             logging.info("Invalid command")
             

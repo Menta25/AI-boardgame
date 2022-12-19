@@ -1,3 +1,5 @@
+# pylint: disable=no-name-in-module
+
 import logging
 from pathlib import Path
 from abc import ABC, abstractmethod
@@ -24,7 +26,7 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
     def __init__(self, redSide: Player, blackSide: Player) -> None:
         ABC.__init__(self)
         QObject.__init__(self)
-        self.sides: Dict[Side, Player] = {Side.Red: redSide, Side.Black: blackSide}
+        self.sides: Dict[Side, Player] = {Side.RED: redSide, Side.BLACK: blackSide}
         self._engine = XiangqiEngine()
         self._turn = 0
 
@@ -43,11 +45,11 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
 
     @property
     def redSide(self) -> Player:
-        return self.sides[Side.Red]
+        return self.sides[Side.RED]
 
     @property
     def blackSide(self) -> Player:
-        return self.sides[Side.Black]
+        return self.sides[Side.BLACK]
 
     @property
     def currentSide(self) -> Side:
@@ -67,9 +69,9 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
             winnerSide = self._engine.winner
             return winnerSide, self.sides[winnerSide]
         elif self.redSide.isConceding:
-            return Side.Black, blackSide
+            return Side.BLACK, black
         elif self.blackSide.isConceding:
-            return Side.Red, redSide
+            return Side.RED, red
         else:
             return None
 
@@ -77,12 +79,12 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
     def _prepare(self) -> None:
         try:
             self._engine.newGame()
-            self.engineUpdated.emit(self._engine.FEN)
+            self.engineUpdated.emit(self._engine.fen)
             self.turn = 0
             for player in self.sides.values():
                 player.prepare()
         except PlayerError as error:
-            raise GameplayError(str(error))
+            raise GameplayError(str(error)) from error
 
     def play(self) -> None:
         self._prepare()
@@ -94,10 +96,10 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
             if moves % 2 == 0:
                 self.turn += 1
                 logging.info("")
-                logging.info(f"Turn {self.turn}.")
+                logging.info("Turn {turn}", turn=self.turn)
                 logging.info("")
             try:
-                self.currentPlayer.makeMove(self._engine.FEN)
+                self.currentPlayer.makeMove(self._engine.fen)
                 if not self.currentPlayer.isConceding:
                     self._updateEngine()
                     if self._engine.isCurrentPlayerChecked:
@@ -112,9 +114,9 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
                 self._handleInvalidMove(error)
             else:
                 moves += 1
-                self.engineUpdated(self._engine.FEN)
+                self.engineUpdated(self._engine.fen)
         side, player = self.winner
-        logging.info(f"The game has ended, {side.name} {player.__class__.__name__} has won")
+        logging.info("The game has ended, {side} {player} has won", side=side.name, player=player.__class__.__name__)
         self.over.emit(side, player)
 
     @abstractmethod
@@ -164,7 +166,7 @@ class Xiangqi(XiangqiBase):
     def _prepare(self) -> None:
         if not self._camera.isActive:
             self._camera.activate()
-        
+
         super()._prepare()
         while (board := self._analyseBoard()) != self._engine.board:
             logging.error(prettyBoard(board, colors=True))
@@ -192,7 +194,7 @@ class Xiangqi(XiangqiBase):
             while True:
                 try:
                     logging.error(str(error))
-                    self.invalidMove.emit(str(error), self._engine.FEN)
+                    self.invalidMove.emit(str(error), self._engine.fen)
                     utils.event.set()
                     self._updateEngine()
                 except InvalidMove as newError:
@@ -203,34 +205,32 @@ class Xiangqi(XiangqiBase):
 
 
 if __name__ == "__main__":
-    import logging
-
     logging.basicConfig(level=logging.INFO, format="")
 
     try:
         cameraIntrinsics = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
-        camera = RobotCamera(feedInput=0, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
+        cam = RobotCamera(feedInput=0, resolution=(1920, 1080), interval=0.1, intrinsicsFile=cameraIntrinsics)
         robotArm = RobotArm(hardwareID="USB VID:PID=2341:0042", speed=500_000)
 
-        camera.activate()
+        cam.activate()
         robotArm.connect()
 
-        redSide = HumanPlayer()
-        blackSide = RobotArmPlayer(arm=robotArm, camera=camera, difficulty=Difficulty.Medium)
+        red = HumanPlayer()
+        black = RobotArmPlayer(arm=robotArm, camera=cam, difficulty=Difficulty.MEDIUM)
 
-        game = Xiangqi(camera=camera, redSide=redSide, blackSide=blackSide)
+        game = Xiangqi(camera=cam, redSide=red, blackSide=black)
         game.play()
 
         robotArm.disconnect()
-        camera.deactivate()
-    except (CameraError, RobotArmException, GameplayError, PlayerError) as error:
-        logging.error(str(error))
+        cam.deactivate()
+    except (CameraError, RobotArmException, GameplayError, PlayerError) as exception:
+        logging.error(str(exception))
 
     # try:
-    #     redSide = HumanTerminalPlayer()
-    #     blackSide = RobotTerminalPlayer(difficulty=Difficulty.Easy)
+    #     red = HumanTerminalPlayer()
+    #     black = RobotTerminalPlayer(difficulty=Difficulty.Easy)
 
-    #     game = TerminalXiangqi(redSide=redSide, blackSide=blackSide)
+    #     game = TerminalXiangqi(redSide=red, blackSide=black)
     #     game.play()
-    # except GameplayError as error:
-    #     logging.error(str(error))
+    # except GameplayError as exception:
+    #     logging.error(str(exception))

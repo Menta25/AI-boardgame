@@ -1,8 +1,10 @@
-import numpy as np
-import cv2 as cv
+# pylint: disable=no-member
+
 from pathlib import Path
 from enum import Enum, auto, unique
 from typing import Tuple, Optional, Literal, overload, Generator
+import numpy as np
+import cv2 as cv
 
 from aiBoardGame.vision.camera import RobotCameraInterface, CameraError
 from aiBoardGame.vision.boardImage import BoardImage
@@ -56,7 +58,7 @@ def generateTrainDataset(rawImagesRoot: Path, destinationRoot: Path, camera: Opt
                 else:
                     savePieces(destinationRoot, boardImage, rawImagePath)
             elif generate == GenerateMode.TILES:
-               saveTiles(destinationRoot, boardImage, rawImagePath)
+                saveTiles(destinationRoot, boardImage, rawImagePath)
             elif generate == GenerateMode.DATA:
                 saveData(destinationRoot, boardImage, rawImagePath)
             elif generate == GenerateMode.ROI:
@@ -112,8 +114,8 @@ def saveROI(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -
 
 
 if __name__ == "__main__":
-    camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
-    rawImagesRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic")
-    destinationRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes4")
-    generate = GenerateMode.DATA
-    generateTrainDataset(rawImagesRoot, destinationRoot, camera, generate)
+    cam = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=Path("/home/Menta/Workspace/Projects/AI-boardgame/newCamCalibs.npz"))
+    rawImgsRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/zips/basic")
+    destRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes4")
+    gen = GenerateMode.DATA
+    generateTrainDataset(rawImgsRoot, destRoot, cam, gen)

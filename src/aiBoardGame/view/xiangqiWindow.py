@@ -1,9 +1,11 @@
+# pylint: disable=no-name-in-module
+
 import logging
-import numpy as np
 from pathlib import Path
 from time import sleep
 from threading import Thread
 from typing import Optional, List
+import numpy as np
 from PyQt6.QtWidgets import QMainWindow, QLabel, QFileDialog, QMessageBox
 from PyQt6.QtCore import pyqtSlot, QThread
 from PyQt6.QtGui import QCloseEvent
@@ -145,7 +147,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         self.camera = None
         if self.cameraThread is not None:
             self.cameraThread.join()
-    
+
     def updateCameraViews(self, cameraViews: List[QLabel]) -> None:
         while self.camera is not None:
             image = self.camera.read(undistorted=False)
@@ -185,7 +187,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
     @pyqtSlot(Board)
     def onInvalidStartPosition(self, board: Board) -> None:
         messageBox = QMessageBox(parent=self, title="Invalid Start Position", text="Press OK if you've set up start position", buttons=QMessageBox.StandardButton.Ok)
-        messageBox.setDetailedText(f"{board.FEN}\n\n{prettyBoard(board)}")
+        messageBox.setDetailedText(f"{board.fen}\n\n{prettyBoard(board)}")
         messageBox.show()
         utils.clearEvent()
 
@@ -255,7 +257,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
 
             if len(self.calibrationImages) >= RobotCamera.calibrationMinPatternCount:
                 self.calibrateCamera()
-    
+
     def calibrateCamera(self) -> None:
         try:
             self.camera.calibrate(checkerBoardImages=self.calibrationImages, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value()))
@@ -273,7 +275,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         fileName, _ = QFileDialog.getSaveFileName(self, caption="Save calibration", filter="Numpy save format (*.npz)")
         savePath = Path(fileName).with_suffix(".npz")
         self.camera.saveParameters(savePath)
-            
+
     def resetCalibration(self) -> None:
         self.horizontalVerticiesSpinBox.setEnabled(True)
         self.verticalVerticiesSpinBox.setEnabled(True)
@@ -282,16 +284,16 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
     def onCalibrated(self) -> None:
         self.gameTab.setEnabled(True)
 
-    def closeEvent(self, a0: QCloseEvent) -> None:
+    def closeEvent(self, event: QCloseEvent) -> None:
         self.camera = None
         if self.cameraThread is not None:
             self.cameraThread.join()
-        return super().closeEvent(a0)
+        return super().closeEvent(event)
 
 
 if __name__ == "__main__":
     import sys
-    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
 
     logging.basicConfig(level=logging.INFO, format="")
 

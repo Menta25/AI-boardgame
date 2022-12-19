@@ -12,23 +12,22 @@ _BINARY_PATH = Path("src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_
 
 @unique
 class Difficulty(Enum):
-    Easy = auto(),
-    Medium = auto(),
-    Hard = auto()
+    EASY = auto(),
+    MEDIUM = auto(),
+    HARD = auto()
 
 
-#  TODO: Define valid arguments for difficulties
 _GO_ARGS = {
-    Difficulty.Easy: (10, 1000),
-    Difficulty.Medium: (20, 2000),
-    Difficulty.Hard: (40, 4000)
+    Difficulty.EASY: (10, 1000),
+    Difficulty.MEDIUM: (20, 2000),
+    Difficulty.HARD: (40, 4000)
 }
 
 
 class FairyStockfish:
     baseBinaryPath: ClassVar[Path] = _BINARY_PATH
 
-    def __init__(self, binaryPath: Path = _BINARY_PATH, difficulty: Difficulty = Difficulty.Medium) -> None:
+    def __init__(self, binaryPath: Path = _BINARY_PATH, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
         self._process = Popen(
             args=[binaryPath.as_posix()],
             stdin=PIPE, stdout=PIPE,
@@ -45,21 +44,21 @@ class FairyStockfish:
     def __del__(self) -> None:
         self._process.terminate()
 
-    def _write(self, input: str) -> None:
-        self._process.stdin.write(f"{input}\n")
+    def _write(self, inputStr: str) -> None:
+        self._process.stdin.write(f"{inputStr}\n")
         self._process.stdin.flush()
 
     def _read(self) -> str:
         return self._process.stdout.readline().strip()
 
-    def _communicate(self, input: List[str], wait: int = 0) -> List[str]:
-        self._write(" ".join(input))
+    def _communicate(self, inputStrs: List[str], wait: int = 0) -> List[str]:
+        self._write(" ".join(inputStrs))
         sleep(wait/1000)
         self._write("isready")
         out = []
         while (line := self._read()) != "readyok":
             out.append(line)
-        return out 
+        return out
 
     def _initGameInterface(self) -> None:
         self._communicate(["ucci"])
@@ -99,7 +98,7 @@ class FairyStockfish:
 
 if __name__ == "__main__":
     stockfishPath = Path("/home/Menta/Workspace/Projects/AI-boardgame/src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_x86-64")
-    stockfish = FairyStockfish(binaryPath=stockfishPath, difficulty=Difficulty.Medium)
+    stockfish = FairyStockfish(binaryPath=stockfishPath, difficulty=Difficulty.MEDIUM)
     ret = stockfish.nextMove("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1")
     print(ret)
     ret = stockfish.nextMove("rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1CN4C1/9/R1BAKABNR b - - 0 1")

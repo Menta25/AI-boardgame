@@ -10,16 +10,16 @@ Piece = TypeVar("Piece")
 
 
 class Side(IntEnum):
-    Black = -1
-    Red = 1
+    BLACK = -1
+    RED = 1
 
     @property
     def opponent(self) -> Side:
         return Side(-self)
 
     @property
-    def FEN(self) -> str:
-        return "w" if self == Side.Red else "b"
+    def fen(self) -> str:
+        return "w" if self == Side.RED else "b"
 
 class Delta(NamedTuple):
     file: Union[int, float]
@@ -118,8 +118,8 @@ class BoardEntity(NamedTuple):
     piece: Type[Piece]
 
     @property
-    def FEN(self) -> str:
-        caseFunction = str.upper if self.side == Side.Red else str.lower
+    def fen(self) -> str:
+        caseFunction = str.upper if self.side == Side.RED else str.lower
         return caseFunction(self.piece.abbreviations["fen"])
 
     def __str__(self) -> str:
@@ -168,7 +168,7 @@ class Board(Dict[Side, SideState]):
         return sorted(allPieces, key=lambda item: (*item[0],))
 
     @property
-    def FEN(self) -> str:
+    def fen(self) -> str:
         fen = ""
         for rank in range(self.rankCount-1, -1, -1):
             emptyCount = 0
@@ -180,7 +180,7 @@ class Board(Dict[Side, SideState]):
                     if emptyCount != 0:
                         fen += str(emptyCount)
                         emptyCount = 0
-                    fen += boardEntity.FEN
+                    fen += boardEntity.fen
             if emptyCount != 0:
                 fen += str(emptyCount)
             fen += "/"

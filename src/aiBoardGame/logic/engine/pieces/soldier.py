@@ -21,7 +21,7 @@ class Soldier(Piece):
         delta = Delta(end.file - start.file, end.rank - start.rank)
 
         isOverRiver = start.rank >= (Piece.rankLength() + 1) / 2
-        if side == Side.Black:
+        if side == Side.BLACK:
             delta = Delta(delta.file, -1*delta.rank)
             isOverRiver = not isOverRiver
 
@@ -37,7 +37,7 @@ class Soldier(Piece):
     def _getPossibleMoves(cls, board: Board, side: Side,  start: Position) -> List[Position]:
         possibleToPositions = []
         possibleToPositions.append(start + Delta(0, side))
-        isOverRiver = start.rank >= _RIVER_RANK if side == Side.Red else start.rank < _RIVER_RANK
+        isOverRiver = start.rank >= _RIVER_RANK if side == Side.RED else start.rank < _RIVER_RANK
         if isOverRiver:
             possibleToPositions.append(start + Delta(1, 0))
             possibleToPositions.append(start + Delta(-1, 0))

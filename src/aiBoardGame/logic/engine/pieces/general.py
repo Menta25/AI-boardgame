@@ -1,8 +1,8 @@
-import numpy as np
-
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Tuple
 from itertools import chain, product, starmap
+import numpy as np
+
 
 from aiBoardGame.logic.engine.pieces import Piece
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
@@ -18,7 +18,7 @@ FILE_MARGIN = (Piece.fileLength() - NEW_FILE_LENGTH) // 2
 class General(Piece):
     fileBounds: ClassVar[Tuple[int, int]] = (Piece.fileBounds[0] + FILE_MARGIN, Piece.fileBounds[1] - FILE_MARGIN)
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
-    
+
     abbreviations: ClassVar[Dict[str, str]] = {
         "base": "G",
         "fen": "K"
@@ -36,7 +36,7 @@ class General(Piece):
             return True
         elif isOneDeltaOnly and abs(delta.rank) > 1 and board[end].piece == General:  # NOTE: Flying general
             for rank in range(start.rank + np.sign(delta.rank), end.rank, np.sign(delta.rank)):
-                if board[end.file, rank] is not None:   
+                if board[end.file, rank] is not None:
                     return False
             return True
         else:
