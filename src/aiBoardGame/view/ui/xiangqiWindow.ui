@@ -106,7 +106,7 @@
            </attribute>
            <layout class="QGridLayout" name="gridLayout_5">
             <item row="0" column="0">
-             <layout class="QVBoxLayout" name="gameLayout" stretch="0,1,0,0">
+             <layout class="QVBoxLayout" name="gameLayout" stretch="0,0,1,0">
               <item>
                <widget class="QPushButton" name="newGameButton">
                 <property name="text">
@@ -115,23 +115,62 @@
                </widget>
               </item>
               <item>
-               <widget class="QLabel" name="gameCameraView">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: rgb(35, 34, 34);</string>
-                </property>
+               <widget class="QLabel" name="turnLabel">
                 <property name="text">
-                 <string/>
+                 <string>Turn</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
                 </property>
                </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="boardStateLayout" stretch="1,1">
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="gameCameraView">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>350</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">background-color: rgb(35, 34, 34);</string>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="boardFENLabel">
+                  <property name="styleSheet">
+                   <string notr="true">font: 700 11pt &quot;Monospace&quot;;</string>
+                  </property>
+                  <property name="text">
+                   <string/>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
               <item>
                <layout class="QHBoxLayout" name="difficultyLayout" stretch="0,0,1">
@@ -165,13 +204,6 @@
                  <widget class="QComboBox" name="difficultyComboBox"/>
                 </item>
                </layout>
-              </item>
-              <item>
-               <widget class="QPushButton" name="readyButton">
-                <property name="text">
-                 <string>Ready</string>
-                </property>
-               </widget>
               </item>
              </layout>
             </item>
@@ -355,6 +387,7 @@
     </item>
    </layout>
   </widget>
+  <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <tabstops>
   <tabstop>tabWidget</tabstop>
@@ -363,7 +396,6 @@
   <tabstop>loadCalibrationButton</tabstop>
   <tabstop>newGameButton</tabstop>
   <tabstop>difficultyComboBox</tabstop>
-  <tabstop>readyButton</tabstop>
   <tabstop>horizontalVerticiesSpinBox</tabstop>
   <tabstop>verticalVerticiesSpinBox</tabstop>
   <tabstop>calibrateButton</tabstop>

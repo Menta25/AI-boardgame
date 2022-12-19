@@ -2,14 +2,15 @@ import numpy as np
 import cv2 as cv
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import Tuple, Optional, ClassVar, Callable
+from typing import Tuple, Optional, ClassVar
 from abc import ABC, abstractmethod
+from PyQt6.QtCore import pyqtSignal, QObject
 
 from aiBoardGame.logic import FairyStockfish, Difficulty, Position
 from aiBoardGame.robot import RobotArm, RobotArmException
 from aiBoardGame.vision import RobotCamera, BoardImage, CameraError
 
-from aiBoardGame.utility import retry, rerunAfterCorrection
+from aiBoardGame.game.utility import retry, rerunAfterCorrection, utils, FinalMeta
 
 
 @dataclass(frozen=True)
@@ -21,7 +22,7 @@ class PlayerError(Exception):
 
 
 @dataclass
-class Player(ABC):
+class Player(ABC, QObject, metaclass=FinalMeta):
     isConceding: bool = field(default=False, init=False)
 
     @abstractmethod
@@ -38,25 +39,11 @@ class TerminalPlayer(Player):
     move: Optional[Tuple[Position, Position]] = field(default=None, init=False)
 
 
-def _waitForHumanPlayerInput() -> bool:
-    command = input("Press ENTER if you want to finish your turn, or type \"concede\" if you want to concede")
-    return command != "concede"
-
 @dataclass
-class HumanPlayer(Player):
-    waitForPrepare: ClassVar[Callable[[], None]] = lambda: input("Press ENTER if you are ready to start the game")
-    waitForMakeMove: ClassVar[Callable[[], bool]] = _waitForHumanPlayerInput
-
+class HumanTerminalPlayer(TerminalPlayer):
     def prepare(self) -> None:
-        self.waitForPrepare()
+        input("Press ENTER if you are ready to start the game")
 
-    def makeMove(self, fen: str) -> None:
-        if self.waitForMakeMove() is False:
-            self.isConceding = True
-
-
-@dataclass
-class HumanTerminalPlayer(HumanPlayer, TerminalPlayer):
     def makeMove(self, fen: str) -> None:
         while True:
             try:
@@ -75,6 +62,20 @@ class HumanTerminalPlayer(HumanPlayer, TerminalPlayer):
                         break
             except ValueError:
                 pass
+
+
+@dataclass
+class HumanPlayer(Player):
+    prepareStarted: pyqtSignal = field(default=pyqtSignal(), init=False)
+    makeMoveStarted: pyqtSignal = field(default=pyqtSignal(), init=False)
+
+    def prepare(self) -> None:
+        self.prepareStarted.emit()
+        utils.event.set()
+
+    def makeMove(self, fen: str) -> None:
+        self.makeMoveStarted.emit()
+        utils.event.set()
 
 
 @dataclass(init=False)
@@ -114,14 +115,15 @@ class RobotArmPlayer(RobotPlayer):
     camera: RobotCamera
     cornerCartesians: Optional[np.ndarray]
 
-    waitForCalibrationReady: ClassVar[Callable[[str], None]] = lambda corner: input(f"Move robot arm to {corner} corner (from the view of RED side)")
+    calibrateCorner: pyqtSignal = field(default=pyqtSignal(str), init=False)
+
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
     def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.Medium) -> None:
         if not camera.isCalibrated:
             raise PlayerError(f"Camera is not calibrated, cannot use it in {self.__class__.__name__}")
 
-        super().__init__(difficulty)
+        super().__init__(self, difficulty)
         self.arm = arm
         self.camera = camera
         self.cornerCartesians = None
@@ -192,7 +194,8 @@ class RobotArmPlayer(RobotPlayer):
         coordinates = []
         for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
             self.arm.detach(safe=False)
-            self.waitForCalibrationReady(corner)
+            self.calibrateCorner.emit(corner)
+            utils.event.set()
             self.arm.attach()
             coordinates.append(self.arm.position)
         self.robotArmCornerCoordinates = np.asarray(coordinates)

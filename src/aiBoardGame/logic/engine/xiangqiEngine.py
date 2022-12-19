@@ -1,6 +1,7 @@
 import logging
+from threading import Event
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 from itertools import chain, product, starmap
 from collections import defaultdict
 
@@ -16,17 +17,28 @@ class XiangqiEngine:
     generals: Dict[Side, Position]
     currentSide: Side
     moveHistory: List[MoveRecord]
+
+    _checks: List[Position]
+    _pins: Dict[Position, List[Position]]
     _validMoves: Dict[Position, List[Position]]
 
     def __init__(self) -> None:
         self.board, self.generals = createXiangqiBoard()
         self.currentSide = Side.Red
         self.moveHistory = []
-        self._validMoves = self._getAllValidMoves()
+        self._calculateValidMoves()
+
+    @property
+    def isCurrentPlayerChecked(self) -> bool:
+        return len(self._checks) > 0
 
     @property
     def isOver(self) -> bool:
         return len(self._validMoves) == 0
+
+    @property
+    def winner(self) -> Optional[Side]:
+        return self.currentSide.opponent if self.isOver else None
 
     def newGame(self) -> None:
         self.__init__()
@@ -40,27 +52,21 @@ class XiangqiEngine:
         if not isinstance(end, Position):
             end = Position(*end)
 
-        if self.board[start] == None:
+        if self.isOver:
+            raise InvalidMove(None, start, end, f"Cannot move beacuse the game is already over, start a new game or undo last move")
+        elif self.board[start] == None:
             raise InvalidMove(None, start, end, f"No piece found on {*start,}")
         elif start not in self._validMoves or end not in self._validMoves[start]:
             raise InvalidMove(self.board[start].piece, start, end)
 
         self._move(start, end)
-
         self.currentSide = self.currentSide.opponent
-        self._validMoves = self._getAllValidMoves()
-
-        if self.isOver:
-            logging.info(f"{self.currentSide.opponent.name} has delivered a mate and won!")
-        else:
-            checks, _ = self._getChecksAndPins()
-            if len(checks) > 0:
-                logging.info(f"{self.currentSide.name} is in check!")
+        self._calculateValidMoves()
 
     def undoMove(self) -> None:
         self._undoMove()
         self.currentSide = self.currentSide.opponent
-        self._validMoves = self._getAllValidMoves()
+        self._calculateValidMoves()
 
     def update(self, board: Board) -> None:
         selfPiecesAsSet = set(self.board.pieces)
@@ -68,9 +74,6 @@ class XiangqiEngine:
         
         selfDifference = list(selfPiecesAsSet - otherPiecesAsSet)
         otherDifference = list(otherPiecesAsSet - selfPiecesAsSet)
-
-        logging.info(f"self: {selfDifference}")
-        logging.info(f"other: {otherDifference}")
 
         if len(selfDifference) == 0 and len(otherDifference) == 0:
             raise InvalidMove(None, None, None, "Cannot update because no piece were moved")
@@ -110,6 +113,10 @@ class XiangqiEngine:
                 self.generals[lastMove.movedPieceEntity.side] = lastMove.start
         else:
             raise InvalidMove("Cannot undo move, game is in start state")
+
+    def _calculateValidMoves(self) -> None:
+        self._checks, self._pins = self._getChecksAndPins()
+        self._validMoves = self._getAllValidMoves(self._checks, self._pins)
 
     def _getChecksAndPins(self) -> Tuple[List[Position], Dict[Position, List[Position]]]:
         checks = []
@@ -161,11 +168,10 @@ class XiangqiEngine:
                 allPossibleMoves[position] = possibleMoves
         return allPossibleMoves
 
-    def _getAllValidMoves(self) -> Dict[Position, List[Position]]:
-        possibleMoves: Dict[Position, List[Position]] = {}
-        checks, pins = self._getChecksAndPins()
+    def _getAllValidMoves(self, checks: List[Position], pins: Dict[Position, List[Position]]) -> Dict[Position, List[Position]]:
+        possibleMoves: Dict[Position, List[Position]] = {}        
 
-        if len(checks) > 1:
+        if len(self._checks) > 1:
             possibleMoves[self.generals[self.currentSide]] = General.getPossibleMoves(self.board, self.generals[self.currentSide])
         else:
             possibleMoves = self._getAllPossibleMoves()
@@ -210,9 +216,9 @@ class XiangqiEngine:
         if self.generals[self.currentSide] in possibleMoves:
             for possibleGeneralMove in list(possibleMoves[self.generals[self.currentSide]]):
                 self._move(self.generals[self.currentSide], possibleGeneralMove)
-                checks, _ = self._getChecksAndPins()
+                checksAfterMove, _ = self._getChecksAndPins()
                 self._undoMove()
-                if len(checks) > 0:
+                if len(checksAfterMove) > 0:
                     possibleMoves[self.generals[self.currentSide]].remove(possibleGeneralMove)
 
         for piece in list(possibleMoves):

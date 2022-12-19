@@ -1,7 +1,29 @@
 import logging
+from abc import ABC
+from threading import Event
 from time import sleep
 from math import log10
+from dataclasses import dataclass, field
 from typing import List, Dict, Any, Tuple, Type, Callable, Optional
+from PyQt6.QtCore import pyqtSignal, pyqtSlot, QObject
+
+
+class FinalMeta(type(ABC), type(QObject)):
+    pass
+
+
+@dataclass
+class Utils(QObject):
+    event: Event = field(default=Event(), init=False)
+    waitForCorrection: pyqtSignal = field(default=pyqtSignal(str), init=False) 
+    statusUpdate: pyqtSignal = field(default=pyqtSignal(str), init=False)
+
+    @pyqtSlot()
+    def clearEvent(self) -> None:
+        self.event.clear()
+
+
+utils = Utils()
 
 
 def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional[Callable[[Callable[..., Any], str], Any]] = None) -> Callable:
@@ -27,6 +49,7 @@ def retry(times: int, exceptions: Tuple[Type[Exception],...], callback: Optional
 
 
 def rerunAfterCorrection(functionName: str, function: Callable[..., Any], args: List[Any], kwargs: Dict[str, Any]) -> Any:
-    input(f"Press any key if the correction was made for {functionName}")
+    utils.waitForCorrection.emit(f"Press any key if the correction was made for {functionName}")
+    utils.event.set()
     return function(*args, **kwargs)
     
