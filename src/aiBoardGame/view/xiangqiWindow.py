@@ -7,7 +7,7 @@ from threading import Thread
 from typing import Optional, List
 import numpy as np
 from PyQt6.QtWidgets import QMainWindow, QLabel, QFileDialog, QMessageBox
-from PyQt6.QtCore import pyqtSlot, QThread
+from PyQt6.QtCore import pyqtSlot, QThread, Qt
 from PyQt6.QtGui import QCloseEvent
 
 from aiBoardGame.logic import Difficulty, Board
@@ -85,6 +85,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
             self.resetCameraWidgets()
 
             self.camera = RobotCamera(feedInput=capturingDevice, resolution=(1920,1080))
+            self.camera.activate()
             self.cameraThread = Thread(target=self.updateCameraViews, kwargs={"cameraViews": [self.selectCameraView, self.calibrationCameraView]}, name="updateCameraThread")
         except CameraError as error:
             logging.error(str(error))
@@ -103,12 +104,14 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
                 self.blackSide = RobotArmPlayer(arm=self.robotArm, camera=self.camera, difficulty=Difficulty[self.difficultyComboBox.currentText()])
                 self.game = Xiangqi(camera=self.camera, redSide=self.redSide, blackSide=self.blackSide)
             else:
+                self.gameThread.terminate()
                 self.gameCameraView.clear()
                 self.boardFENLabel.clear()
         except (CameraError, RobotArmException, PlayerError, GameplayError) as error:
-            messageBox = QMessageBox(parent=self, title="Error", text="An error has occurred", buttons=QMessageBox.StandardButton.Ok)
+            messageBox = QMessageBox(QMessageBox.Icon.Warning, "Error", "An error has occurred", buttons=QMessageBox.StandardButton.Ok, parent=self)
             messageBox.setDetailedText(str(error))
-            messageBox.show()
+            messageBox.setTextFormat(Qt.TextFormat.AutoText)
+            messageBox.exec()
         else:
             self.initGameThread()
             self.newGameButton.setEnabled(False)
@@ -121,11 +124,13 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         utils.moveToThread(self.gameThread)
         self.gameThread.started.connect(self.game.play)
         self.connectGameSignals()
+        self.gameThread.start()
 
     def connectGameSignals(self) -> None:
         self.redSide.prepareStarted.connect(self.onPrepareStarted)
         self.redSide.makeMoveStarted.connect(self.onMakeMoveStarted)
-        self.blackSide.calibrateCorner.connect()
+        self.blackSide.loadLastCalibration.connect(self.onLoadLastCalibration)
+        self.blackSide.calibrateCorner.connect(self.onCalibrateCorner)
         self.game.turnChanged.connect(self.updateTurnLabel)
         self.game.engineUpdated.connect(self.updateBoardFENLabel)
         self.game.over.connect(self.onGameOver)
@@ -181,27 +186,29 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
 
     @pyqtSlot(str)
     def onCalibrateCorner(self, corner: str) -> None:
-        QMessageBox.information(self, title="Robot Arm Calibration", text=f"Press OK if you've moved the robot arm to the {corner} corner (from the perspective of the RED side)", defaultButton=QMessageBox.StandardButton.Ok)
-        utils.clearEvent()
+        QMessageBox.information(self, "Robot Arm Calibration", f"Press OK if you've moved the robot arm to the {corner} corner (from the perspective of the RED side)", defaultButton=QMessageBox.StandardButton.Ok)
+        utils.continueRun()
 
     @pyqtSlot(Board)
     def onInvalidStartPosition(self, board: Board) -> None:
-        messageBox = QMessageBox(parent=self, title="Invalid Start Position", text="Press OK if you've set up start position", buttons=QMessageBox.StandardButton.Ok)
+        messageBox = QMessageBox(QMessageBox.Icon.Warning, "Invalid Start Position", "Press OK if you've set up start position", buttons=QMessageBox.StandardButton.Ok, parent=self)
         messageBox.setDetailedText(f"{board.fen}\n\n{prettyBoard(board)}")
-        messageBox.show()
-        utils.clearEvent()
+        messageBox.setTextFormat(Qt.TextFormat.AutoText)
+        messageBox.exec()
+        utils.continueRun()
 
     @pyqtSlot(str, str)
     def onInvalidMove(self, errorMessage: str, fen: str) -> None:
-        messageBox = QMessageBox(parent=self, title="Invalid Move", text="Press OK if you've corrected the previous move", buttons=QMessageBox.StandardButton.Ok)
+        messageBox = QMessageBox(QMessageBox.Icon.Warning, "Invalid Move", "Press OK if you've corrected the previous move", buttons=QMessageBox.StandardButton.Ok, parent=self)
         messageBox.setDetailedText(f"{errorMessage}\n\n{fen}\n\n{prettyBoard(fen)}")
-        messageBox.show()
-        utils.clearEvent()
+        messageBox.setTextFormat(Qt.TextFormat.AutoText)
+        messageBox.exec()
+        utils.continueRun()
 
     @pyqtSlot()
     def onPrepareStarted(self) -> None:
-        QMessageBox.information(self, title="Player Preparation", text="Press OK if you've prepared for the game", defaultButton=QMessageBox.StandardButton.Ok)
-        utils.clearEvent()
+        QMessageBox.information(self, "Player Preparation", "Press OK if you've prepared for the game", defaultButton=QMessageBox.StandardButton.Ok)
+        utils.continueRun()
 
     @pyqtSlot(str)
     def onDifficultyChange(self, difficulty: str) -> None:
@@ -212,13 +219,20 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
 
     @pyqtSlot(str)
     def onWaitForCorrection(self, message: str) -> None:
-        QMessageBox.information(self, title="Wating For Correction", text=message, defaultButton=QMessageBox.StandardButton.Ok)
-        utils.clearEvent()
+        QMessageBox.information(self, "Wating For Correction", message, defaultButton=QMessageBox.StandardButton.Ok)
+        utils.continueRun()
 
     @pyqtSlot()
     def onMakeMoveStarted(self) -> None:
-        QMessageBox.information(self, title="Player's Turn", text="Press OK if you've made your move", defaultButton=QMessageBox.StandardButton.Ok)
-        utils.clearEvent()
+        QMessageBox.information(self, "Player's Turn", "Press OK if you've made your move", defaultButton=QMessageBox.StandardButton.Ok)
+        utils.continueRun()
+
+    @pyqtSlot()
+    def onLoadLastCalibration(self) -> None:
+        reply = QMessageBox.question(self, "Load Calibration", "Do you want to load last game's robot arm calibration?", defaultButton=QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.blackSide.loadCalibration()
+        utils.continueRun()
 
     @pyqtSlot()
     def showManualCalibration(self) -> None:
@@ -263,9 +277,9 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
             self.camera.calibrate(checkerBoardImages=self.calibrationImages, checkerBoardShape=(self.horizontalVerticiesSpinBox.value(), self.verticalVerticiesSpinBox.value()))
         except CameraError:
             logging.exception("Calibration failed")
-            QMessageBox.critical(self, title="Calibration", text="Calibration failed", defaultButton=QMessageBox.StandardButton.Ok)
+            QMessageBox.critical(self, "Calibration", "Calibration failed", defaultButton=QMessageBox.StandardButton.Ok)
         else:
-            reply = QMessageBox.question(self, title="Save Calibration", text="Do you want to save the parameters used for camera calibration?", defaultButton=QMessageBox.StandardButton.Yes)
+            reply = QMessageBox.question(self, "Save Calibration", "Do you want to save the parameters used for camera calibration?", defaultButton=QMessageBox.StandardButton.Yes)
             if reply == QMessageBox.StandardButton.Yes:
                 self.showSaveCalibrationFileDialog()
         finally:
@@ -288,6 +302,8 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
         self.camera = None
         if self.cameraThread is not None:
             self.cameraThread.join()
+        if self.gameThread is not None:
+            self.gameThread.terminate()
         return super().closeEvent(event)
 
 

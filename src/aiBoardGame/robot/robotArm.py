@@ -88,7 +88,7 @@ class RobotArm:
         try:
             self.swift.connect()
             self.swift.waiting_ready(timeout=3)
-            logging.debug("Device info:\n{info}", info=self.info)
+            logging.debug(f"Device info:\n{self.info}")
         except Exception as exception:
             raise RobotArmException("Cannot connect to uArm Swift") from exception
         else:

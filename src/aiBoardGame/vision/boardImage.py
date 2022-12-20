@@ -162,7 +162,7 @@ class BoardImage:
         detectedCircles = sorted(detectedCircles, key=lambda circle: np.linalg.norm(normalizedTileCenter - np.asarray(circle[0:1])))
         circle = np.asarray(detectedCircles[0])
         circle[:2] += (tileCenter - self.tileSize/2).astype(np.uint16)
-        logging.debug("{tileCenter} ---> {circleCenter} : {distance} <= {threshold} ?", tileCenter=tileCenter, circleCenter=(circle[0], circle[1]), distance=np.linalg.norm(tileCenter - circle[:2]), threshold=self.fileStep/self.pieceThresholdDivisor)
+        logging.debug(f"{tileCenter} ---> {*circle[:2],} : {np.linalg.norm(tileCenter - circle[:2])} <= {self.fileStep/self.pieceThresholdDivisor} ?")
         if np.linalg.norm(tileCenter - circle[:2]) > self.fileStep/self.pieceThresholdDivisor:
             return None
 
@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
         startTime = time.time()
         board = classifier.predictBoard(boardImage)
-        logging.info("predict time: {time:.4f}s", time=time.time() - startTime)
+        logging.info(f"predict time: {time.time() - startTime:.4f}s")
 
         logging.info(prettyBoard(board, colors=True))
 

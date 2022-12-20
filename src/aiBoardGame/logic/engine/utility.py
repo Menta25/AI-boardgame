@@ -1,3 +1,5 @@
+# pylint: disable=anomalous-backslash-in-string
+
 import re
 from math import floor
 from collections import defaultdict
@@ -10,7 +12,7 @@ from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, C
 SOLDIER_RANK_OFFSET = 3
 CANNON_RANK_OFFSET = 2
 
-_STR_BOARD = r"""\
+_STR_BOARD = """\
 9 ┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓
   ┃   ┃   ┃   ┃ \ ┃ / ┃   ┃   ┃   ┃
 8 ┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫

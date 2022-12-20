@@ -23,6 +23,10 @@ class GameplayError(Exception):
         return self.message
 
 class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
+    turnChanged = pyqtSignal(int)
+    engineUpdated = pyqtSignal(str)
+    over = pyqtSignal(Side, Player)
+
     def __init__(self, redSide: Player, blackSide: Player) -> None:
         ABC.__init__(self)
         QObject.__init__(self)
@@ -30,9 +34,6 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
         self._engine = XiangqiEngine()
         self._turn = 0
 
-        self.turnChanged = pyqtSignal(int)
-        self.engineUpdated = pyqtSignal(str)
-        self.over = pyqtSignal(Side, Player)
 
     @property
     def turn(self) -> int:
@@ -96,14 +97,14 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
             if moves % 2 == 0:
                 self.turn += 1
                 logging.info("")
-                logging.info("Turn {turn}", turn=self.turn)
+                logging.info(f"Turn {self.turn}")
                 logging.info("")
             try:
                 self.currentPlayer.makeMove(self._engine.fen)
                 if not self.currentPlayer.isConceding:
                     self._updateEngine()
                     if self._engine.isCurrentPlayerChecked:
-                        text = f"{self.currentSide} {self.currentPlayer} is in check!"
+                        text = f"{self.currentSide.name} {self.currentPlayer.__class__.__name__} is in check!"
                         logging.info(text)
                         utils.statusUpdate.emit(text)
                 else:
@@ -114,9 +115,9 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
                 self._handleInvalidMove(error)
             else:
                 moves += 1
-                self.engineUpdated(self._engine.fen)
+                self.engineUpdated.emit(self._engine.fen)
         side, player = self.winner
-        logging.info("The game has ended, {side} {player} has won", side=side.name, player=player.__class__.__name__)
+        logging.info(f"The game has ended, {side.name} {player.__class__.__name__} has won")
         self.over.emit(side, player)
 
     @abstractmethod
@@ -151,6 +152,10 @@ class TerminalXiangqi(XiangqiBase):
         logging.error(str(error))
 
 class Xiangqi(XiangqiBase):
+    newBoardImage = pyqtSignal(BoardImage)
+    invalidStartPosition = pyqtSignal(Board)
+    invalidMove = pyqtSignal(str, str)
+
     def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
         if not camera.isCalibrated:
             raise GameplayError("Camera is not calibrated, cannot play Xiangqi")
@@ -159,25 +164,21 @@ class Xiangqi(XiangqiBase):
         self._camera = camera
         self._classifier = XiangqiPieceClassifier(weights=XiangqiPieceClassifier.baseWeightsPath, device=XiangqiPieceClassifier.getAvailableDevice())
 
-        self.newBoardImage = pyqtSignal(BoardImage)
-        self.invalidStartPosition = pyqtSignal(Board)
-        self.invalidMove = pyqtSignal(str, str)
-
     def _prepare(self) -> None:
         if not self._camera.isActive:
             self._camera.activate()
 
         super()._prepare()
         while (board := self._analyseBoard()) != self._engine.board:
-            logging.error(prettyBoard(board, colors=True))
+            logging.error(f"\n{prettyBoard(board, colors=True)}")
             self.invalidStartPosition.emit(board)
-            utils.event.set()
+            utils.pauseRun()
 
 
     @retry(times=3, exceptions=(InvalidMove))
     def _updateEngine(self) -> None:
         board = self._analyseBoard()
-        logging.debug(prettyBoard(board, colors=True))
+        logging.debug(f"\n{prettyBoard(board, colors=True)}")
         self._engine.update(board)
 
     @retry(times=3, exceptions=(CameraError), callback=rerunAfterCorrection)
@@ -189,16 +190,17 @@ class Xiangqi(XiangqiBase):
 
     def _handleInvalidMove(self, error: InvalidMove) -> None:
         logging.info("Engine state:")
-        logging.info(prettyBoard(self._engine.board, colors=True))
+        logging.info(f"\n{prettyBoard(self._engine.board, colors=True)}")
         if isinstance(self.currentPlayer, RobotArmPlayer):
             while True:
                 try:
                     logging.error(str(error))
                     self.invalidMove.emit(str(error), self._engine.fen)
-                    utils.event.set()
+                    utils.pauseRun()
                     self._updateEngine()
                 except InvalidMove as newError:
                     logging.error(str(newError))
+                    utils.statusUpdate.emit(str(newError))
         else:
             logging.error(str(error))
             utils.statusUpdate.emit(str(error))
