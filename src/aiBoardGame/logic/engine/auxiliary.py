@@ -1,3 +1,5 @@
+"""Module for various auxiliary class"""
+
 from __future__ import annotations
 
 from math import sqrt
@@ -10,26 +12,40 @@ Piece = TypeVar("Piece")
 
 
 class Side(IntEnum):
+    """Enum class for board sides"""
     BLACK = -1
     RED = 1
 
     @property
     def opponent(self) -> Side:
+        """Get opponent side"""
         return Side(-self)
 
     @property
     def fen(self) -> str:
+        """Get side's FEN"""
         return "w" if self == Side.RED else "b"
 
 class Delta(NamedTuple):
+    """Class for indicating movement direction and distance"""
     file: Union[int, float]
     rank: Union[int, float]
 
     def normalize(self) -> Delta:
+        """Normalize movement vector
+
+        :return: Normalized delta
+        :rtype: Delta
+        """
         length = abs(self)
         return Delta(self.file/length, self.rank/length)
 
     def round(self) -> Delta:
+        """Round movement vector
+
+        :return: Rounded delta
+        :rtype: Delta
+        """
         return Delta(round(self.file), round(self.rank))
 
     def __add__(self, other: Union[Delta, Tuple[int, int]]) -> Delta:
@@ -56,6 +72,7 @@ class Delta(NamedTuple):
         return sqrt(self.file**2 + self.rank**2)
 
 class Position(NamedTuple):
+    """Class for storing positions on board"""
     file: int
     rank: int
 
@@ -110,15 +127,30 @@ class Position(NamedTuple):
 
 
     def isBetween(self, first: Position, second: Position) -> bool:
+        """Check if position is between two other positions
+
+        :param first: First position
+        :type first: Position
+        :param second: Second position
+        :type second: Position
+        :return: Is position between the other two
+        :rtype: bool
+        """
         return first <= self <= second or first >= self >= second
 
 
 class BoardEntity(NamedTuple):
+    """Class for storing pieces on board"""
     side: Side
     piece: Type[Piece]
 
     @property
     def fen(self) -> str:
+        """Get piece's FEN
+
+        :return: Piece's FEN
+        :rtype: str
+        """
         caseFunction = str.upper if self.side == Side.RED else str.lower
         return caseFunction(self.piece.abbreviations["fen"])
 
@@ -127,6 +159,7 @@ class BoardEntity(NamedTuple):
 
 
 class SideState(Dict[Position, Type[Piece]]):
+    """Helper class for storing a side's pieces on board"""
     def __getitem__(self, key: Union[Position, Tuple[int, int]]) -> Optional[Type[Piece]]:
         if isinstance(key, tuple):
             key = Position(*key)
@@ -149,26 +182,40 @@ class SideState(Dict[Position, Type[Piece]]):
 
 @dataclass(init=False)
 class Board(Dict[Side, SideState]):
+    """Class for tracking gameboard state"""
     fileBounds: ClassVar[Tuple[int, int]] = (0, 9)
+    """File bounds that pieces operate in"""
     rankBounds: ClassVar[Tuple[int, int]] = (0, 10)
+    """Rank bounds that pieces operate in"""
 
     fileCount: ClassVar[int] = sum(fileBounds)
+    """File bound length"""
     rankCount: ClassVar[int] = sum(rankBounds)
+    """Rank bound length"""
 
     def __init__(self) -> None:
         self.update({side: SideState() for side in Side})
 
     @classmethod
     def isInBounds(cls, position: Position) -> bool:
+        """Checks if position is in operation bounds
+
+        :param position: Position
+        :type position: Position
+        :return: Given position is in or not in bounds
+        :rtype: bool
+        """
         return (cls.fileBounds[0], cls.rankBounds[0]) <= position < (cls.fileBounds[1], cls.rankBounds[1])
 
     @property
     def pieces(self) -> List[Tuple[Position, BoardEntity]]:
+        """Pieces on board"""
         allPieces = ((position, BoardEntity(side, piece)) for side, sideState in self.items() for position, piece in sideState.items())
         return sorted(allPieces, key=lambda item: (*item[0],))
 
     @property
     def fen(self) -> str:
+        """Board's FEN"""
         fen = ""
         for rank in range(self.rankCount-1, -1, -1):
             emptyCount = 0

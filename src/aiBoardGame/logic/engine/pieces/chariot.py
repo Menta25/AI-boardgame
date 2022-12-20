@@ -1,3 +1,5 @@
+"""Module for the chariot piece"""
+
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List
 from itertools import chain, product, starmap
@@ -10,6 +12,7 @@ from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
 
 @dataclass(init=False)
 class Chariot(Piece):
+    """Chariot piece class"""
     abbreviations: ClassVar[Dict[str, str]] = {
         "base": "R",
         "fen": "R"

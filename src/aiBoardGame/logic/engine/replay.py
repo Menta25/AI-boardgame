@@ -1,3 +1,5 @@
+"""Replay a game from stored matches"""
+
 import logging
 from pathlib import Path
 from time import sleep
@@ -9,6 +11,14 @@ from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine
 
 
 def replayGame(gameRecordPath: Path, intermission: Optional[int] = None) -> None:
+    """Replay a Xiangqi game
+
+    :param gameRecordPath: File with moves made during the game
+    :type gameRecordPath: Path
+    :param intermission: Time between moves, defaults to None
+    :type intermission: Optional[int], optional
+    :raises InvalidMove: Could not convert notation to move
+    """
     game = XiangqiEngine()
     with gameRecordPath.open(mode="r") as gameRecordFile:
         for turn, notation in enumerate(gameRecordFile):

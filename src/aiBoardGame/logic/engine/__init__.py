@@ -1,3 +1,5 @@
+"""Pieces package"""
+
 from aiBoardGame.logic.engine.move import MoveRecord, InvalidMove
 from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine
 from aiBoardGame.logic.engine.auxiliary import Side, Delta, Position, BoardEntity, SideState, Board

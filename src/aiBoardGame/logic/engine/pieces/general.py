@@ -1,3 +1,5 @@
+"""Module for the general piece"""
+
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Tuple
 from itertools import chain, product, starmap
@@ -16,6 +18,7 @@ FILE_MARGIN = (Piece.fileLength() - NEW_FILE_LENGTH) // 2
 
 @dataclass(init=False)
 class General(Piece):
+    """General piece class"""
     fileBounds: ClassVar[Tuple[int, int]] = (Piece.fileBounds[0] + FILE_MARGIN, Piece.fileBounds[1] - FILE_MARGIN)
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
 

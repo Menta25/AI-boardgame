@@ -1,3 +1,5 @@
+"""Module for the elephant piece"""
+
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Tuple
 from itertools import product, starmap
@@ -11,6 +13,7 @@ NEW_RANK_LENGTH = Piece.rankLength() // 2
 
 @dataclass(init=False)
 class Elephant(Piece):
+    """Elephant piece class"""
     fileBounds: ClassVar[Tuple[int, int]] = Piece.fileBounds
     rankBounds: ClassVar[Tuple[int, int]] = (Piece.rankBounds[0], NEW_RANK_LENGTH)
 

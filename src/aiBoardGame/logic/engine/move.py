@@ -1,3 +1,5 @@
+"""Piece movement history on board"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -11,6 +13,7 @@ Piece = TypeVar("Piece")
 
 @dataclass(frozen=True)
 class InvalidMove(Exception):
+    """Exception for invalid move on board"""
     piece: Type[Piece]
     start: Position
     end: Position
@@ -22,6 +25,7 @@ class InvalidMove(Exception):
 
 @dataclass(frozen=True)
 class MoveRecord:
+    """Class for storing movement on board"""
     start: Position
     end: Position
     movedPieceEntity: BoardEntity
@@ -29,6 +33,17 @@ class MoveRecord:
 
     @classmethod
     def make(cls, board: Board, start: Position, end: Position) -> MoveRecord:
+        """Create move easily
+
+        :param board: Board the move was made one
+        :type board: Board
+        :param start: Move's start position
+        :type start: Position
+        :param end: Move's end position
+        :type end: Position
+        :return: Created move record
+        :rtype: MoveRecord
+        """
         return MoveRecord(
             start=start,
             end=end,

@@ -1,3 +1,5 @@
+"""Module for utility functions"""
+
 import re
 from math import floor
 from collections import defaultdict
@@ -35,6 +37,7 @@ _STR_BOARD = r"""\
 
 
 class FontFormat:
+    """Font formats in terminal"""
     HEADER = "\033[95m"
     OKBLUE = "\033[94m"
     OKCYAN = "\033[96m"
@@ -47,6 +50,11 @@ class FontFormat:
 
 
 def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
+    """Load an empty Xiangqi board with starting pieces
+
+    :return: Xiangqi board and general positions
+    :rtype: Tuple[Board, Dict[Side, Tuple[int, int]]]
+    """
     board = Board()
 
     uniquePieces = [Chariot, Horse, Elephant, Advisor, General]
@@ -77,6 +85,17 @@ _OPERATOR_MAP = {
 
 
 def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
+    """Convert a basic Xiangqi chess notation to a move
+
+    :param board: Board to move on
+    :type board: Board
+    :param side: Side that moves
+    :type side: Side
+    :param notation: Move notation
+    :type notation: str
+    :return: Move corresponding to the move
+    :rtype: Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]
+    """
     try:
         notationRegEx = re.match(r"(?P<tandem>[+-])?(?P<piece>\w)(?P<formerFile>\d)?(?P<direction>[+-=.,])(?P<newFileOrDeltaRank>\d)", notation)
         if notationRegEx is None:
@@ -127,8 +146,17 @@ def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[P
 
 
 def fenToBoard(fenStr: str) -> Board:
+    """Convert FEN to a board
+
+    :param fenStr: FEN
+    :type fenStr: str
+    :raises ValueError: Invalid game FEN
+    :raises ValueError: Invalid board FEN
+    :return: Board from FEN
+    :rtype: Board
+    """
     fenParts = fenStr.split(" ")
-    if len(fenParts) != 6:
+    if len(fenParts) not in [1, 6]:
         raise ValueError
 
     boardFenParts = fenParts[0].split("/")
@@ -157,6 +185,20 @@ def prettyBoard(board: Union[Board, str], colors: Literal[True], lastMove: Optio
     ...
 
 def prettyBoard(board: Union[Board, str], colors: bool = False, lastMove: Optional[Tuple[Position, Position]] = None) -> str:
+    """Create a pretty board string representation
+
+    :param board: Board to make pretty
+    :type board: Union[Board, str]
+    :param colors: Use colors in string representation, defaults to False
+    :type colors: bool, optional
+    :param lastMove: Mark given move, defaults to None
+    :type lastMove: Optional[Tuple[Position, Position]], optional
+    :raises ValueError: Invalid game FEN
+    :raises ValueError: Invalid board FEN
+    :raises TypeError: Invalid board type
+    :return: Pretty board string representation
+    :rtype: str
+    """
     if isinstance(board, Board):
         pieces = board.pieces
         if len(pieces) > 0:

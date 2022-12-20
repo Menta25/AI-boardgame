@@ -1,3 +1,5 @@
+"""Module for the soldier piece"""
+
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List
 
@@ -10,6 +12,7 @@ _RIVER_RANK = (Piece.rankLength() + 1) // 2
 
 @dataclass(init=False)
 class Soldier(Piece):
+    """Soldier piece class"""
     abbreviations: ClassVar[Dict[str, str]] = {
         "base": "S",
         "fen": "P"

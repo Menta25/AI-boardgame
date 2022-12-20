@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "AI-boardgame"
 description = "A thesis project about using a robotic arm, computer vision and reinforcement learning to play a boardgame"
-version = "0.0.1"
+version = "1.0.0"
 authors = [{name = "Deák Árpád", email = "cryso.dk.rp@gmail.com"}]
 requires-python = ">=3.8"
 readme = "README.md"
@@ -22,12 +22,18 @@ dependencies = [
     "uArm-Python-SDK @ git+https://github.com/uArm-Developer/uArm-Python-SDK.git@2.0"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pylint",
+    "Sphinx",
+    "sphinx_rtd_theme"
+]
+
 [project.urls]
 GitHub = "https://github.com/Menta25/AI-boardgame"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-namespaces = false
 
 [tool.pylint.main]
 fail-under = 10

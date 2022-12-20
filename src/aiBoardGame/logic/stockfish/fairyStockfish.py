@@ -1,3 +1,5 @@
+"""Communication with Fairy-Stockfish"""
+
 from enum import Enum, auto, unique
 from pathlib import Path
 from subprocess import Popen, PIPE
@@ -12,6 +14,7 @@ _BINARY_PATH = Path("src/aiBoardGame/logic/stockfish/fairy-stockfish-largeboard_
 
 @unique
 class Difficulty(Enum):
+    """Enum class for Fairy-Stockfish difficulty"""
     EASY = auto(),
     MEDIUM = auto(),
     HARD = auto()
@@ -25,9 +28,20 @@ _GO_ARGS = {
 
 
 class FairyStockfish:
+    """A wrapper class for the Fairy-Stockfish binary. Used for generating valid moves
+    from a given boardgame state"""
+
     baseBinaryPath: ClassVar[Path] = _BINARY_PATH
+    """Default Fairy-Stockfish binary path"""
 
     def __init__(self, binaryPath: Path = _BINARY_PATH, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
+        """Constructs a FairyStockFish object
+
+        :param binaryPath: Binary executable's path, defaults to _BINARY_PATH
+        :type binaryPath: Path, optional
+        :param difficulty: Defines the arguments passed to the go command, defaults to Difficulty.MEDIUM
+        :type difficulty: Difficulty, optional
+        """
         self._process = Popen(
             args=[binaryPath.as_posix()],
             stdin=PIPE, stdout=PIPE,
@@ -39,6 +53,11 @@ class FairyStockfish:
 
     @property
     def currentFen(self) -> str:
+        """Last FEN value set by the :meth:`~position` method
+
+        :return: Current FEN value used for generating move
+        :rtype: str
+        """
         return self._currentFen
 
     def __del__(self) -> None:
@@ -64,10 +83,21 @@ class FairyStockfish:
         self._communicate(["ucci"])
 
     def position(self, fen: str) -> None:
+        """Sets Fairy-Stockfish's boardgame state
+
+        :param fen: Boardgame's FEN
+        :type fen: str
+        """
         self._communicate(["position", "fen", fen])
         self._currentFen = fen
 
     def go(self) -> str:
+        """Generates move based on current boardgame state
+
+        :raises RuntimeError: No answer from process
+        :return: Chess move notation
+        :rtype: str
+        """
         depth, movetime = _GO_ARGS[self.difficulty]
         out = self._communicate([
             "go",
@@ -79,6 +109,14 @@ class FairyStockfish:
         return out[-1].split(" ")[1]
 
     def nextMove(self, fen: str) -> Optional[Tuple[Position, Position]]:
+        """Sets Fairy-Stockfish's boardgame state and generates a move based on it.
+        Bundles :meth:`~position` and :meth:`~go` in a single method for convenience.
+
+        :param fen: Boardgame's FEN
+        :type fen: str
+        :return: Move's start and end position or nothing if Fairy-Stockfish cannot generate a move
+        :rtype: Optional[Tuple[Position, Position]]
+        """
         self.position(fen)
         go = self.go()
         return self._algebraicMoveToPositions(go) if go != "(none)" else None
