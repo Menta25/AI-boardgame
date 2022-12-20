@@ -13,6 +13,10 @@ dist
 # Cache
 *__pycache__
 
+# Docs
+_build
+_autosummary
+
 # Other
 *.npz
 *.pt
