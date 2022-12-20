@@ -1,5 +1,6 @@
 # pylint: disable=no-name-in-module, no-member
 
+import logging
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Tuple, Optional, ClassVar
@@ -27,6 +28,9 @@ class PlayerError(Exception):
 class Player(ABC, QObject, metaclass=FinalMeta):
     isConceding: bool = field(default=False, init=False)
 
+    def __post_init__(self) -> None:
+        super().__init__()
+
     @abstractmethod
     def prepare(self) -> None:
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented prepare() method")
@@ -41,7 +45,7 @@ class TerminalPlayer(Player):
     move: Optional[Tuple[Position, Position]] = field(default=None, init=False)
 
 
-@dataclass
+@dataclass(init=False)
 class HumanTerminalPlayer(TerminalPlayer):
     def prepare(self) -> None:
         input("Press ENTER if you are ready to start the game")
@@ -73,11 +77,11 @@ class HumanPlayer(Player):
 
     def prepare(self) -> None:
         self.prepareStarted.emit()
-        utils.event.set()
+        utils.pauseRun()
 
     def makeMove(self, fen: str) -> None:
         self.makeMoveStarted.emit()
-        utils.event.set()
+        utils.pauseRun()
 
 
 @dataclass(init=False)
@@ -85,6 +89,7 @@ class RobotPlayer(Player):
     stockfish: FairyStockfish
 
     def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
+        super().__init__()
         self.stockfish = FairyStockfish(difficulty=difficulty)
 
     @property
@@ -117,8 +122,8 @@ class RobotArmPlayer(RobotPlayer):
     camera: RobotCamera
     cornerCartesians: Optional[np.ndarray]
 
-    calibrateCorner: pyqtSignal
-    loadLastCalibration: pyqtSignal
+    calibrateCorner: pyqtSignal = pyqtSignal(str)
+    loadLastCalibration: pyqtSignal = pyqtSignal()
 
     _loaded: bool
 
@@ -132,9 +137,6 @@ class RobotArmPlayer(RobotPlayer):
         self.arm = arm
         self.camera = camera
         self.cornerCartesians = None
-
-        self.calibrateCorner = pyqtSignal(str)
-        self.loadLastCalibration = pyqtSignal()
 
         self._loaded = False
 
@@ -202,7 +204,7 @@ class RobotArmPlayer(RobotPlayer):
     def _calibrate(self) -> None:
         if self._baseCalibPath.exists():
             self.loadLastCalibration.emit()
-            utils.event.set()
+            utils.pauseRun()
 
         if not self._loaded:
             self.arm.detach(safe=True)
@@ -210,7 +212,7 @@ class RobotArmPlayer(RobotPlayer):
             for corner in ["TOP LEFT", "TOP RIGHT", "BOTTOM RIGHT", "BOTTOM LEFT"]:
                 self.arm.detach(safe=False)
                 self.calibrateCorner.emit(corner)
-                utils.event.set()
+                utils.pauseRun()
                 self.arm.attach()
                 cartesians.append(self.arm.position)
             self.cornerCartesians = np.asarray(cartesians)[:,:2]

@@ -76,6 +76,8 @@ class XiangqiEngine:
         if len(selfDifference) == 0 and len(otherDifference) == 0:
             raise InvalidMove(None, None, None, "Cannot update because no piece were moved")
         elif not (1 <= len(selfDifference) <= 2 and len(otherDifference) == 1):
+            logging.error(selfDifference)
+            logging.error(otherDifference)
             raise InvalidMove(None, None, None, "Cannot update because multiple piece were moved")
 
         end, movedBoardEntity = otherDifference[0]
@@ -243,7 +245,7 @@ if __name__ == "__main__":
             notation = command.split(" ")[1]
             startPosition, endPosition = baseNotationToMove(game.board, game.currentSide, notation)
             if startPosition is not None and endPosition is not None:
-                logging.info("From {start} to {end}", start=(startPosition[0], startPosition[1]), end=(endPosition[0], endPosition[1]))
+                logging.info(f"From {*startPosition,} to {*endPosition,}")
             else:
                 logging.info("Cannot convert notation to move")
         else:

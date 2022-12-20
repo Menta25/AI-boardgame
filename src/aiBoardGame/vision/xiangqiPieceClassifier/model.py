@@ -115,7 +115,7 @@ class XiangqiPieceClassifier:
         since = time.time()
 
         for epoch in range(self.epochCount):
-            logging.debug("Epoch {epoch}/{epochCount}", epoch=epoch+1, epochCount=self.epochCount)
+            logging.debug(f"Epoch {epoch+1}/{self.epochCount}")
             logging.debug("-"*10)
 
             for phase, dataLoader in phases.items():
@@ -150,7 +150,7 @@ class XiangqiPieceClassifier:
                 epochLoss = runningLoss / len(dataLoader.dataset.indices)
                 epochAccuracy = runningCorrects.double() / len(dataLoader.dataset.indices)
 
-                logging.debug("{phase} Loss: {loss:.4f} Accuracy: {accuracy:.4f}", phase=phase.capitalize(), loss=epochLoss, accuracy=epochAccuracy)
+                logging.debug(f"{phase.capitalize()} Loss: {epochLoss:.4f} Accuracy: {epochAccuracy:.4f}")
 
                 if phase == "validation":
                     earlyStopping(self.model, epochLoss)
@@ -164,7 +164,7 @@ class XiangqiPieceClassifier:
             logging.debug("")
 
         timeElapsed = time.time() - since
-        logging.info("Training complete in {minutes:.0f}m {seconds:.0f}s", minutes=timeElapsed // 60, seconds=timeElapsed % 60)
+        logging.info(f"Training complete in {timeElapsed // 60:.0f}m {timeElapsed % 60:.0f}s")
 
         self.loadWeights(earlyStopping.checkpointPath)
         return self
@@ -187,7 +187,7 @@ class XiangqiPieceClassifier:
 
         for pieceClass, correctCount in correctPredictions.items():
             accuracy = 100 * float(correctCount) / totalPredictions[pieceClass]
-            logging.info("Accuracy for class: {pieceClass} is {accuracy:.1f} %", pieceClass=pieceClass, accuracy=accuracy)
+            logging.info(f"Accuracy for class: {pieceClass} is {accuracy:.1f} %")
 
     def predict(self, inputTensor: Tensor) -> List[Optional[BoardEntity]]:
         if len(inputTensor.shape) == 3:
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     DEVICE = XiangqiPieceClassifier.getAvailableDevice()
-    logging.info("Using {device} device", device=DEVICE)
+    logging.info(f"Using {DEVICE} device")
 
     xiangqiDatasetRoot = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/classes")
     train, validation, test = XiangqiPieceDataset.split(root=xiangqiDatasetRoot, batchSize=XiangqiPieceClassifier.batchSize, numWorkers=4)
@@ -269,7 +269,7 @@ if __name__ == "__main__":
     pieceImage = cv.cvtColor(pieceImage, cv.COLOR_BGR2RGB)
 
     pred = classifier.predictTile(pieceImage)
-    logging.info("Label: {label}, Prediction: {prediction}", label=pieceImagePath.parent.name, prediction=pred)
+    logging.info(f"Label: {pieceImagePath.parent.name}, Prediction: {pred}")
 
     saveModelWeights = input("Do you want to save model weights? (yes/other) ") == "yes"
     if saveModelWeights is True:

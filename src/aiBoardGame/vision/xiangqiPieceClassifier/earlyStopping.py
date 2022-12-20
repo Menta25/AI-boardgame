@@ -29,7 +29,7 @@ class EarlyStopping:
             self.saveCheckpoint(model, validationLoss)
         elif accuracy < self.bestScore + self.delta:
             self.counter += 1
-            logging.debug("EarlyStopping Counter: {counter} out of {patience}", counter=self.counter, patience=self.patience)
+            logging.debug(f"EarlyStopping Counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.isEarlyStop = True
         else:

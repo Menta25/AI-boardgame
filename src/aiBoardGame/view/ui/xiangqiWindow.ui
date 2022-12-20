@@ -117,7 +117,7 @@
               <item>
                <widget class="QLabel" name="turnLabel">
                 <property name="text">
-                 <string>Turn</string>
+                 <string>Turn 0</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>

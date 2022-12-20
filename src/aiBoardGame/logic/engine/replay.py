@@ -22,7 +22,7 @@ def replayGame(gameRecordPath: Path, intermission: Optional[int] = None) -> None
     game = XiangqiEngine()
     with gameRecordPath.open(mode="r") as gameRecordFile:
         for turn, notation in enumerate(gameRecordFile):
-            logging.info("\nTurn {turn} - {side}", turn=turn+1, side=game.currentSide)
+            logging.info(f"\nTurn {turn+1} - {game.currentSide}")
             start, end = baseNotationToMove(game.board, game.currentSide, notation.rstrip("\n"))
             if start is None or end is None:
                 raise InvalidMove(None, None, None, "Could not convert notation to move")

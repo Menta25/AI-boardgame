@@ -266,22 +266,25 @@ class RobotCameraInterface(AbstractCameraInterface):
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
 
-        corners = self._detectCorners(image)
-        if len(corners) != 4:
-            corners = self._detectArUcoCorners(image)
+        try:
+            corners = self._detectCorners(image)
+            if len(corners) != 4:
+                corners = self._detectArUcoCorners(image)
 
-        transformedCorners = np.array([
-            [0, 0],
-            [self._boardWidth, 0],
-            [self._boardWidth, self._boardHeight],
-            [0, self._boardHeight]
-        ], dtype=np.float32) + self._boardOffset
+            transformedCorners = np.array([
+                [0, 0],
+                [self._boardWidth, 0],
+                [self._boardWidth, self._boardHeight],
+                [0, self._boardHeight]
+            ], dtype=np.float32) + self._boardOffset
 
-        warpMatrix = cv.getPerspectiveTransform(corners, transformedCorners)
+            warpMatrix = cv.getPerspectiveTransform(corners, transformedCorners)
 
-        warpSize = (np.array([self._boardWidth, self._boardHeight]) + 2*self._boardOffset).astype(int)
-        warpedBoard = cv.warpPerspective(image, warpMatrix, warpSize, flags=cv.INTER_LINEAR)
-        return BoardImage(warpedBoard, int(self._boardOffset[0]), int(self._boardOffset[1]), int(self._boardWidth), int(self._boardHeight))
+            warpSize = (np.array([self._boardWidth, self._boardHeight]) + 2*self._boardOffset).astype(int)
+            warpedBoard = cv.warpPerspective(image, warpMatrix, warpSize, flags=cv.INTER_LINEAR)
+            return BoardImage(warpedBoard, int(self._boardOffset[0]), int(self._boardOffset[1]), int(self._boardWidth), int(self._boardHeight))
+        except CameraError as error:
+            raise CameraError("Could not detect board") from error
 
 
 class RobotCamera(RobotCameraInterface):
@@ -311,7 +314,7 @@ class RobotCamera(RobotCameraInterface):
             self.isActive = True
             self._thread = Thread(target=self._update, daemon=True)
             self._thread.start()
-            sleep(self.interval+0.2)
+            sleep(self.interval+1)
 
     def deactivate(self) -> None:
         if self.isActive:
