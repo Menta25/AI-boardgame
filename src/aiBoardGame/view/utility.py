@@ -1,3 +1,5 @@
+"""Utility functions for GUI"""
+
 # pylint: disable=no-name-in-module, no-member
 
 from typing import Optional

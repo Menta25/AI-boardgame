@@ -1,3 +1,5 @@
+"""Camera control and image extraction"""
+
 # pylint: disable=no-member
 
 from __future__ import annotations
@@ -18,7 +20,7 @@ _cameraLogger = logging.getLogger(__name__)
 
 
 class Resolution(NamedTuple):
-    """Store width and height in pixel"""
+    """Named tuple for resolution"""
     width: int
     height: int
 
@@ -26,24 +28,29 @@ class Resolution(NamedTuple):
         return f"{self.width}x{self.height}"
 
 
-class FocalLength(NamedTuple):
-    horizontal: float
-    vertical: float
-
-
 class CameraError(Exception):
+    """Exception for camera errors"""
     def __init__(self, message: str) -> None:
         super().__init__(message)
         self.message = message
 
 
 class AbstractCameraInterface:
-    """Class for handling camera input"""
+    """Class for handling camera output and calibration"""
     calibrated: ClassVar[Event] = Event()
+    """Threading event set after calibration"""
     calibrationMinPatternCount: ClassVar[int] = 5
+    """Minimum image count for calibration"""
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
+        """Constructs an AbstractCameraInterface object
+
+        :param resolution: Resolution of the camera
+        :type resolution: Union[Resolution, Tuple[int, int]]
+        :param intrinsicsFile: Calibration file that stores camera intrinsics, defaults to None
+        :type intrinsicsFile: Optional[Path], optional
+        """
         if isinstance(resolution, tuple):
             resolution = Resolution(*resolution)
 
@@ -59,30 +66,37 @@ class AbstractCameraInterface:
 
     @property
     def isCalibrated(self) -> bool:
-        """Check if camera has been calibrated yet"""
+        """Checks if camera is calibrated"""
         return self._intrinsicMatrix is not None and \
                self._distortionCoefficients is not None and \
                self._undistortedIntrinsicMatrix is not None and \
                self._regionOfInterest is not None
 
-    @property
-    def focalLength(self) -> FocalLength:
-        """
-            Get focal length stored in the camera matrix
-
-            :raises CameraError: Camera is not calibrated yet
-        """
-        if not self.isCalibrated:
-            raise CameraError("Camera is not calibrated yet")
-        return FocalLength(self._intrinsicMatrix[0][0], self._intrinsicMatrix[1][1])
-
     def undistort(self, image: np.ndarray) -> np.ndarray:
+        """Undistorts an image
+
+        :param image: Image from camera
+        :type image: np.ndarray
+        :raises CameraError: Camera is not calibrated yet
+        :return: Undistorted image
+        :rtype: np.ndarray
+        """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
         return cv.undistort(image, self._intrinsicMatrix, self._distortionCoefficients, None, self._undistortedIntrinsicMatrix)
 
     @staticmethod
     def isSuitableForCalibration(image: np.ndarray, checkerBoardShape: Tuple[int, int]) -> bool:
+        """Check if image is suitable for calibration.
+        It is suitable if a checkerboard pattern is found on the image
+
+        :param image: Image for calibration
+        :type image: np.ndarray
+        :param checkerBoardShape: Shape of the checkerboard (horizontal and vertical vertices)
+        :type checkerBoardShape: Tuple[int, int]
+        :return: Image is suitable or not
+        :rtype: bool
+        """
         logging.info(checkerBoardShape)
         grayImage = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
         isPatternFound, _ = cv.findChessboardCorners(grayImage, checkerBoardShape, None)
@@ -90,10 +104,14 @@ class AbstractCameraInterface:
 
 
     def calibrate(self, checkerBoardImages: List[np.ndarray], checkerBoardShape: Tuple[int, int]) -> None:
-        """
-            Calibrate camera with given image feed
+        """Calibrate camera
 
-            :raises CameraError: Not enough valid pattern input or reprojection error is too high
+        :param checkerBoardImages: Images containing checkerboard patterns in different poses
+        :type checkerBoardImages: List[np.ndarray]
+        :param checkerBoardShape: Shape of the checkerboard (horizontal and vertical vertices)
+        :type checkerBoardShape: Tuple[int, int]
+        :raises CameraError: Not enough pattern found
+        :raises CameraError: High reprojection error
         """
         objp = np.zeros((np.prod(checkerBoardShape),3), np.float32)
         objp[:,:2] = np.mgrid[0:checkerBoardShape[0],0:checkerBoardShape[1]].T.reshape(-1,2)
@@ -131,6 +149,11 @@ class AbstractCameraInterface:
         self.calibrated.set()
 
     def saveParameters(self, filePath: Path) -> None:
+        """Save camera intrinsics
+
+        :param filePath: File to save to
+        :type filePath: Path
+        """
         _cameraLogger.debug("Saving camera parameters to {savePath}", savePath=filePath)
         resolution = self.resolution
         parameters = {
@@ -144,6 +167,13 @@ class AbstractCameraInterface:
         np.savez(filePath, **parameters)
 
     def loadParameters(self, filePath: Path) -> None:
+        """Load camera intrinsics
+
+        :param filePath: File to load from
+        :type filePath: Path
+        :raises CameraError: Intrinsics file does not have required fields for calibration
+        :raises CameraError: Intrinsics belong to a camera with different resolution
+        """
         errorMessage = "Invalid parameter file, cannot load calibration"
         try:
             with np.load(filePath, mmap_mode="r") as parameters:
@@ -160,12 +190,19 @@ class AbstractCameraInterface:
 
 
 class RobotCameraInterface(AbstractCameraInterface):
-    """Camera subclass used for playing board games"""
+    """AbstractCameraInterface subclass used for playing boardgames"""
 
     _boardImageRatio: ClassVar[float] = 3/4
 
 
     def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
+        """Contructs a RobotCameraInterface object
+
+        :param resolution: Resolution of the camera
+        :type resolution: Union[Resolution, Tuple[int, int]]
+        :param intrinsicsFile: Calibration file that stores camera intrinsics, defaults to None
+        :type intrinsicsFile: Optional[Path], optional
+        """
         super().__init__(resolution, intrinsicsFile)
 
         self._boardHeight = int(min(self.resolution.width, self.resolution.height) * self._boardImageRatio)
@@ -258,10 +295,16 @@ class RobotCameraInterface(AbstractCameraInterface):
         return np.array([markers[i][(i+2)%4] for i in range(4)])
 
     def detectBoard(self, image: np.ndarray) -> BoardImage:
-        """
-            Detect game board on given image with the help of 4 ArUco markers and return a Board instance
+        """Detect board on image. Tries to detect corners with HSV ranges, if it fails then
+        it falls back to aruco markers. After corner detection it transforms the image to
+        top view with a perspective transform and creates a board image
 
-            :raises CameraError: Not enough ArUco marker found on image
+        :param image: Image with a board
+        :type image: np.ndarray
+        :raises CameraError: Camera is not calibrated yet
+        :raises CameraError: Could not detect board
+        :return: Topdown board image
+        :rtype: BoardImage
         """
         if not self.isCalibrated:
             raise CameraError("Camera is not calibrated yet")
@@ -288,7 +331,21 @@ class RobotCameraInterface(AbstractCameraInterface):
 
 
 class RobotCamera(RobotCameraInterface):
+    """RobotCameraInterface subclass used for extracting output from a camera feed"""
     def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], interval: float = 0.1, intrinsicsFile: Optional[Path] = None) -> None:
+        """Constructs a RobotCamera object
+
+        :param feedInput: Camera identifier. Index or device path
+        :type feedInput: Union[int, Path, str]
+        :param resolution: Resolution of the camera
+        :type resolution: Union[Resolution, Tuple[int, int]]
+        :param interval: Interval to extract image from feed, defaults to 0.1
+        :type interval: float, optional
+        :param intrinsicsFile: Calibration file that stores camera intrinsics, defaults to None
+        :type intrinsicsFile: Optional[Path], optional
+        :raises CameraError: Invalid camera input type
+        :raises CameraError: Cannot open camera
+        """
         super().__init__(resolution, intrinsicsFile)
 
         if isinstance(feedInput, (int, str)):
@@ -310,6 +367,8 @@ class RobotCamera(RobotCameraInterface):
         self._frame: Optional[np.ndarray] = None
 
     def activate(self) -> None:
+        """Activates camera feed extration on an interval
+        """
         if not self.isActive:
             self.isActive = True
             self._thread = Thread(target=self._update, daemon=True)
@@ -317,6 +376,8 @@ class RobotCamera(RobotCameraInterface):
             sleep(self.interval+1)
 
     def deactivate(self) -> None:
+        """Deactivates camera feed
+        """
         if self.isActive:
             self.isActive = False
             self._thread.join()
@@ -327,6 +388,15 @@ class RobotCamera(RobotCameraInterface):
             sleep(self.interval)
 
     def read(self, undistorted: bool = True) -> np.ndarray:
+        """Get last image extracted from camera
+
+        :param undistorted: Undistort extracted image, defaults to True
+        :type undistorted: bool, optional
+        :raises CameraError: Camera is not active
+        :raises CameraError: Read was not successful
+        :return: Extracted image
+        :rtype: np.ndarray
+        """
         if not self.isActive:
             raise CameraError("Camera is not active, cannot read from camera")
         elif self._frame is None:

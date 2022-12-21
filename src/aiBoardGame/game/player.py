@@ -1,6 +1,7 @@
-# pylint: disable=no-name-in-module, no-member
+"""Player module for making moves"""
 
-import logging
+# pylint: disable=no-name-in-module, no-member, unnecessary-pass
+
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Tuple, Optional, ClassVar
@@ -18,6 +19,7 @@ from aiBoardGame.game.utility import retry, rerunAfterCorrection, utils, FinalMe
 
 @dataclass(frozen=True)
 class PlayerError(Exception):
+    """Exception for player errors"""
     message: str
 
     def __str__(self) -> str:
@@ -26,31 +28,53 @@ class PlayerError(Exception):
 
 @dataclass
 class Player(ABC, QObject, metaclass=FinalMeta):
+    """Abstract base class of all player classes"""
     isConceding: bool = field(default=False, init=False)
+    """Has player conceded in game"""
 
     def __post_init__(self) -> None:
         super().__init__()
 
     @abstractmethod
     def prepare(self) -> None:
+        """Prepare to play game
+
+        :raises NotImplementedError: Method has not been implemented in subclass
+        """
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented prepare() method")
 
     @abstractmethod
     def makeMove(self, fen: str) -> None:
+        """Make move on board
+
+        :param fen: Game state to make move decision on
+        :type fen: str
+        :raises NotImplementedError: Method has not been implemented in subclass
+        """
         raise NotImplementedError(f"{self.__class__.__name__} has not implemented getPossibleMoves() method")
 
 
 @dataclass
 class TerminalPlayer(Player):
+    """Player class for playing in a terminal"""
     move: Optional[Tuple[Position, Position]] = field(default=None, init=False)
+    """Last valid move typed in terminal"""
 
 
 @dataclass(init=False)
 class HumanTerminalPlayer(TerminalPlayer):
+    """Human player class for playing in a terminal"""
     def prepare(self) -> None:
+        """Prepare to play game
+        """
         input("Press ENTER if you are ready to start the game")
 
     def makeMove(self, fen: str) -> None:
+        """Make move on board
+
+        :param fen: Game state to make move decision on
+        :type fen: str
+        """
         while True:
             try:
                 moveStr = input("Move (fromFile,fromRank toFile,toRank): ")
@@ -72,28 +96,46 @@ class HumanTerminalPlayer(TerminalPlayer):
 
 @dataclass
 class HumanPlayer(Player):
+    """Human player class for playing in real life"""
     prepareStarted: pyqtSignal = field(default=pyqtSignal(), init=False)
+    """Signal emitted when player is preparing"""
     makeMoveStarted: pyqtSignal = field(default=pyqtSignal(), init=False)
+    """Signal emitted when player has to make a move"""
 
     def prepare(self) -> None:
+        """Prepare to play game
+        """
         self.prepareStarted.emit()
         utils.pauseRun()
 
     def makeMove(self, fen: str) -> None:
+        """Make move on board
+
+        :param fen: Game state to make move decision on
+        :type fen: str
+        """
         self.makeMoveStarted.emit()
         utils.pauseRun()
 
 
 @dataclass(init=False)
 class RobotPlayer(Player):
+    """Robot player class base"""
     stockfish: FairyStockfish
+    """Stockfish to generate moves"""
 
     def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
+        """Constructs a RobotPlayer object
+
+        :param difficulty: Quality of generated moves, defaults to Difficulty.MEDIUM
+        :type difficulty: Difficulty, optional
+        """
         super().__init__()
         self.stockfish = FairyStockfish(difficulty=difficulty)
 
     @property
     def difficulty(self) -> Difficulty:
+        """Quality of generated moves"""
         return self.stockfish.difficulty
 
     @difficulty.setter
@@ -103,14 +145,22 @@ class RobotPlayer(Player):
 
 @dataclass(init=False)
 class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
+    """Robot player class for playing in a terminal"""
     def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
         RobotPlayer.__init__(self, difficulty)
         TerminalPlayer.__init__(self)
 
     def prepare(self) -> None:
+        """Prepare to play game
+        """
         pass
 
     def makeMove(self, fen: str) -> None:
+        """Make move on board
+
+        :param fen: Game state to make move decision on
+        :type fen: str
+        """
         self.move = self.stockfish.nextMove(fen=fen)
         if self.move is None:
             self.isConceding = True
@@ -118,18 +168,34 @@ class RobotTerminalPlayer(RobotPlayer, TerminalPlayer):
 
 @dataclass(init=False)
 class RobotArmPlayer(RobotPlayer):
+    """Robot arm player for playing in real life"""
     arm: RobotArm
+    """Robot arm to move pieces on board"""
     camera: RobotCamera
+    """Camera to detect pieces"""
     cornerCartesians: Optional[np.ndarray]
+    """Board coordinates"""
 
     calibrateCorner: pyqtSignal = pyqtSignal(str)
+    """Signal emitted when robot arm needs to be moved to corner"""
     loadLastCalibration: pyqtSignal = pyqtSignal()
+    """Signal emitted when deciding to load last calibration"""
 
     _loaded: bool
 
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
     def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
+        """Constructs a RobotArmPlayer object
+
+        :param arm: Robot arm to move pieces on board
+        :type arm: RobotArm
+        :param camera: Camera to detect pieces
+        :type camera: RobotCamera
+        :param difficulty: Quality of generated moves, defaults to Difficulty.MEDIUM
+        :type difficulty: Difficulty, optional
+        :raises PlayerError: Camera is not calibrated
+        """
         if not camera.isCalibrated:
             raise PlayerError(f"Camera is not calibrated, cannot use it in {self.__class__.__name__}")
 
@@ -141,6 +207,10 @@ class RobotArmPlayer(RobotPlayer):
         self._loaded = False
 
     def prepare(self) -> None:
+        """Prepare to play game
+
+        :raises PlayerError: Cannot connect robot arm
+        """
         if not self.arm.isConnected:
             try:
                 self.arm.connect()
@@ -152,6 +222,12 @@ class RobotArmPlayer(RobotPlayer):
 
     @retry(times=1, exceptions=(RobotArmException, CameraError, RuntimeError), callback=rerunAfterCorrection)
     def makeMove(self, fen: str) -> None:
+        """Make move on board
+
+        :param fen: Game state to make move decision on
+        :type fen: str
+        :raises RuntimeError: Generated move piece not found on board
+        """
         move = self.stockfish.nextMove(fen=fen)
         if move is not None:
             fromMove, toMove = move
@@ -222,6 +298,8 @@ class RobotArmPlayer(RobotPlayer):
         self.arm.reset(safe=True)
 
     def loadCalibration(self) -> None:
+        """Load robot arm calibration
+        """
         with np.load(self._baseCalibPath, mmap_mode="r") as calibration:
             self.cornerCartesians = calibration["cornerCartesians"]
             self._loaded = True

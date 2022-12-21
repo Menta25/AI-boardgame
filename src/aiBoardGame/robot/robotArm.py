@@ -14,7 +14,7 @@ from uarm.swift.protocol import SERVO_BOTTOM, SERVO_LEFT, SERVO_RIGHT, SERVO_HAN
 
 @unique
 class Servo(IntEnum):
-    """Ennum class for indentifying robot servos"""
+    """Enum class for indentifying robot servos"""
     BOTTOM = SERVO_BOTTOM
     LEFT = SERVO_LEFT
     RIGHT = SERVO_RIGHT
@@ -31,7 +31,7 @@ class RobotArmException(Exception):
 
 
 class RobotArm:
-    """A Wrapper class for the Swift API and the robot arm for better control"""
+    """Wrapper class for the Swift API and the robot arm for better control"""
     swift: SwiftAPI
     """Swift API instance"""
     speed: int

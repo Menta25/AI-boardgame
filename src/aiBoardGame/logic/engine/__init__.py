@@ -1,4 +1,4 @@
-"""Pieces package"""
+"""Engine related modules"""
 
 from aiBoardGame.logic.engine.move import MoveRecord, InvalidMove
 from aiBoardGame.logic.engine.xiangqiEngine import XiangqiEngine

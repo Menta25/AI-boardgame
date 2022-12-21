@@ -1,3 +1,5 @@
+"""Xiangqi gameplay control"""
+
 # pylint: disable=no-name-in-module
 
 import logging
@@ -17,17 +19,29 @@ from aiBoardGame.game.utility import retry, rerunAfterCorrection, utils, FinalMe
 
 @dataclass(frozen=True)
 class GameplayError(Exception):
+    """Exception for gameplay errors"""
     message: str
 
     def __str__(self) -> str:
         return self.message
 
 class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
+    """Xiangqi gameplay base class"""
     turnChanged = pyqtSignal(int)
+    """Signal emitted when turn has changed"""
     engineUpdated = pyqtSignal(str)
+    """Signal emitted when engine has been updated"""
     over = pyqtSignal(Side, Player)
+    """Signal emitted if game is over"""
 
     def __init__(self, redSide: Player, blackSide: Player) -> None:
+        """Used for subclass initialization
+
+        :param redSide: Red side player
+        :type redSide: Player
+        :param blackSide: Black side player
+        :type blackSide: Player
+        """
         ABC.__init__(self)
         QObject.__init__(self)
         self.sides: Dict[Side, Player] = {Side.RED: redSide, Side.BLACK: blackSide}
@@ -37,6 +51,7 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
 
     @property
     def turn(self) -> int:
+        """Game's current turn"""
         return self._turn
 
     @turn.setter
@@ -46,26 +61,32 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
 
     @property
     def redSide(self) -> Player:
+        """Red side player"""
         return self.sides[Side.RED]
 
     @property
     def blackSide(self) -> Player:
+        """Black side player"""
         return self.sides[Side.BLACK]
 
     @property
     def currentSide(self) -> Side:
+        """Current side to move"""
         return self._engine.currentSide
 
     @property
     def currentPlayer(self) -> Player:
+        """Current player to move"""
         return self.sides[self.currentSide]
 
     @property
     def isOver(self) -> bool:
+        """Checks if game is over"""
         return self._engine.isOver or any([player.isConceding for player in self.sides.values()])
 
     @property
     def winner(self) -> Optional[Tuple[Side, Player]]:
+        """Winner if game is over"""
         if self._engine.isOver:
             winnerSide = self._engine.winner
             return winnerSide, self.sides[winnerSide]
@@ -88,6 +109,9 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
             raise GameplayError(str(error)) from error
 
     def play(self) -> None:
+        """Start Xiangqi game after preparation. Game consists of valid moves made by both sides
+        one after another until game is over. If move was invalid it needs to be corrected
+        """
         self._prepare()
         text = "Starting game"
         logging.info(text)
@@ -130,6 +154,7 @@ class XiangqiBase(ABC, QObject, metaclass=FinalMeta):
 
 
 class TerminalXiangqi(XiangqiBase):
+    """Xiangqi gameplay in terminal"""
     def __init__(self, redSide: Union[HumanTerminalPlayer, RobotTerminalPlayer], blackSide: Union[HumanTerminalPlayer, RobotTerminalPlayer]) -> None:
         super().__init__(redSide, blackSide)
 
@@ -152,9 +177,13 @@ class TerminalXiangqi(XiangqiBase):
         logging.error(str(error))
 
 class Xiangqi(XiangqiBase):
+    """Xiangqi gameplay in real life"""
     newBoardImage = pyqtSignal(BoardImage)
+    """Signal emitted when there is a new board image"""
     invalidStartPosition = pyqtSignal(Board)
+    """Signal emitted if starting move is invalid"""
     invalidMove = pyqtSignal(str, str)
+    """Signal emitted when move was invalid"""
 
     def __init__(self, camera: RobotCamera, redSide: Union[HumanPlayer, RobotArmPlayer], blackSide: Union[HumanPlayer, RobotArmPlayer]) -> None:
         if not camera.isCalibrated:

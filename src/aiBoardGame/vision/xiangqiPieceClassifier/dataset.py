@@ -1,3 +1,7 @@
+"""Piece dataset used for training the recognition model"""
+
+# pylint: disable=unnecessary-pass
+
 from pathlib import Path
 from itertools import chain
 from math import floor, isclose
@@ -17,15 +21,19 @@ XIANGQI_PIECE_CLASSES = sorted(chain((BoardEntity(side, piece) for side in Side 
 
 
 class XiangqiPieceDataLoader(DataLoader):
+    """Custom DataLoader for type checking"""
     pass
 
 
 class XiangqiPieceDataset(ImageFolder):
+    """Custom ImageFolder dataset for finding, transforming Xianqi piece images 
+    and providing them to the convolutional neural network model"""
     basicTransform: ClassVar[transforms.Compose] = transforms.Compose([
         transforms.Resize((128, 128)),
         transforms.ToTensor(),
         transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))
     ])
+    """Transforms used for normalizing input"""
     trainTransform: ClassVar[transforms.Compose] = transforms.Compose([
         basicTransform.transforms[0],
         transforms.RandomAffine(degrees=180, translate=(0.15, 0.15), scale=(0.8, 1.2)),
@@ -34,9 +42,19 @@ class XiangqiPieceDataset(ImageFolder):
         transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 0.8)),
         *basicTransform.transforms[-2:]
     ])
+    """Transforms used for broadening dataset"""
     splitSizeFractions: ClassVar[List[float]] = [0.8, 0.1, 0.1]
+    """Ratios used for splitting the dataset to train, validation and test data"""
 
     def __init__(self, root: Path, transform: Optional[transforms.Compose] = None) -> None:
+        """Constructs a XiangqiPieceDataset object
+
+        :param root: Root of the image folders
+        :type root: Path
+        :param transform: Transforms applied to images found under the root directory, defaults to None
+        :type transform: Optional[transforms.Compose], optional
+        :raises FileNotFoundError: Root does not contain all Xiangqi piece class folder
+        """
         super().__init__(root.as_posix(), transform)
 
         if Counter(self.classes) != Counter(str(pieceClass) for pieceClass in XIANGQI_PIECE_CLASSES):
@@ -70,6 +88,17 @@ class XiangqiPieceDataset(ImageFolder):
 
     @staticmethod
     def split(root: Path, batchSize: int, numWorkers: int) -> Tuple[XiangqiPieceDataLoader, XiangqiPieceDataLoader, XiangqiPieceDataLoader]:
+        """Splits dataset into train, validation and test DataLoader
+
+        :param root: Root of the image folders
+        :type root: Path
+        :param batchSize: Loaded image batch size
+        :type batchSize: int
+        :param numWorkers: Multi-process data loading, specifies number of loader worker processes
+        :type numWorkers: int
+        :return: Train, validation and test DataLoader
+        :rtype: Tuple[XiangqiPieceDataLoader, XiangqiPieceDataLoader, XiangqiPieceDataLoader]
+        """
         assert len(XiangqiPieceDataset.splitSizeFractions) == 3
         assert isclose(sum(XiangqiPieceDataset.splitSizeFractions), 1.0)
 

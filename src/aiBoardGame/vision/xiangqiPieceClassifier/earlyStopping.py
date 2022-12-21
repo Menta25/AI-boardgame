@@ -1,3 +1,5 @@
+"""Early-stopping implementation for PyTorch"""
+
 import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -6,7 +8,16 @@ from torch import nn, save
 
 
 class EarlyStopping:
+    """Class for keeping track of the neural network model's validation accuracy.
+    Stops training if accuracy does not improve after a few epochs"""
     def __init__(self, patience: int, delta: float = 0):
+        """Constructs an EarlyStopping object
+
+        :param patience: Epochs after EarlyStopping activates
+        :type patience: int
+        :param delta: Tolerance limit, defaults to 0
+        :type delta: float, optional
+        """
         self.patience = patience
         self.counter = 0
         self.bestScore = None
@@ -38,6 +49,13 @@ class EarlyStopping:
             self.counter = 0
 
     def saveCheckpoint(self, model: nn.Module, validationLoss: float):
+        """Saves given model's parameters
+
+        :param model: Model to save parameters from
+        :type model: nn.Module
+        :param validationLoss: New validation loss value
+        :type validationLoss: float
+        """
         logging.debug("Validation loss decreased, saving model...")
         save(model.state_dict(), self.checkpointPath)
         self.validationMinLoss = validationLoss

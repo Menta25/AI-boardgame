@@ -1,3 +1,5 @@
+"""Convolutional neural network used for Xiangqi piece recognition"""
+
 # pylint: disable=no-member
 
 from __future__ import annotations
@@ -27,13 +29,27 @@ _WEIGHTS_PATH = Path("src/aiBoardGame/vision/xiangqiPieceClassifier/xiangqiWts.p
 
 
 class XiangqiPieceClassifier:
+    """Convolutional neural network model for classifying Xiangqi pieces achieved by transfer learning.
+    Uses a pretrained ResNET18 model as a base"""
     batchSize: ClassVar[int] = 32
+    """Loaded image batch size"""
     epochCount: ClassVar[int] = 150
+    """Maximum epochs to run training"""
 
     classes: ClassVar[List[Optional[BoardEntity]]] = XIANGQI_PIECE_CLASSES
+    """All Xiangqi piece types and empty type"""
     baseWeightsPath: ClassVar[Path] = _WEIGHTS_PATH
+    """Used for loading default model parameters"""
 
     def __init__(self, weights: Union[Path, Dict[str, Tensor]] = _WEIGHTS_PATH, device: str = "cpu") -> None:
+        """Constructs a XiangqiPieceClassifier object. Replaces the last fully connected layer of the
+        pretrained ResNET18 to suit the Xiangqi piece classification
+
+        :param weights: Weights used as model parameters, defaults to _WEIGHTS_PATH
+        :type weights: Union[Path, Dict[str, Tensor]], optional
+        :param device: CPU or GPU to use for training or prediction, defaults to "cpu"
+        :type device: str, optional
+        """
         self._model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', weights=ResNet18_Weights.DEFAULT if weights is None else None)
         self.model.fc = Linear(self.model.fc.in_features, len(self.classes))
 
@@ -45,10 +61,12 @@ class XiangqiPieceClassifier:
 
     @property
     def model(self) -> ResNet:
+        """Model used for classifying"""
         return self._model
 
     @property
     def device(self) -> str:
+        """Device in use"""
         return self._device
 
     @device.setter
@@ -58,18 +76,44 @@ class XiangqiPieceClassifier:
 
     @staticmethod
     def getAvailableDevice() -> Literal["cuda", "cpu"]:
+        """List available devices
+
+        :return: Available devices
+        :rtype: str
+        """
         return "cuda" if torch.cuda.is_available() else "cpu"
 
     def loadWeights(self, weights: Union[Path, Dict[str, Tensor]]) -> None:
+        """Load weights into model
+
+        :param weights: File containing model parameters
+        :type weights: Union[Path, Dict[str, Tensor]]
+        """
         if isinstance(weights, Path):
             weights: Dict[str, Tensor] = torch.load(weights)
         self.model.load_state_dict(weights)
         self.isTrained = True
 
     def saveWeights(self, savePath: Path) -> None:
+        """Save model weights to a file
+
+        :param savePath: File to save to
+        :type savePath: Path
+        """
         torch.save(self.model.state_dict(), savePath.with_suffix(".pt"))
 
     def trainFromScratch(self, trainDataLoader: XiangqiPieceDataLoader, validationDataLoader: XiangqiPieceDataLoader) -> XiangqiPieceClassifier:
+        """Trains the model from scratch. Freezes all pretrained ResNET18 layer, only the last layer
+        remains trainable. Runs for given epoch or until early-stopping is activated, then unfreezes
+        all layers and fine tunes the model
+
+        :param trainDataLoader: DataLoader for training data
+        :type trainDataLoader: XiangqiPieceDataLoader
+        :param validationDataLoader: DataLoader for validation data
+        :type validationDataLoader: XiangqiPieceDataLoader
+        :return: Model after transfer learning
+        :rtype: XiangqiPieceClassifier
+        """
         criterion = CrossEntropyLoss()
 
 
@@ -170,6 +214,11 @@ class XiangqiPieceClassifier:
         return self
 
     def test(self, testDataLoader: XiangqiPieceDataLoader) -> None:
+        """Tests model accuracy on a dataset
+
+        :param testDataLoader: DataLoader for test data
+        :type testDataLoader: XiangqiPieceDataLoader
+        """
         self.model.eval()
 
         correctPredictions = {pieceClass: 0 for pieceClass in self.classes}
@@ -190,6 +239,13 @@ class XiangqiPieceClassifier:
             logging.info(f"Accuracy for class: {pieceClass} is {accuracy:.1f} %")
 
     def predict(self, inputTensor: Tensor) -> List[Optional[BoardEntity]]:
+        """Predicts the piece class of the given input
+
+        :param inputTensor: A single or a batch of piece images
+        :type inputTensor: Tensor
+        :return: Class of given input, can be nothing
+        :rtype: List[Optional[BoardEntity]]
+        """
         if len(inputTensor.shape) == 3:
             inputTensor = inputTensor.unsqueeze(0)
         elif len(inputTensor.shape) > 4:
@@ -206,12 +262,29 @@ class XiangqiPieceClassifier:
         return boardEntities
 
     def predictTile(self, tile: np.ndarray) -> Optional[BoardEntity]:
+        """Predicts the class of a single tile
+
+        :param tile: Tile from an image of a board
+        :type tile: np.ndarray
+        :raises ValueError: Invalid tile shape
+        :return: Class of given tile, can be nothing
+        :rtype: Optional[BoardEntity]
+        """
         if not (len(tile.shape) == 3 and tile.shape[-1] == 3):
             raise ValueError("Invalid tile shape, must be (..., ..., 3)")
 
         return self.predict(self._cvImagesToInput(tile[np.newaxis]))[0]
 
     def predictBoard(self, boardImage: BoardImage, allTiles: bool = False) -> Board:
+        """Predicts a board state
+
+        :param boardImage: Image of a board
+        :type boardImage: BoardImage
+        :param allTiles: Use all tiles from the image or filter only the tiles that have a piece. The latter takes longer but has higher accuracy, defaults to False
+        :type allTiles: bool, optional
+        :return: Predicted board state
+        :rtype: Board
+        """
         board = Board()
         if allTiles:
             positions, tiles = [Position(file, rank) for file in range(Board.fileCount) for rank in range(Board.rankCount)], boardImage.tiles

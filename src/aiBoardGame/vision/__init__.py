@@ -1,3 +1,5 @@
+"""XiangqiPieceClassifier, Camera and BoardImage modules"""
+
 from aiBoardGame.vision.boardImage import BoardImage
 from aiBoardGame.vision.camera import Resolution, RobotCamera, RobotCameraInterface, CameraError
 from aiBoardGame.vision.xiangqiPieceClassifier import XiangqiPieceClassifier

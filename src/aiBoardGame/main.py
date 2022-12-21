@@ -1,3 +1,5 @@
+"""Main aiBoardGame module"""
+
 # pylint: disable=no-name-in-module
 
 import sys
@@ -10,6 +12,7 @@ logging.basicConfig(format="[{levelname:.1s}] [{asctime}.{msecs:<3.0f}] {module:
 
 
 def main() -> None:
+    """Run aiBoardGame application"""
     app = QApplication([])
     window = XianqiWindow()
     window.show()

@@ -1,3 +1,5 @@
+"""Xiangqi rules"""
+
 import logging
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union, Optional
@@ -12,16 +14,23 @@ from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToM
 
 @dataclass(init=False)
 class XiangqiEngine:
+    """Class for controlling Xiangqi game state and verifying moves"""
     board: Board
+    """Board that sides operate on"""
     generals: Dict[Side, Position]
+    """Stored positions of the generals"""
     currentSide: Side
+    """Next that has to move"""
     moveHistory: List[MoveRecord]
+    """Stored moves made by both sides"""
 
     _checks: List[Position]
     _pins: Dict[Position, List[Position]]
     _validMoves: Dict[Position, List[Position]]
 
     def __init__(self) -> None:
+        """Constructs a XiangqiEngine object
+        """
         self.board, self.generals = createXiangqiBoard()
         self.currentSide = Side.RED
         self.moveHistory = []
@@ -29,22 +38,37 @@ class XiangqiEngine:
 
     @property
     def isCurrentPlayerChecked(self) -> bool:
+        """Check if current side is in check"""
         return len(self._checks) > 0
 
     @property
     def isOver(self) -> bool:
+        """Check if a side has checkmated the other"""
         return len(self._validMoves) == 0
 
     @property
     def winner(self) -> Optional[Side]:
+        """Return winner side if the game is over"""
         return self.currentSide.opponent if self.isOver else None
 
     def newGame(self) -> None:
+        """Start a new game instance
+        """
         self.__init__()  # pylint: disable=unnecessary-dunder-call
 
     # TODO: Do not allow perpetual chasing and checking
     # TODO: Calculate approximate values for each side
     def move(self, start: Union[Position, Tuple[int, int]], end: Union[Position, Tuple[int, int]]) -> None:
+        """Move a piece on board. All possible and valid moves are generated between turns, given move has to be amongst them
+
+        :param start: Start position to move from
+        :type start: Union[Position, Tuple[int, int]]
+        :param end: End position to move to
+        :type end: Union[Position, Tuple[int, int]]
+        :raises InvalidMove: Game is already over
+        :raises InvalidMove: No piece found on start position
+        :raises InvalidMove: Given piece cannot make the move (out of bounds, piece is in check, etc.)
+        """
         if not isinstance(start, Position):
             start = Position(*start)
         if not isinstance(end, Position):
@@ -62,11 +86,21 @@ class XiangqiEngine:
         self._calculateValidMoves()
 
     def undoMove(self) -> None:
+        """Undo last move made. Also removes it from the move history
+        """
         self._undoMove()
         self.currentSide = self.currentSide.opponent
         self._calculateValidMoves()
 
     def update(self, board: Board) -> None:
+        """Update board with a new board state if it is a valid transition
+
+        :param board: New board state
+        :type board: Board
+        :raises InvalidMove: No piece were moved
+        :raises InvalidMove: Multiple piece were moved
+        :raises InvalidMove: Moved piece does not match with it's previous state
+        """
         selfPiecesAsSet = set(self.board.pieces)
         otherPiecesAsSet = set(board.pieces)
 
@@ -101,6 +135,7 @@ class XiangqiEngine:
 
     @property
     def fen(self) -> str:
+        """Game's FEN"""
         return f"{self.board.fen} {self.currentSide.fen} - - 0 {len(self.moveHistory)//2+1}"
 
     def _undoMove(self) -> None:

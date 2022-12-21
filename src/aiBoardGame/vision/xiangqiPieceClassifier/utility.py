@@ -1,3 +1,5 @@
+"""Utility functions to generate dataset from raw images"""
+
 # pylint: disable=no-member
 
 from pathlib import Path
@@ -15,6 +17,7 @@ XIANGQI_PIECE_CLASSES_STR = [str(xiangqiClass) for xiangqiClass in XIANGQI_PIECE
 
 @unique
 class GenerateMode(Enum):
+    """Enum class for specifying generation target"""
     DATA = auto()
     ROI = auto()
     TILES = auto()
@@ -22,13 +25,29 @@ class GenerateMode(Enum):
 
 
 def getBoardImage(image: np.ndarray, camera: Optional[RobotCameraInterface]) -> BoardImage:
+    """Generate board image from raw image
+
+    :param image: Raw image path
+    :type image: np.ndarray
+    :param camera: Camera for prespective transform
+    :type camera: Optional[RobotCameraInterface]
+    :return: Generated board image
+    :rtype: BoardImage
+    """
     if camera is not None:
         return camera.detectBoard(camera.undistort(image))
     else:
         return BoardImage(data=image)
 
 
-def iterateDataset(rawImagesRoot: Path) -> Generator[Tuple[BoardImage, Path], None, None]:
+def iterateDataset(rawImagesRoot: Path) -> Generator[Tuple[np.ndarray, Path], None, None]:
+    """Get dataset generator
+
+    :param rawImagesRoot: Raw image root path
+    :type rawImagesRoot: Path
+    :yield: Raw image and its path
+    :rtype: Generator[Tuple[BoardImage, Path], None, None]
+    """
     for rawImagesPath in rawImagesRoot.iterdir():
         if rawImagesPath.is_dir() and rawImagesPath.name in XIANGQI_PIECE_CLASSES_STR:
             for rawImagePath in rawImagesPath.iterdir():
@@ -48,6 +67,17 @@ def generateTrainDataset(rawImagesRoot: Path, destinationRoot: Path, camera: Rob
 
 
 def generateTrainDataset(rawImagesRoot: Path, destinationRoot: Path, camera: Optional[RobotCameraInterface], generate: GenerateMode) -> None:
+    """Main function to generate dataset
+
+    :param rawImagesRoot: Raw image root path
+    :type rawImagesRoot: Path
+    :param destinationRoot: Destination path to save generated dataset
+    :type destinationRoot: Path
+    :param camera: Camera for prespective transform
+    :type camera: Optional[RobotCameraInterface]
+    :param generate: Generation target
+    :type generate: GenerateMode
+    """
     for rawImage, rawImagePath in iterateDataset(rawImagesRoot):
         try:
             boardImage = getBoardImage(rawImage, camera)
@@ -68,6 +98,15 @@ def generateTrainDataset(rawImagesRoot: Path, destinationRoot: Path, camera: Opt
 
 
 def savePieces(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -> None:
+    """Save pieces from board image
+
+    :param destinationRoot: Destination path to save pieces
+    :type destinationRoot: Path
+    :param boardImage: Board image to search pieces on
+    :type boardImage: BoardImage
+    :param rawImagePath: Raw image to generate board image from
+    :type rawImagePath: Path
+    """
     object.__setattr__(boardImage, "pieceThresholdDivisor", 2.1)
     pieceImagesDir = Path(destinationRoot, rawImagePath.parent.name)
     if not pieceImagesDir.exists():
@@ -82,6 +121,15 @@ def savePieces(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path
 
 
 def saveTiles(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -> None:
+    """Save tiles from board image
+
+    :param destinationRoot: Destination path to save tiles
+    :type destinationRoot: Path
+    :param boardImage: Board image to extract tiles from
+    :type boardImage: BoardImage
+    :param rawImagePath: Raw image to generate board image from
+    :type rawImagePath: Path
+    """
     xiangqiClass = rawImagePath.parent.name
     tileImagesDir = Path(destinationRoot, xiangqiClass)
     if not tileImagesDir.exists():
@@ -98,6 +146,15 @@ def saveTiles(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path)
 
 
 def saveData(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -> None:
+    """Save data from board image
+
+    :param destinationRoot: Destination path to save data
+    :type destinationRoot: Path
+    :param boardImage: Board image to extract data from
+    :type boardImage: BoardImage
+    :param rawImagePath: Raw image to generate board image from
+    :type rawImagePath: Path
+    """
     dataImagesDir = Path(destinationRoot, rawImagePath.parent.name)
     if not dataImagesDir.exists():
         dataImagesDir.mkdir(parents=True, exist_ok=True)
@@ -106,6 +163,15 @@ def saveData(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) 
 
 
 def saveROI(destinationRoot: Path, boardImage: BoardImage, rawImagePath: Path) -> None:
+    """Save ROI from board image
+
+    :param destinationRoot: Destination path to save ROI
+    :type destinationRoot: Path
+    :param boardImage: Board image to extract ROI from
+    :type boardImage: BoardImage
+    :param rawImagePath: Raw image to generate board image from
+    :type rawImagePath: Path
+    """
     roiImagesDir = Path(destinationRoot, rawImagePath.parent.name)
     if not roiImagesDir.exists():
         roiImagesDir.mkdir(parents=True, exist_ok=True)

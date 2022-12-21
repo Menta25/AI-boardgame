@@ -1,3 +1,5 @@
+"""Piece modules"""
+
 from aiBoardGame.logic.engine.pieces.piece import Piece
 from aiBoardGame.logic.engine.pieces.general import General
 from aiBoardGame.logic.engine.pieces.advisor import Advisor

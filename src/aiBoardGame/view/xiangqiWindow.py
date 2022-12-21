@@ -1,3 +1,5 @@
+"""Game main GUI window"""
+
 # pylint: disable=no-name-in-module
 
 import logging
@@ -25,6 +27,7 @@ UPDATE_INTERVAL = 0.1
 
 
 class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
+    """Qt MainWindow for GUI"""
     def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)

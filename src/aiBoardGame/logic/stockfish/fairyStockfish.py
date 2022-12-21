@@ -28,7 +28,7 @@ _GO_ARGS = {
 
 
 class FairyStockfish:
-    """A wrapper class for the Fairy-Stockfish binary. Used for generating valid moves
+    """Wrapper class for the Fairy-Stockfish binary. Used for generating valid moves
     from a given boardgame state"""
 
     baseBinaryPath: ClassVar[Path] = _BINARY_PATH

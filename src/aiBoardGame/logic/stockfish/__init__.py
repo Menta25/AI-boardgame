@@ -1,3 +1,5 @@
+"""Stockfish related modules"""
+
 from aiBoardGame.logic.stockfish.fairyStockfish import FairyStockfish, Difficulty
 
 

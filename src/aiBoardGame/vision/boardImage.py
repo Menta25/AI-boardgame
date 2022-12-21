@@ -1,3 +1,6 @@
+"""Store a board state as an image"""
+
+
 # pylint: disable=no-member
 
 from __future__ import annotations
@@ -15,8 +18,9 @@ from aiBoardGame.logic.engine import Board, Position
 
 @dataclass(frozen=True)
 class BoardImage:
-    """A game board represented by a ndarray"""
+    """Board state represented by an ndarray image"""
     data: np.ndarray
+    """Raw image data in BGR"""
 
     _x: Optional[int] = None
     _y: Optional[int] = None
@@ -24,14 +28,21 @@ class BoardImage:
     _height: Optional[int] = None
 
     positions: np.ndarray = field(init=False)
+    """Board positions"""
 
     fileStep: int = field(init=False)
+    """Distance between files"""
     rankStep: int = field(init=False)
+    """Distance between ranks"""
     tileSize: np.ndarray = field(init=False)
+    """Size of a tile on board"""
 
     tileSizeMultiplier: ClassVar[float] = 1.6
+    """Multiplier for cutting out a tile"""
     pieceSizeMultiplier: ClassVar[float] = 1.2
+    """Multiplier for cutting out a piece"""
     pieceThresholdDivisor: ClassVar[float] = 3.1
+    """Finds pieces only in the range of fileStep divided by this value"""
 
     # hsvRanges: ClassVar[Tuple[np.ndarray]] = (
     #     np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
@@ -40,6 +51,7 @@ class BoardImage:
     # )
 
     hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
+    """HSV ranges of the board"""
 
 
     def __post_init__(self) -> None:
@@ -96,10 +108,17 @@ class BoardImage:
 
     @property
     def tiles(self) -> np.ndarray:
+        """Board tiles"""
         return np.array([[self._tile(tileCenter) for tileCenter in file[::-1]] for file in self.positions])
 
     def tile(self, position: Position) -> np.ndarray:
-        """Return the given tile's ndarray representation"""
+        """Tile belonging to given position
+
+        :param position: Tile position
+        :type position: Position
+        :return: Tile image
+        :rtype: np.ndarray
+        """
         imagePosition: np.ndarray = self.positions[position.file, position.rank]
         return self._tile(imagePosition)
 
@@ -118,6 +137,7 @@ class BoardImage:
 
     @property
     def roi(self) -> np.ndarray:
+        """Area of interest (only the board)"""
         topLeftCorner = (self.positions[0,-1] - self.tileSize/2).astype(np.uint16)
         bottomRightCorner = (self.positions[-1,0] + self.tileSize/2).astype(np.uint16)
         return self.data[topLeftCorner[1]:bottomRightCorner[1], topLeftCorner[0]:bottomRightCorner[0]]
@@ -132,6 +152,7 @@ class BoardImage:
 
     @property
     def pieces(self) -> List[Tuple[Position, np.ndarray]]:
+        """Piece centers and radiuses with their corresponding board positions"""
         pieces = []
         for file in range(Board.fileCount):
             for rank in range(Board.rankCount):
@@ -143,6 +164,7 @@ class BoardImage:
 
     @property
     def pieceTiles(self) -> List[Tuple[Position, np.ndarray]]:
+        """Piece tile images with their corresponding board positions"""
         pieceTiles = []
         for position, (x, y, radius) in self.pieces:
             offset = radius * self.pieceSizeMultiplier
@@ -151,6 +173,13 @@ class BoardImage:
         return pieceTiles
 
     def findPiece(self, position: Position) -> Optional[np.ndarray]:
+        """Check if piece is found in on given position
+
+        :param position: Check position
+        :type position: Position
+        :return: Piece center and radius if found on position
+        :rtype: Optional[np.ndarray]
+        """
         tileCenter = self.positions[position.file, position.rank]
         tile = self._tile(tileCenter)
         detectedCircles = self._detectCircles(tile, tile.shape[0], int(self.fileStep*0.45), int(self.fileStep*0.5))
@@ -169,6 +198,11 @@ class BoardImage:
         return circle[:3]
 
     def markDetectedPieces(self) -> BoardImage:
+        """Copies the board image and marks all detected pieces
+
+        :return: Board image copy with detected pieces
+        :rtype: BoardImage
+        """
         boardImageCopy = deepcopy(self)
         for _, (*center, radius) in boardImageCopy.pieces:
             cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), int(radius), color=(0,255,0), thickness=3)
