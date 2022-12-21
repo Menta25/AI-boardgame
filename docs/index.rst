@@ -6,7 +6,12 @@
 Welcome to AI-Boardgame's documentation!
 ========================================
 
-Lorem ipsum.
+A `thesis project <https://github.com/Menta25/AI-boardgame>`_ about using a robotic arm, computer vision and convolutional neural network to play Xiangqi
+
+
+
+Modules
+=======
 
 .. autosummary::
    :toctree: _autosummary

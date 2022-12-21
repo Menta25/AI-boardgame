@@ -27,7 +27,7 @@ class PlayerError(Exception):
 
 
 @dataclass
-class Player(ABC, QObject, metaclass=FinalMeta):
+class Player(QObject, ABC, metaclass=FinalMeta):
     """Abstract base class of all player classes"""
     isConceding: bool = field(default=False, init=False)
     """Has player conceded in game"""

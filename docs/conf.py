@@ -1,5 +1,3 @@
-import sphinx_rtd_theme
-
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -33,9 +31,11 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.viewcode',
-    'sphinx_rtd_theme'
+    'sphinx.ext.intersphinx',
+    'sphinx_rtd_theme',
+    'sphinx_qt_documentation'
 ]
-autosummary_generate = True
+add_module_names = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -43,7 +43,7 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', '.venv', 'build' , 'docs', '.vscode', 'AI_boardgame.egg-info']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -59,4 +59,17 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = []
 
 
+html_title = 'AI-Boardgame'
+
 # -- Extension configuration -------------------------------------------------
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+}
+qt_documentation = 'PyQt6'
+
+autosummary_generate = True
+autoclass_content = "class"
+autodoc_mock_imports = ['torch', 'torchvision', 'PyQt6']
+autodoc_preserve_defaults = True
+autodoc_inherit_docstrings = False
+html_show_sourcelink = False

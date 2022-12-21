@@ -3,7 +3,7 @@
 # pylint: disable=no-name-in-module,unnecessary-pass
 
 import logging
-from abc import ABC
+from abc import ABCMeta
 from threading import Event
 from time import sleep
 from math import log10
@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Tuple, Type, Callable, Optional
 from PyQt6.QtCore import pyqtSignal, pyqtSlot, QObject
 
 
-class FinalMeta(type(ABC), type(QObject)):
+class FinalMeta(ABCMeta, type(QObject)):
     """Metaclass to combine Abstract Base Class and QObject"""
     pass
 
