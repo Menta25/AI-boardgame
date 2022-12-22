@@ -13,8 +13,8 @@ from aiBoardGame.logic import XiangqiEngine, InvalidMove, Board, Side, Difficult
 from aiBoardGame.vision import RobotCamera, CameraError, XiangqiPieceClassifier, BoardImage
 from aiBoardGame.robot import RobotArm, RobotArmException
 
-from aiBoardGame.game.player import Player, HumanPlayer, RobotArmPlayer, HumanTerminalPlayer, RobotTerminalPlayer, PlayerError
-from aiBoardGame.game.utility import retry, rerunAfterCorrection, utils, FinalMeta
+from aiBoardGame.gameplay.player import Player, HumanPlayer, RobotArmPlayer, HumanTerminalPlayer, RobotTerminalPlayer, PlayerError
+from aiBoardGame.gameplay.utility import retry, rerunAfterCorrection, utils, FinalMeta
 
 
 @dataclass(frozen=True)

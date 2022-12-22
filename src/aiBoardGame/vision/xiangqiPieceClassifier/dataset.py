@@ -47,8 +47,7 @@ class XiangqiPieceDataset(ImageFolder):
     """Ratios used for splitting the dataset to train, validation and test data"""
 
     def __init__(self, root: Path, transform: Optional[transforms.Compose] = None) -> None:
-        """Constructs a XiangqiPieceDataset object
-
+        """
         :param root: Root of the image folders
         :type root: Path
         :param transform: Transforms applied to images found under the root directory, defaults to None

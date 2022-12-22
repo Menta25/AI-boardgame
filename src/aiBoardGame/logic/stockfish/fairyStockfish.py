@@ -35,8 +35,7 @@ class FairyStockfish:
     """Default Fairy-Stockfish binary path"""
 
     def __init__(self, binaryPath: Path = _BINARY_PATH, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
-        """Constructs a FairyStockFish object
-
+        """
         :param binaryPath: Binary executable's path, defaults to _BINARY_PATH
         :type binaryPath: Path, optional
         :param difficulty: Defines the arguments passed to the go command, defaults to Difficulty.MEDIUM

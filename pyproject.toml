@@ -26,7 +26,9 @@ dependencies = [
 dev = [
     "pylint",
     "Sphinx",
-    "sphinx_rtd_theme"
+    "sphinx_rtd_theme",
+    "sphinx-qt-documentation",
+    "sphinx-autoapi"
 ]
 
 [project.urls]

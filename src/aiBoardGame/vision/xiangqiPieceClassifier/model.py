@@ -30,7 +30,8 @@ _WEIGHTS_PATH = Path("src/aiBoardGame/vision/xiangqiPieceClassifier/xiangqiWts.p
 
 class XiangqiPieceClassifier:
     """Convolutional neural network model for classifying Xiangqi pieces achieved by transfer learning.
-    Uses a pretrained ResNET18 model as a base"""
+    Uses a pretrained ResNET18 model as a base, replaces the last fully connected layer of the
+    model to suit the Xiangqi piece classification"""
     batchSize: ClassVar[int] = 32
     """Loaded image batch size"""
     epochCount: ClassVar[int] = 150
@@ -42,9 +43,7 @@ class XiangqiPieceClassifier:
     """Used for loading default model parameters"""
 
     def __init__(self, weights: Union[Path, Dict[str, Tensor]] = _WEIGHTS_PATH, device: str = "cpu") -> None:
-        """Constructs a XiangqiPieceClassifier object. Replaces the last fully connected layer of the
-        pretrained ResNET18 to suit the Xiangqi piece classification
-
+        """
         :param weights: Weights used as model parameters, defaults to _WEIGHTS_PATH
         :type weights: Union[Path, Dict[str, Tensor]], optional
         :param device: CPU or GPU to use for training or prediction, defaults to "cpu"

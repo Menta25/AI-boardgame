@@ -44,8 +44,7 @@ class AbstractCameraInterface:
     _calibrationCritera: ClassVar[Tuple[int, int, float]] = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
 
     def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
-        """Constructs an AbstractCameraInterface object
-
+        """
         :param resolution: Resolution of the camera
         :type resolution: Union[Resolution, Tuple[int, int]]
         :param intrinsicsFile: Calibration file that stores camera intrinsics, defaults to None
@@ -196,8 +195,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 
 
     def __init__(self, resolution: Union[Resolution, Tuple[int, int]], intrinsicsFile: Optional[Path] = None) -> None:
-        """Contructs a RobotCameraInterface object
-
+        """
         :param resolution: Resolution of the camera
         :type resolution: Union[Resolution, Tuple[int, int]]
         :param intrinsicsFile: Calibration file that stores camera intrinsics, defaults to None
@@ -333,8 +331,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 class RobotCamera(RobotCameraInterface):
     """RobotCameraInterface subclass used for extracting output from a camera feed"""
     def __init__(self, feedInput: Union[int, Path, str], resolution: Union[Resolution, Tuple[int, int]], interval: float = 0.1, intrinsicsFile: Optional[Path] = None) -> None:
-        """Constructs a RobotCamera object
-
+        """
         :param feedInput: Camera identifier. Index or device path
         :type feedInput: Union[int, Path, str]
         :param resolution: Resolution of the camera

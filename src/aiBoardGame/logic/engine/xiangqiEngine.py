@@ -29,8 +29,6 @@ class XiangqiEngine:
     _validMoves: Dict[Position, List[Position]]
 
     def __init__(self) -> None:
-        """Constructs a XiangqiEngine object
-        """
         self.board, self.generals = createXiangqiBoard()
         self.currentSide = Side.RED
         self.moveHistory = []

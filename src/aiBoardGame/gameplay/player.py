@@ -14,7 +14,7 @@ from aiBoardGame.logic import FairyStockfish, Difficulty, Position
 from aiBoardGame.robot import RobotArm, RobotArmException
 from aiBoardGame.vision import RobotCamera, BoardImage, CameraError
 
-from aiBoardGame.game.utility import retry, rerunAfterCorrection, utils, FinalMeta
+from aiBoardGame.gameplay.utility import retry, rerunAfterCorrection, utils, FinalMeta
 
 
 @dataclass(frozen=True)
@@ -125,8 +125,7 @@ class RobotPlayer(Player):
     """Stockfish to generate moves"""
 
     def __init__(self, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
-        """Constructs a RobotPlayer object
-
+        """
         :param difficulty: Quality of generated moves, defaults to Difficulty.MEDIUM
         :type difficulty: Difficulty, optional
         """
@@ -186,8 +185,7 @@ class RobotArmPlayer(RobotPlayer):
     _baseCalibPath: ClassVar[Path] = Path("src/aiBoardGame/robotArmCalib.npz")
 
     def __init__(self, arm: RobotArm, camera: RobotCamera, difficulty: Difficulty = Difficulty.MEDIUM) -> None:
-        """Constructs a RobotArmPlayer object
-
+        """
         :param arm: Robot arm to move pieces on board
         :type arm: RobotArm
         :param camera: Camera to detect pieces

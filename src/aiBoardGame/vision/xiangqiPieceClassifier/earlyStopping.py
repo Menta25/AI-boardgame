@@ -11,8 +11,7 @@ class EarlyStopping:
     """Class for keeping track of the neural network model's validation accuracy.
     Stops training if accuracy does not improve after a few epochs"""
     def __init__(self, patience: int, delta: float = 0):
-        """Constructs an EarlyStopping object
-
+        """
         :param patience: Epochs after EarlyStopping activates
         :type patience: int
         :param delta: Tolerance limit, defaults to 0

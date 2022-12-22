@@ -43,8 +43,7 @@ class RobotArm:
     """Robot arm's reset position"""
 
     def __init__(self, speed: int = 1000, hardwareID: Optional[str] = None) -> None:
-        """Constructs a RobotArm object
-
+        """
         :param speed: Robot arm move speed, defaults to 1000
         :type speed: int, optional
         :param hardwareID: Hardware ID, defaults to USB VID:PID=2341:0042

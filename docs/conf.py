@@ -30,15 +30,15 @@ author = 'Deák Árpád'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme',
-    'sphinx_qt_documentation'
+    'sphinx_qt_documentation',
+    'autoapi.extension'
 ]
 add_module_names = False
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = []
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -60,6 +60,7 @@ html_static_path = []
 
 
 html_title = 'AI-Boardgame'
+html_show_sourcelink = False
 
 # -- Extension configuration -------------------------------------------------
 intersphinx_mapping = {
@@ -67,9 +68,19 @@ intersphinx_mapping = {
 }
 qt_documentation = 'PyQt6'
 
-autosummary_generate = True
-autoclass_content = "class"
-autodoc_mock_imports = ['torch', 'torchvision', 'PyQt6']
-autodoc_preserve_defaults = True
-autodoc_inherit_docstrings = False
-html_show_sourcelink = False
+extensions.append('autoapi.extension')
+
+autoapi_type = 'python'
+autoapi_dirs = ['../src/aiBoardGame']
+autoapi_ignore = ['_build', '.venv', 'build' , '.vscode', 'AI_boardgame.egg-info']
+autoapi_options = [
+    'members', 'inherited-members', 'show-inheritance', 'show-module-summary', 'show-inheritance-diagram'
+]
+autoapi_member_order = 'groupwise'
+autoapi_python_class_content = 'both'
+autoapi_add_toctree_entry = False
+
+
+# -- Options for LaTeX output ------------------------------------------------
+
+

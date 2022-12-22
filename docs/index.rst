@@ -13,12 +13,10 @@ A `thesis project <https://github.com/Menta25/AI-boardgame>`_ about using a robo
 Modules
 =======
 
-.. autosummary::
-   :toctree: _autosummary
-   :template: custom-module-template.rst
-   :recursive:
+.. toctree::
+   :maxdepth: 3
 
-   aiBoardGame
+   autoapi/aiBoardGame/index
 
 
 

@@ -19,7 +19,7 @@ from aiBoardGame.vision import RobotCamera, CameraError, BoardImage
 from aiBoardGame.view.ui.xiangqiWindow import Ui_xiangqiWindow
 from aiBoardGame.view.utility import imageToPixmap
 
-from aiBoardGame.game import Xiangqi, HumanPlayer, RobotArmPlayer, GameplayError, PlayerError, utils
+from aiBoardGame.gameplay import Xiangqi, HumanPlayer, RobotArmPlayer, GameplayError, PlayerError, utils
 from aiBoardGame.robot import RobotArm, RobotArmException
 
 
