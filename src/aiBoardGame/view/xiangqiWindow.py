@@ -102,7 +102,7 @@ class XianqiWindow(QMainWindow, Ui_xiangqiWindow):
     def newGame(self) -> None:
         try:
             if self.game is None:
-                self.robotArm = RobotArm(speed=500_000)
+                self.robotArm = RobotArm(speed=300_000)
                 self.redSide = HumanPlayer()
                 self.blackSide = RobotArmPlayer(arm=self.robotArm, camera=self.camera, difficulty=Difficulty[self.difficultyComboBox.currentText()])
                 self.game = Xiangqi(camera=self.camera, redSide=self.redSide, blackSide=self.blackSide)
