@@ -1,0 +1,35 @@
+Pontozza 1-5 tartó skálán:
+
+Robot
+    0. bábu felismerés
+Robot lépések
+    1. helyessége a játék szabályai alapján
+    2. precizitása (bábuk mozgatása)
+    3. ideje
+Játékmenet
+    4. gördülékenysége
+    5. közben felmerült hibás lépések lekezelése, kijavítása
+    6. elkezdéséhez szükséges előkészületek (?)
+Grafikus felület
+    7. intuitív használata
+
+
+Lili:
+0. 5
+1. 5
+2. 3,5
+3. 5
+4. 4
+5. 3
+6. 3
+7. 5
+
+Viktor:
+0. 5
+1. 5
+2. 4,5
+3. 5
+4. 4
+5. 3,5
+6. 3,5
+7. 5

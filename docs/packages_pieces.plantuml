@@ -1,0 +1,36 @@
+@startuml packages_pieces
+set namespaceSeparator none
+package "aiBoardGame.logic.engine.pieces" as aiBoardGame.logic.engine.pieces #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.advisor" as aiBoardGame.logic.engine.pieces.advisor #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.cannon" as aiBoardGame.logic.engine.pieces.cannon #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.chariot" as aiBoardGame.logic.engine.pieces.chariot #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.elephant" as aiBoardGame.logic.engine.pieces.elephant #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.general" as aiBoardGame.logic.engine.pieces.general #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.horse" as aiBoardGame.logic.engine.pieces.horse #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.piece" as aiBoardGame.logic.engine.pieces.piece #aliceblue {
+}
+package "aiBoardGame.logic.engine.pieces.soldier" as aiBoardGame.logic.engine.pieces.soldier #aliceblue {
+}
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.advisor
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.cannon
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.chariot
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.elephant
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.general
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.horse
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.piece
+aiBoardGame.logic.engine.pieces --> aiBoardGame.logic.engine.pieces.soldier
+aiBoardGame.logic.engine.pieces.advisor --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.cannon --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.chariot --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.elephant --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.general --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.horse --> aiBoardGame.logic.engine.pieces
+aiBoardGame.logic.engine.pieces.soldier --> aiBoardGame.logic.engine.pieces
+@enduml

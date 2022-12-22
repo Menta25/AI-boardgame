@@ -1,0 +1,77 @@
+@startuml packages_AI-Boardgame
+set namespaceSeparator none
+package "src.aiBoardGame" as src.aiBoardGame #aliceblue {
+}
+package "src.aiBoardGame.gameplay" as src.aiBoardGame.gameplay #aliceblue {
+}
+package "src.aiBoardGame.gameplay.player" as src.aiBoardGame.gameplay.player #aliceblue {
+}
+package "src.aiBoardGame.gameplay.utility" as src.aiBoardGame.gameplay.utility #aliceblue {
+}
+package "src.aiBoardGame.gameplay.xiangqi" as src.aiBoardGame.gameplay.xiangqi #aliceblue {
+}
+package "src.aiBoardGame.logic" as src.aiBoardGame.logic #aliceblue {
+}
+package "src.aiBoardGame.logic.engine" as src.aiBoardGame.logic.engine #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.auxiliary" as src.aiBoardGame.logic.engine.auxiliary #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.move" as src.aiBoardGame.logic.engine.move #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces" as src.aiBoardGame.logic.engine.pieces #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.advisor" as src.aiBoardGame.logic.engine.pieces.advisor #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.cannon" as src.aiBoardGame.logic.engine.pieces.cannon #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.chariot" as src.aiBoardGame.logic.engine.pieces.chariot #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.elephant" as src.aiBoardGame.logic.engine.pieces.elephant #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.general" as src.aiBoardGame.logic.engine.pieces.general #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.horse" as src.aiBoardGame.logic.engine.pieces.horse #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.piece" as src.aiBoardGame.logic.engine.pieces.piece #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.pieces.soldier" as src.aiBoardGame.logic.engine.pieces.soldier #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.replay" as src.aiBoardGame.logic.engine.replay #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.utility" as src.aiBoardGame.logic.engine.utility #aliceblue {
+}
+package "src.aiBoardGame.logic.engine.xiangqiEngine" as src.aiBoardGame.logic.engine.xiangqiEngine #aliceblue {
+}
+package "src.aiBoardGame.logic.stockfish" as src.aiBoardGame.logic.stockfish #aliceblue {
+}
+package "src.aiBoardGame.logic.stockfish.fairyStockfish" as src.aiBoardGame.logic.stockfish.fairyStockfish #aliceblue {
+}
+package "src.aiBoardGame.main" as src.aiBoardGame.main #aliceblue {
+}
+package "src.aiBoardGame.robot" as src.aiBoardGame.robot #aliceblue {
+}
+package "src.aiBoardGame.robot.robotArm" as src.aiBoardGame.robot.robotArm #aliceblue {
+}
+package "src.aiBoardGame.view" as src.aiBoardGame.view #aliceblue {
+}
+package "src.aiBoardGame.view.utility" as src.aiBoardGame.view.utility #aliceblue {
+}
+package "src.aiBoardGame.view.xiangqiWindow" as src.aiBoardGame.view.xiangqiWindow #aliceblue {
+}
+package "src.aiBoardGame.vision" as src.aiBoardGame.vision #aliceblue {
+}
+package "src.aiBoardGame.vision.boardImage" as src.aiBoardGame.vision.boardImage #aliceblue {
+}
+package "src.aiBoardGame.vision.camera" as src.aiBoardGame.vision.camera #aliceblue {
+}
+package "src.aiBoardGame.vision.xiangqiPieceClassifier" as src.aiBoardGame.vision.xiangqiPieceClassifier #aliceblue {
+}
+package "src.aiBoardGame.vision.xiangqiPieceClassifier.dataset" as src.aiBoardGame.vision.xiangqiPieceClassifier.dataset #aliceblue {
+}
+package "src.aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping" as src.aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping #aliceblue {
+}
+package "src.aiBoardGame.vision.xiangqiPieceClassifier.model" as src.aiBoardGame.vision.xiangqiPieceClassifier.model #aliceblue {
+}
+package "src.aiBoardGame.vision.xiangqiPieceClassifier.utility" as src.aiBoardGame.vision.xiangqiPieceClassifier.utility #aliceblue {
+}
+@enduml

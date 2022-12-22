@@ -83,4 +83,4 @@ autoapi_add_toctree_entry = False
 
 # -- Options for LaTeX output ------------------------------------------------
 
-
+latex_engine = 'xelatex'

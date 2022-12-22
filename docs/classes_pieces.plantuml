@@ -1,0 +1,56 @@
+@startuml classes_pieces
+set namespaceSeparator none
+class "abc.ABC" as abc.ABC #grey {
+}
+class "aiBoardGame.logic.engine.pieces.advisor.Advisor" as aiBoardGame.logic.engine.pieces.advisor.Advisor #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+  fileBounds : ClassVar[Tuple[int, int]]
+  rankBounds : ClassVar[Tuple[int, int]]
+}
+class "aiBoardGame.logic.engine.pieces.cannon.Cannon" as aiBoardGame.logic.engine.pieces.cannon.Cannon #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+}
+class "aiBoardGame.logic.engine.pieces.chariot.Chariot" as aiBoardGame.logic.engine.pieces.chariot.Chariot #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+}
+class "aiBoardGame.logic.engine.pieces.elephant.Elephant" as aiBoardGame.logic.engine.pieces.elephant.Elephant #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+  fileBounds : ClassVar[Tuple[int, int]]
+  rankBounds : ClassVar[Tuple[int, int]]
+}
+class "aiBoardGame.logic.engine.pieces.general.General" as aiBoardGame.logic.engine.pieces.general.General #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+  fileBounds : ClassVar[Tuple[int, int]]
+  rankBounds : ClassVar[Tuple[int, int]]
+}
+class "aiBoardGame.logic.engine.pieces.horse.Horse" as aiBoardGame.logic.engine.pieces.horse.Horse #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+}
+class "aiBoardGame.logic.engine.pieces.piece.Piece" as aiBoardGame.logic.engine.pieces.piece.Piece #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+  fileBounds : ClassVar[Tuple[int, int]]
+  rankBounds : ClassVar[Tuple[int, int]]
+  fileLength() -> int
+  getPossibleMoves(board: Board, start: Position) -> List[Position]
+  isFileInBounds(side: Side, file: int) -> bool
+  isPositionInBounds(side: Side, position: Position) -> bool
+  isRankInBounds(side: Side, rank: int) -> bool
+  isValidMove(board: Board, side: Side, start: Position, end: Position) -> bool
+  mirrorFile(file: int) -> int
+  mirrorPosition(position: Position) -> Position
+  mirrorRank(rank: int) -> int
+  name() -> str
+  rankLength() -> int
+}
+class "aiBoardGame.logic.engine.pieces.soldier.Soldier" as aiBoardGame.logic.engine.pieces.soldier.Soldier #aliceblue {
+  abbreviations : ClassVar[Dict[str, str]]
+}
+aiBoardGame.logic.engine.pieces.advisor.Advisor --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.cannon.Cannon --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.chariot.Chariot --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.elephant.Elephant --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.general.General --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.horse.Horse --|> aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.pieces.piece.Piece --|> abc.ABC
+aiBoardGame.logic.engine.pieces.soldier.Soldier --|> aiBoardGame.logic.engine.pieces.piece.Piece
+@enduml
