@@ -1,0 +1,25 @@
+@startuml classes_gameplay
+set namespaceSeparator none
+class "<color:red>aiBoardGame.gameplay.xiangqi.GameplayError</color>" as aiBoardGame.gameplay.xiangqi.GameplayError #aliceblue {
+}
+class "aiBoardGame.gameplay.xiangqi.TerminalXiangqi" as aiBoardGame.gameplay.xiangqi.TerminalXiangqi #aliceblue {
+}
+class "aiBoardGame.gameplay.xiangqi.Xiangqi" as aiBoardGame.gameplay.xiangqi.Xiangqi #aliceblue {
+}
+abstract class "aiBoardGame.gameplay.xiangqi.XiangqiBase" as aiBoardGame.gameplay.xiangqi.XiangqiBase #aliceblue {
+}
+abstract class "aiBoardGame.gameplay.player.Player" as aiBoardGame.gameplay.player.Player #aliceblue {
+}
+class "aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine" as aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine #antiquewhite {
+}
+class "aiBoardGame.vision.camera.RobotCamera" as aiBoardGame.vision.camera.RobotCamera #aquamarine {
+}
+class "aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier" as aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier #aquamarine {
+}
+aiBoardGame.gameplay.xiangqi.TerminalXiangqi --|> aiBoardGame.gameplay.xiangqi.XiangqiBase
+aiBoardGame.gameplay.xiangqi.Xiangqi --|> aiBoardGame.gameplay.xiangqi.XiangqiBase
+aiBoardGame.gameplay.player.Player "2" --o aiBoardGame.gameplay.xiangqi.XiangqiBase : sides
+aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine --* aiBoardGame.gameplay.xiangqi.XiangqiBase : _engine
+aiBoardGame.vision.camera.RobotCamera --* aiBoardGame.gameplay.xiangqi.Xiangqi : _camera
+aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier --* aiBoardGame.gameplay.xiangqi.Xiangqi : _classifier
+@enduml

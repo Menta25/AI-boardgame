@@ -1,0 +1,35 @@
+@startuml classes_player
+set namespaceSeparator none
+class "aiBoardGame.gameplay.player.HumanPlayer" as aiBoardGame.gameplay.player.HumanPlayer #aliceblue {
+}
+class "aiBoardGame.gameplay.player.HumanTerminalPlayer" as aiBoardGame.gameplay.player.HumanTerminalPlayer #aliceblue {
+}
+abstract class "aiBoardGame.gameplay.player.Player" as aiBoardGame.gameplay.player.Player #aliceblue {
+}
+class "<color:red>aiBoardGame.gameplay.player.PlayerError</color>" as aiBoardGame.gameplay.player.PlayerError #aliceblue {
+}
+class "aiBoardGame.gameplay.player.RobotArmPlayer" as aiBoardGame.gameplay.player.RobotArmPlayer #aliceblue {
+}
+class "aiBoardGame.gameplay.player.RobotPlayer" as aiBoardGame.gameplay.player.RobotPlayer #aliceblue {
+}
+class "aiBoardGame.gameplay.player.RobotTerminalPlayer" as aiBoardGame.gameplay.player.RobotTerminalPlayer #aliceblue {
+}
+class "aiBoardGame.gameplay.player.TerminalPlayer" as aiBoardGame.gameplay.player.TerminalPlayer #aliceblue {
+}
+class "aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish" as aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish #antiquewhite {
+}
+class "aiBoardGame.robot.robotArm.RobotArm" as aiBoardGame.robot.robotArm.RobotArm #aquamarine {
+}
+class "aiBoardGame.vision.camera.RobotCamera" as aiBoardGame.vision.camera.RobotCamera #burlywood {
+}
+aiBoardGame.gameplay.player.HumanPlayer --|> aiBoardGame.gameplay.player.Player
+aiBoardGame.gameplay.player.HumanTerminalPlayer --|> aiBoardGame.gameplay.player.TerminalPlayer
+aiBoardGame.gameplay.player.RobotArmPlayer --|> aiBoardGame.gameplay.player.RobotPlayer
+aiBoardGame.gameplay.player.RobotPlayer --|> aiBoardGame.gameplay.player.Player
+aiBoardGame.gameplay.player.RobotTerminalPlayer --|> aiBoardGame.gameplay.player.RobotPlayer
+aiBoardGame.gameplay.player.RobotTerminalPlayer --|> aiBoardGame.gameplay.player.TerminalPlayer
+aiBoardGame.gameplay.player.TerminalPlayer --|> aiBoardGame.gameplay.player.Player
+aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish --* aiBoardGame.gameplay.player.RobotPlayer : stockfish
+aiBoardGame.robot.robotArm.RobotArm --o aiBoardGame.gameplay.player.RobotArmPlayer : arm
+aiBoardGame.vision.camera.RobotCamera --o aiBoardGame.gameplay.player.RobotArmPlayer : camera
+@enduml

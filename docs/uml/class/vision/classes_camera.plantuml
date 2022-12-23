@@ -1,0 +1,16 @@
+@startuml classes_camera
+set namespaceSeparator none
+abstract class "aiBoardGame.vision.camera.AbstractCameraInterface" as aiBoardGame.vision.camera.AbstractCameraInterface #aliceblue {
+}
+class "<color:red>aiBoardGame.vision.camera.CameraError</color>" as aiBoardGame.vision.camera.CameraError #aliceblue {
+}
+class "aiBoardGame.vision.camera.Resolution" as aiBoardGame.vision.camera.Resolution #aliceblue {
+}
+class "aiBoardGame.vision.camera.RobotCamera" as aiBoardGame.vision.camera.RobotCamera #aliceblue {
+}
+class "aiBoardGame.vision.camera.RobotCameraInterface" as aiBoardGame.vision.camera.RobotCameraInterface #aliceblue {
+}
+aiBoardGame.vision.camera.RobotCamera --|> aiBoardGame.vision.camera.RobotCameraInterface
+aiBoardGame.vision.camera.RobotCameraInterface --|> aiBoardGame.vision.camera.AbstractCameraInterface
+aiBoardGame.vision.camera.Resolution --* aiBoardGame.vision.camera.RobotCamera : resolution
+@enduml

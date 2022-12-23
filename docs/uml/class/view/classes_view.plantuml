@@ -1,0 +1,27 @@
+@startuml classes_view
+set namespaceSeparator none
+class "aiBoardGame.robot.robotArm.RobotArm" as aiBoardGame.robot.robotArm.RobotArm #aliceblue {
+}
+class "aiBoardGame.view.ui.xiangqiWindow.Ui_xiangqiWindow" as aiBoardGame.view.ui.xiangqiWindow.Ui_xiangqiWindow #antiquewhite {
+}
+class "aiBoardGame.view.xiangqiWindow.XianqiWindow" as aiBoardGame.view.xiangqiWindow.XianqiWindow #antiquewhite {
+}
+class "aiBoardGame.vision.camera.RobotCamera" as aiBoardGame.vision.camera.RobotCamera #aquamarine {
+}
+class "aiBoardGame.gameplay.xiangqi.Xiangqi" as aiBoardGame.gameplay.xiangqi.Xiangqi #aliceblue {
+}
+class "aiBoardGame.gameplay.player.HumanPlayer" as aiBoardGame.gameplay.player.HumanPlayer #aliceblue {
+}
+class "aiBoardGame.gameplay.player.RobotArmPlayer" as aiBoardGame.gameplay.player.RobotArmPlayer #aliceblue {
+}
+aiBoardGame.view.xiangqiWindow.XianqiWindow --|> aiBoardGame.view.ui.xiangqiWindow.Ui_xiangqiWindow
+aiBoardGame.robot.robotArm.RobotArm --* aiBoardGame.view.xiangqiWindow.XianqiWindow : robotArm
+aiBoardGame.vision.camera.RobotCamera --* aiBoardGame.view.xiangqiWindow.XianqiWindow : camera
+aiBoardGame.vision.camera.RobotCamera --o aiBoardGame.gameplay.player.RobotArmPlayer : camera
+aiBoardGame.gameplay.xiangqi.Xiangqi --* aiBoardGame.view.xiangqiWindow.XianqiWindow : game
+aiBoardGame.gameplay.player.HumanPlayer --* aiBoardGame.view.xiangqiWindow.XianqiWindow : redSide
+aiBoardGame.gameplay.player.RobotArmPlayer --* aiBoardGame.view.xiangqiWindow.XianqiWindow : blackSide
+aiBoardGame.gameplay.player.HumanPlayer --o aiBoardGame.gameplay.xiangqi.Xiangqi : sides
+aiBoardGame.gameplay.player.RobotArmPlayer --o aiBoardGame.gameplay.xiangqi.Xiangqi : sides
+aiBoardGame.robot.robotArm.RobotArm --o aiBoardGame.gameplay.player.RobotArmPlayer : arm
+@enduml

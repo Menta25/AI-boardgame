@@ -1,0 +1,17 @@
+@startuml classes_move
+set namespaceSeparator none
+class "BoardEntity" as BoardEntity #aliceblue {
+}
+class "Position" as Position #aliceblue {
+}
+class "<color:red>aiBoardGame.logic.engine.move.InvalidMove</color>" as aiBoardGame.logic.engine.move.InvalidMove #antiquewhite {
+}
+class "aiBoardGame.logic.engine.move.MoveRecord" as aiBoardGame.logic.engine.move.MoveRecord #antiquewhite {
+}
+BoardEntity --o aiBoardGame.logic.engine.move.MoveRecord : movedPieceEntity
+BoardEntity --o aiBoardGame.logic.engine.move.MoveRecord : capturedPieceEntity
+Position --* aiBoardGame.logic.engine.move.InvalidMove : start
+Position --* aiBoardGame.logic.engine.move.InvalidMove : end
+Position --* aiBoardGame.logic.engine.move.MoveRecord : start
+Position --* aiBoardGame.logic.engine.move.MoveRecord : end
+@enduml

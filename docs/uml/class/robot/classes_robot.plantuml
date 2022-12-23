@@ -1,0 +1,12 @@
+@startuml classes_robot
+set namespaceSeparator none
+class "aiBoardGame.robot.robotArm.RobotArm" as aiBoardGame.robot.robotArm.RobotArm #aliceblue {
+}
+class "<color:red>aiBoardGame.robot.robotArm.RobotArmException</color>" as aiBoardGame.robot.robotArm.RobotArmException #aliceblue {
+}
+enum "aiBoardGame.robot.robotArm.Servo" as aiBoardGame.robot.robotArm.Servo #aliceblue {
+}
+class "uarm.wrapper.swift_api.SwiftAPI" as uarm.wrapper.swift_api.SwiftAPI #chocolate {
+}
+uarm.wrapper.swift_api.SwiftAPI --* aiBoardGame.robot.robotArm.RobotArm : swift
+@enduml
