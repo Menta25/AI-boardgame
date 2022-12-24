@@ -1,0 +1,19 @@
+@startuml Robot
+
+class aiBoardGame.robot.robotArm.RobotArmException {
+  message: str
+}
+enum aiBoardGame.robot.robotArm.Servo {
+  BOTTOM: 0 {static}
+  LEFT: 1 {static}
+  RIGHT: 2 {static}
+  HAND: 3 {static}
+}
+class aiBoardGame.robot.robotArm.RobotArm {
+  freeMoveHeightLimit: ClassVar[float] {static}
+  resetPosition: ClassVar[Tuple[float, float, float]] {static}
+  swift: uarm.wrapper.swift_api.SwiftAPI
+  speed: int
+}
+
+@enduml

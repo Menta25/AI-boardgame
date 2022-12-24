@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import cv2 as cv
 
-from aiBoardGame.logic.engine import Board, Position
+from aiBoardGame.logic import Board, Position
 
 
 

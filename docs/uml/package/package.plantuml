@@ -1,0 +1,25 @@
+@startuml Package Diagram
+
+package aiBoardGame {
+    package logic as aiBoardGame.logic {
+        package engine as aiBoardGame.logic.engine {
+            package pieces as aiBoardGame.logic.engine.pieces {}
+        }
+        package stockfish as aiBoardGame.logic.stockfish {}
+    }
+    package vision as aiBoardGame.vision {
+        package xiangqiPieceClassifier as aiBoardGame.vision.xiangqiPieceClassifier {}
+    }
+    package robot as aiBoardGame.robot {}
+    package gameplay as aiBoardGame.gameplay {}
+    package view as aiBoardGame.view {}
+}
+
+aiBoardGame.view .down.> aiBoardGame.gameplay
+aiBoardGame.gameplay .down.> aiBoardGame.logic
+aiBoardGame.gameplay .right.> aiBoardGame.vision
+aiBoardGame.robot <.left. aiBoardGame.gameplay
+aiBoardGame.logic.stockfish .right.> aiBoardGame.logic.engine
+aiBoardGame.vision .down.> aiBoardGame.logic.engine
+
+@enduml

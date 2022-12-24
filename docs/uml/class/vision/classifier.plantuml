@@ -1,0 +1,47 @@
+@startuml XiangqiPieceClassifier
+
+class aiBoardGame.logic.engine.auxiliary.BoardEntity {
+  side: Side
+  piece: Piece
+}
+
+class aiBoardGame.vision.xiangqiPieceClassifier.dataset.XiangqiPieceDataLoader {
+}
+class aiBoardGame.vision.xiangqiPieceClassifier.dataset.XiangqiPieceDataset {
+  basicTransform: ClassVar[torchvision.transforms.transforms.Compose] {static}
+  trainTransform: ClassVar[torchvision.transforms.transforms.Compose] {static}
+  splitSizeFractions: ClassVar[List[float]] {static}
+}
+class aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping.EarlyStopping {
+  patience: int
+  counter: int
+  bestScore: float
+  isEarlyStop: bool
+  validationMinLoss: float
+  delta: float
+  checkpointPath: Path
+  _tempDir: TemporaryDirectory
+}
+enum aiBoardGame.vision.xiangqiPieceClassifier.utility.GenerateMode {
+  DATA: 1 {static}
+  ROI: 2 {static}
+  TILES: 3 {static}
+  PIECES: 4 {static}
+}
+class aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier {
+  batchSize: ClassVar[int] {static}
+  epochCount: ClassVar[int] {static}
+  classes: ClassVar[List[Optional[BoardEntity]]] {static}
+  baseWeightsPath: ClassVar[Path] {static}
+  isTrained: bool
+  device: str
+  _model: torchvision.models.resnet.ResNet
+}
+
+aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier *-- aiBoardGame.logic.engine.auxiliary.BoardEntity
+
+aiBoardGame.vision.xiangqiPieceClassifier.dataset -down[hidden]-> aiBoardGame.vision.xiangqiPieceClassifier.model
+aiBoardGame.vision.xiangqiPieceClassifier.dataset -down[hidden]-> aiBoardGame.vision.xiangqiPieceClassifier.earlyStopping
+aiBoardGame.vision.xiangqiPieceClassifier.dataset -down[hidden]-> aiBoardGame.vision.xiangqiPieceClassifier.utility
+
+@enduml

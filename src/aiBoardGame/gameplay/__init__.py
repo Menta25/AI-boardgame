@@ -1,8 +1,8 @@
 """Xiangqi gameplay and player modules"""
 
-from aiBoardGame.game.xiangqi import XiangqiBase, Xiangqi, TerminalXiangqi, GameplayError
-from aiBoardGame.game.player import Player, HumanPlayer, HumanTerminalPlayer, RobotPlayer, RobotArmPlayer, RobotTerminalPlayer, PlayerError
-from aiBoardGame.game.utility import utils
+from aiBoardGame.gameplay.xiangqi import XiangqiBase, Xiangqi, TerminalXiangqi, GameplayError
+from aiBoardGame.gameplay.player import Player, HumanPlayer, HumanTerminalPlayer, RobotPlayer, RobotArmPlayer, RobotTerminalPlayer, PlayerError
+from aiBoardGame.gameplay.utility import utils
 
 
 __all__ = [

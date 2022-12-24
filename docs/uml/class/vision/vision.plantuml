@@ -1,0 +1,57 @@
+@startuml Camera
+
+class aiBoardGame.vision.camera.CameraError {
+  message: str
+}
+class aiBoardGame.vision.camera.Resolution {
+  width: int
+  height: int
+}
+class aiBoardGame.vision.camera.AbstractCameraInterface {
+  calibrated: ClassVar[Event] {static}
+  calibrationMinPatternCount: ClassVar[int] {static}
+  _calibrationCritera: ClassVar[Tuple[int, int, float]] {static}
+  resolution: Resolution
+  _intrinsicMatrix: Optional[numpy.ndarray]
+  _distortionCoefficients: Optional[numpy.ndarray]
+  _undistortedIntrinsicMatrix: Optional[numpy.ndarray]
+  _regionOfInterest: Optional[Tuple[float, float, float, float]]
+}
+class aiBoardGame.vision.camera.RobotCameraInterface {
+  _boardImageRatio: ClassVar[float] {static}
+  _boardHeight: int
+  _boardWidth: int
+  _boardOffset: int
+  _robotToCameraTransform: Optional[numpy.ndarray]
+}
+class aiBoardGame.vision.camera.RobotCamera {
+  interval: float
+  isActive: bool
+  _capture: cv2.VideoCapture
+  _thread: Optional[Thread]
+  _frame: Optional[numpy.ndarray]
+}
+
+class aiBoardGame.vision.boardImage.BoardImage {
+  tileSizeMultiplier: ClassVar[float]
+  pieceSizeMultiplier: ClassVar[float]
+  pieceThresholdDivisor: ClassVar[float]
+  hsvRanges: ClassVar[Tuple[numpy.ndarray]]
+  data: numpy.ndarray
+  positions: numpy.ndarray
+  fileStep: int
+  rankStep: int
+  tileSize: numpy.ndarray
+  _x: Optional[int]
+  _y: Optional[int]
+  _width: Optional[int]
+  _height: Optional[int]
+}
+
+
+aiBoardGame.vision.camera.AbstractCameraInterface <|-- aiBoardGame.vision.camera.RobotCameraInterface
+aiBoardGame.vision.camera.RobotCameraInterface <|-- aiBoardGame.vision.camera.RobotCamera
+
+aiBoardGame.vision.camera.AbstractCameraInterface *-- aiBoardGame.vision.camera.Resolution
+
+@enduml

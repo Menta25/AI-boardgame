@@ -1,0 +1,74 @@
+@startuml Player
+
+class aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish {
+  baseBinaryPath: ClassVar[Path] {static}
+  difficulty: Difficulty
+  _process: Popen
+  _currentFen: Optional[str]
+}
+class aiBoardGame.vision.camera.RobotCamera {
+  interval: float
+  isActive: bool
+  _capture: cv2.VideoCapture
+  _thread: Optional[Thread]
+  _frame: Optional[numpy.ndarray]
+}
+class aiBoardGame.robot.robotArm.RobotArm {
+  freeMoveHeightLimit: ClassVar[float] {static}
+  resetPosition: ClassVar[Tuple[float, float, float]] {static}
+  swift: uarm.wrapper.swift_api.SwiftAPI
+  speed: int
+}
+class aiBoardGame.logic.engine.auxiliary.Position {
+  file: int
+  rank: int
+}
+
+class aiBoardGame.gameplay.utility.FinalMeta {
+}
+
+class aiBoardGame.gameplay.player.PlayerError {
+  message: str
+}
+abstract class aiBoardGame.gameplay.player.Player {
+  isConceding: bool
+}
+abstract class aiBoardGame.gameplay.player.TerminalPlayer {
+  move: Optional[Tuple[Position, Position]]
+}
+abstract class aiBoardGame.gameplay.player.RobotPlayer {
+  stockfish: FairyStockfish
+}
+class aiBoardGame.gameplay.player.RobotArmPlayer {
+  calibrateCorner: PyQt6.QtCore.pyqtSignal {static}
+  loadLastCalibration: PyQt6.QtCore.pyqtSignal {static}
+  _baseCalibPath: ClassVar[pathlib.Path] {static}
+  arm: RobotArm
+  camera: RobotCamera
+  cornerCartesians: Optional[numpy.ndarray]
+  _loaded: bool
+}
+class aiBoardGame.gameplay.player.RobotTerminalPlayer {
+}
+class aiBoardGame.gameplay.player.HumanPlayer {
+  prepareStarted: PyQt6.QtCore.pyqtSignal {static}
+  makeMoveStarted: PyQt6.QtCore.pyqtSignal {static}
+}
+class aiBoardGame.gameplay.player.HumanTerminalPlayer {
+}
+
+aiBoardGame.gameplay.utility.FinalMeta <|-- aiBoardGame.gameplay.player.Player
+aiBoardGame.gameplay.player.Player <|-- aiBoardGame.gameplay.player.TerminalPlayer
+aiBoardGame.gameplay.player.Player <|-- aiBoardGame.gameplay.player.RobotPlayer
+aiBoardGame.gameplay.player.RobotPlayer <|-- aiBoardGame.gameplay.player.RobotArmPlayer
+aiBoardGame.gameplay.player.RobotPlayer <|-- aiBoardGame.gameplay.player.RobotTerminalPlayer
+aiBoardGame.gameplay.player.TerminalPlayer <|-- aiBoardGame.gameplay.player.RobotTerminalPlayer
+aiBoardGame.gameplay.player.Player <|-- aiBoardGame.gameplay.player.HumanPlayer
+aiBoardGame.gameplay.player.TerminalPlayer <|-- aiBoardGame.gameplay.player.HumanTerminalPlayer
+
+aiBoardGame.gameplay.player.RobotArmPlayer o-- aiBoardGame.robot.robotArm.RobotArm
+aiBoardGame.gameplay.player.RobotArmPlayer o-- aiBoardGame.vision.camera.RobotCamera
+aiBoardGame.gameplay.player.RobotPlayer *-- aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish
+aiBoardGame.gameplay.player.TerminalPlayer *-- aiBoardGame.logic.engine.auxiliary.Position
+
+@enduml

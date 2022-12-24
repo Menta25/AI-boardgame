@@ -1,0 +1,136 @@
+@startuml Component Diagram
+
+interface CameraDevice as device1
+component Camera {
+    component Read
+    component Undistort
+    interface Image as img1
+    portin DevicePort
+    portin CameraReadRequestPort as crrp2
+    portout ImagePort as imgPortOut
+
+    DevicePort -d-> Read
+    crrp2 --> Read
+    Read -r-> img1
+    img1 -r-> Undistort
+    Undistort -d-> imgPortOut
+}
+device1 -d-> DevicePort
+
+
+component BoardImageConverter {
+    portin ImagePort as imgPortIn
+    portout BoardImagePort as bip1
+
+    imgPortIn -d-> bip1
+}
+imgPortOut -d-> imgPortIn
+
+
+interface BoardImage as bImg1
+
+bip1 -d-> bImg1
+
+
+component BoardPredictor {
+    component SplitPieceImages
+    component PredictBoardEntity
+    component AssembleBoard
+    interface Image as img2
+    interface BoardEntity
+    interface Board
+    portin BoardImagePort as bip2
+    portout BoardPort as bp1
+
+    bip2 -d-> SplitPieceImages
+    SplitPieceImages -r-> img2
+    img2 -r-> PredictBoardEntity
+    PredictBoardEntity -r-> BoardEntity
+    BoardEntity -r-> AssembleBoard
+    AssembleBoard -r-> Board
+    Board -r-> bp1
+}
+bImg1 -d-> bip2
+Board -[hidden]-> bp1
+
+
+component XiangqiEngine {
+    component UpdateState
+    portin BoardPort as bp2
+    portout EngineStatePort as es1
+
+    bp2 -d-> UpdateState
+    UpdateState -d-> es1
+}
+bp1 -r-> bp2
+bp1 --[hidden]-> bp2
+
+
+interface RobotArmDevice
+component RobotPlayer {
+    component Move as rm
+    portin RobotArmDevicePort
+    portin ImagePort as imgp2
+    portin EngineStatePort as es3
+    portin MoveRequestPort as mrp3
+    portout AnalyseBoardRequestPort as abrp1
+    
+    RobotArmDevicePort -d-> rm
+    imgp2 -d-> rm
+    es3 -d-> rm
+    mrp3 -d-> rm
+    rm -d-> abrp1
+}
+RobotArmDevice -d-> RobotArmDevicePort
+es1 -d-> es3
+bImg1 -> imgp2
+es1 -[hidden]-> es3
+
+
+interface Human
+component HumanPlayer {
+    component Move as hm
+    portin HumanPort
+    portin MoveRequestPort as mrp2
+    portout AnalyseBoardRequestPort as abrp2
+
+    HumanPort -d-> hm
+    mrp2 -d-> hm
+    hm -d-> abrp2
+}
+Human -d-> HumanPort
+
+
+interface AnalyseBoardRequest
+
+abrp1 -d-> AnalyseBoardRequest
+abrp2 -d-> AnalyseBoardRequest
+
+
+component Gameplay {
+    interface CameraReadRequest
+    interface MoveRequest
+    component AnalyseBoard
+    component PlayTurn
+    portin EngineStatePort as es2
+    portin CameraReadRequestPort as crrp1
+    portout MoveRequestPort as mrp1
+    port AnalyseBoardRequestPort as abrp3
+
+    es2 -d-> PlayTurn
+    PlayTurn -d-> MoveRequest
+    MoveRequest -d-> mrp1
+    abrp3 -u-> AnalyseBoard
+    AnalyseBoard -u-> CameraReadRequest
+    CameraReadRequest -u-> crrp1
+}
+AnalyseBoardRequest -> abrp3
+es1 -d-> es2
+mrp1 -d-> mrp2
+mrp1 -d-> mrp3
+crrp1 -l-> crrp2
+
+
+BoardImageConverter -[hidden]-> BoardPredictor
+
+@enduml

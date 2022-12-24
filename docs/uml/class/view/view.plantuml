@@ -1,0 +1,58 @@
+@startuml View
+
+class aiBoardGame.gameplay.xiangqi.Xiangqi {
+  _camera: RobotCamera
+  _classifier: XiangqiPieceClassifier
+}
+class aiBoardGame.vision.camera.RobotCamera {
+  interval: float
+  isActive: bool
+  _capture: cv2.VideoCapture
+  _thread: Optional[Thread]
+  _frame: Optional[numpy.ndarray]
+}
+class aiBoardGame.robot.robotArm.RobotArm {
+  freeMoveHeightLimit: ClassVar[float] {static}
+  resetPosition: ClassVar[Tuple[float, float, float]] {static}
+  swift: uarm.wrapper.swift_api.SwiftAPI
+  speed: int
+}
+class aiBoardGame.gameplay.player.HumanPlayer {
+  prepareStarted: PyQt6.QtCore.pyqtSignal {static}
+  makeMoveStarted: PyQt6.QtCore.pyqtSignal {static}
+}
+class aiBoardGame.gameplay.player.RobotArmPlayer {
+  calibrateCorner: PyQt6.QtCore.pyqtSignal {static}
+  loadLastCalibration: PyQt6.QtCore.pyqtSignal {static}
+  _baseCalibPath: ClassVar[pathlib.Path] {static}
+  arm: RobotArm
+  camera: RobotCamera
+  cornerCartesians: Optional[numpy.ndarray]
+  _loaded: bool
+}
+
+class aiBoardGame.view.ui.xiangqiWindow.Ui_xiangqiWindow {
+}
+class aiBoardGame.view.xiangqiWindow.XianqiWindow {
+  camera: Optional[RobotCamera]
+  cameraThread: Optional[Thread]
+  robotArm: Optional[RobotArm]
+  redSide: Optional[HumanPlayer]
+  blackSide: Optional[RobotArmPlayer]
+  game: Optional[Xiangqi]
+  gameThread: Optional[QThread]
+  calibrationImages: List[numpy.ndarray]
+}
+
+aiBoardGame.view.ui.xiangqiWindow.Ui_xiangqiWindow <|-- aiBoardGame.view.xiangqiWindow.XianqiWindow
+
+aiBoardGame.view.xiangqiWindow.XianqiWindow *-- aiBoardGame.vision.camera.RobotCamera
+aiBoardGame.view.xiangqiWindow.XianqiWindow *-- aiBoardGame.robot.robotArm.RobotArm
+aiBoardGame.view.xiangqiWindow.XianqiWindow *-- aiBoardGame.gameplay.player.HumanPlayer
+aiBoardGame.view.xiangqiWindow.XianqiWindow *-- aiBoardGame.gameplay.player.RobotArmPlayer
+aiBoardGame.view.xiangqiWindow.XianqiWindow *-- aiBoardGame.gameplay.xiangqi.Xiangqi
+aiBoardGame.gameplay.player.RobotArmPlayer o-- aiBoardGame.robot.robotArm.RobotArm
+aiBoardGame.gameplay.player.RobotArmPlayer o-- aiBoardGame.vision.camera.RobotCamera
+aiBoardGame.gameplay.xiangqi.Xiangqi o-- aiBoardGame.vision.camera.RobotCamera
+
+@enduml

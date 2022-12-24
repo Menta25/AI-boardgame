@@ -12,7 +12,7 @@ from typing import ClassVar, Tuple, NamedTuple, Optional, Union, List
 import numpy as np
 import cv2 as cv
 
-from aiBoardGame.logic.engine import Board
+from aiBoardGame.logic import Board
 from aiBoardGame.vision.boardImage import BoardImage
 
 

@@ -1,7 +1,0 @@
-@startuml classes_utility
-set namespaceSeparator none
-abstract class "aiBoardGame.gameplay.utility.FinalMeta" as aiBoardGame.gameplay.utility.FinalMeta #aliceblue {
-}
-class "aiBoardGame.gameplay.utility.Utils" as aiBoardGame.gameplay.utility.Utils #aliceblue {
-}
-@enduml

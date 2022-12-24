@@ -1,0 +1,66 @@
+@startuml Engine
+
+abstract class aiBoardGame.logic.engine.pieces.piece.Piece {
+  fileBounds: ClassVar[Tuple[int, int]] {static}
+  rankBounds: ClassVar[Tuple[int, int]] {static}
+  abbreviations: ClassVar[Dict[str, str]] {static}
+}
+
+enum aiBoardGame.logic.engine.auxiliary.Side {
+  BLACK: -1 {static}
+  RED: 1 {static}
+}
+class aiBoardGame.logic.engine.auxiliary.Position {
+  file: int
+  rank: int
+}
+class aiBoardGame.logic.engine.auxiliary.BoardEntity {
+  side: Side
+  piece: Piece
+}
+class aiBoardGame.logic.engine.auxiliary.Delta {
+  file: float
+  rank: float
+}
+class aiBoardGame.logic.engine.auxiliary.SideState <[Postion, BoardEntity]> {
+}
+class aiBoardGame.logic.engine.auxiliary.Board <[Side, SideState]> {
+  fileBounds: ClassVar[Tuple[int, int]]
+  rankBounds: ClassVar[Tuple[int, int]]
+  fileCount: ClassVar[int]
+  rankCount: ClassVar[int]
+}
+class aiBoardGame.logic.engine.move.MoveRecord {
+  start: Position
+  end: Position
+  movedPieceEntity: BoardEntity
+  capturedPieceEntity: Optional[BoardEntity]
+}
+class aiBoardGame.logic.engine.move.InvalidMove {
+  piece: Type[Piece]
+  start: Position
+  end: Position
+  message: Optional[str]
+}
+class aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine {
+  board: Board
+  generals: Dict[Side, Position]
+  currentSide: Side
+  moveHistory: List[MoveRecord]
+  _checks: List[Position]
+  _pins: Dict[Position, List]
+  _validMoves: Dict[Position, List]
+}
+
+aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine *-- aiBoardGame.logic.engine.auxiliary.Board
+aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine *-- aiBoardGame.logic.engine.auxiliary.Side
+aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine *-- aiBoardGame.logic.engine.move.MoveRecord
+aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine *-- aiBoardGame.logic.engine.auxiliary.Position
+aiBoardGame.logic.engine.move.InvalidMove *-- aiBoardGame.logic.engine.auxiliary.Position
+aiBoardGame.logic.engine.move.MoveRecord *-- aiBoardGame.logic.engine.auxiliary.Position
+aiBoardGame.logic.engine.auxiliary.BoardEntity *-- aiBoardGame.logic.engine.auxiliary.Side
+aiBoardGame.logic.engine.auxiliary.BoardEntity *-- aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.move.InvalidMove o-- aiBoardGame.logic.engine.pieces.piece.Piece
+aiBoardGame.logic.engine.move.MoveRecord *-- aiBoardGame.logic.engine.auxiliary.BoardEntity
+
+@enduml

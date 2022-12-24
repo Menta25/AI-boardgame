@@ -1,8 +1,0 @@
-@startuml classes_stockfish
-set namespaceSeparator none
-enum "aiBoardGame.logic.stockfish.fairyStockfish.Difficulty" as aiBoardGame.logic.stockfish.fairyStockfish.Difficulty #aliceblue {
-}
-class "aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish" as aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish #aliceblue {
-}
-aiBoardGame.logic.stockfish.fairyStockfish.Difficulty --* aiBoardGame.logic.stockfish.fairyStockfish.FairyStockfish : difficulty
-@enduml

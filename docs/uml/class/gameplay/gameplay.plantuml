@@ -1,0 +1,69 @@
+@startuml Gameplay
+
+class aiBoardGame.vision.camera.RobotCamera {
+  interval: float
+  isActive: bool
+  _capture: cv2.VideoCapture
+  _thread: Optional[Thread]
+  _frame: Optional[numpy.ndarray]
+}
+enum aiBoardGame.logic.engine.auxiliary.Side {
+  BLACK: -1 {static}
+  RED: 1 {static}
+}
+class aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier {
+  batchSize: ClassVar[int] {static}
+  epochCount: ClassVar[int] {static}
+  classes: ClassVar[List[Optional[BoardEntity]]] {static}
+  baseWeightsPath: ClassVar[Path] {static}
+  isTrained: bool
+  device: str
+  _model: torchvision.models.resnet.ResNet
+}
+class aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine {
+  board: Board
+  generals: Dict[Side, Position]
+  currentSide: Side
+  moveHistory: List[MoveRecord]
+  _checks: List[Position]
+  _pins: Dict[Position, List]
+  _validMoves: Dict[Position, List]
+}
+
+class aiBoardGame.gameplay.utility.Utils {
+  waitForCorrection: PyQt6.QtCore.pyqtSignal {static}
+  statusUpdate: PyQt6.QtCore.pyqtSignal {static}
+  waitEvent: threading.Event
+}
+class aiBoardGame.gameplay.utility.FinalMeta {
+}
+
+abstract class aiBoardGame.gameplay.player.Player {
+  isConceding: bool
+}
+
+class aiBoardGame.gameplay.xiangqi.GameplayError {
+  message: str
+}
+abstract class aiBoardGame.gameplay.xiangqi.XiangqiBase {
+  sides: Dict[Side, Player]
+  _engine: Optional[XiangqiEngine]
+  _turn: int
+}
+class aiBoardGame.gameplay.xiangqi.TerminalXiangqi {
+}
+class aiBoardGame.gameplay.xiangqi.Xiangqi {
+  _camera: RobotCamera
+  _classifier: XiangqiPieceClassifier
+}
+
+aiBoardGame.gameplay.xiangqi.XiangqiBase <|-- aiBoardGame.gameplay.xiangqi.TerminalXiangqi
+aiBoardGame.gameplay.xiangqi.XiangqiBase <|-- aiBoardGame.gameplay.xiangqi.Xiangqi
+
+aiBoardGame.gameplay.xiangqi.Xiangqi o-- aiBoardGame.vision.camera.RobotCamera
+aiBoardGame.gameplay.xiangqi.XiangqiBase o-- aiBoardGame.gameplay.player.Player
+aiBoardGame.gameplay.xiangqi.XiangqiBase *-- aiBoardGame.logic.engine.auxiliary.Side
+aiBoardGame.gameplay.xiangqi.XiangqiBase *-- aiBoardGame.logic.engine.xiangqiEngine.XiangqiEngine
+aiBoardGame.gameplay.xiangqi.Xiangqi *-- aiBoardGame.vision.xiangqiPieceClassifier.model.XiangqiPieceClassifier
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml Pieces
+
+abstract class aiBoardGame.logic.engine.pieces.piece.Piece {
+  fileBounds: ClassVar[Tuple[int, int]] {static}
+  rankBounds: ClassVar[Tuple[int, int]] {static}
+  abbreviations: ClassVar[Dict[str, str]] {static}
+}
+class aiBoardGame.logic.engine.pieces.advisor.Advisor {
+}
+class aiBoardGame.logic.engine.pieces.cannon.Cannon {
+}
+class aiBoardGame.logic.engine.pieces.chariot.Chariot {
+}
+class aiBoardGame.logic.engine.pieces.elephant.Elephant {
+}
+class aiBoardGame.logic.engine.pieces.general.General {
+}
+class aiBoardGame.logic.engine.pieces.horse.Horse {
+}
+class aiBoardGame.logic.engine.pieces.soldier.Soldier {
+}
+
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.advisor.Advisor
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.cannon.Cannon
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.chariot.Chariot
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.elephant.Elephant
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.general.General
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.horse.Horse
+aiBoardGame.logic.engine.pieces.piece.Piece <|-- aiBoardGame.logic.engine.pieces.soldier.Soldier
+
+@enduml
