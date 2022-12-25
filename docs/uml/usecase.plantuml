@@ -1,7 +1,7 @@
 @startuml Usecase Diagram
 
 skinparam actorStyle awesome
-left to right direction
+' left to right direction
 
 
 actor Player
@@ -61,7 +61,7 @@ rp -down- mpob2 #line:black
 cc .up.> pcpuc #line:red : include 
 cc .down.> ng #line:red : precedes
 ng .down.> p1 #line:red : include
-p1 .down.> mm1 #line:red : precedes
+p1 .down..> mm1 #line:red : precedes
 mm1 .left.> mpob1 #line:red : include
 
 
@@ -78,7 +78,7 @@ mm1 .right.> mm2 #line:black : precedes
 
 
 mpob1 -right-|> ce #line:red
-ce .up.> mm1 #line:red : extend
+ce .up..> mm1 #line:red : extend
 ce .up.> mm2 #line:black : extend
 
 @enduml
