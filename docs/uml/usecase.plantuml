@@ -1,0 +1,84 @@
+@startuml Usecase Diagram
+
+skinparam actorStyle awesome
+left to right direction
+
+
+actor Player
+actor :Human player: as hp #red;line:red;text:red
+actor :Robot player: as rp #black;line:black;text:black
+
+Player -up-|> hp
+Player -up-|> rp
+
+
+usecase pcpuc as "Put checkerboard pattern under Camera" #line:red;text:red
+usecase mratc as "Move robot arm to corners" #line:red;text:red
+usecase mpob1 as "Move piece on board" #line:red;text:red
+usecase mpob2 as "Move piece on board" #line:black;text:black
+
+rectangle aiBoardGame {
+    usecase cc as "Calibrate Camera" #line:red;text:red
+    usecase ng as "New game" #line:red;text:red
+    usecase p1 as "Prepare" #line:red;text:red
+    usecase p2 as "Prepare" #line:black;text:black
+    usecase cra as "Calibrate robot arm" #line:black;text:black
+    usecase lrac as "Load robot arm calibration" #line:red;text:red
+    usecase mm1 as "Make move" #line:red;text:red
+    usecase mm2 as "Make move" #line:black;text:black
+    usecase ce as "Correct error" #line:red;text:red
+}
+
+ce -[hidden]down-> Player
+p1 -[hidden]right-> p2
+mm1 -[hidden]right-> mm2
+mratc -[hidden]down-> aiBoardGame
+cc -[hidden]right-> lrac
+ng -[hidden]right->cra
+mpob1 -[hidden]up-> mm1
+mpob2 -[hidden]left-> p2
+ce -[hidden]up-> rp
+ce -[hidden]up-> rp
+rp -[hidden]up-> cra
+hp -[hidden]right-> aiBoardGame
+
+
+hp -up- cc #line:red 
+hp -right- ng #line:red
+hp -right- p1 #line:red
+hp -up- lrac #line:red
+hp -up- pcpuc #line:red
+hp -up- mratc #line:red
+hp -right- mm1 #line:red
+hp -down- mpob1 #line:red
+hp -down- ce #line:red
+
+rp -left- p2 #line:black
+rp -left- mm2 #line:black
+rp -down- mpob2 #line:black
+
+
+cc .up.> pcpuc #line:red : include 
+cc .down.> ng #line:red : precedes
+ng .down.> p1 #line:red : include
+p1 .down.> mm1 #line:red : precedes
+mm1 .left.> mpob1 #line:red : include
+
+
+ng .down.> p2 #line:black : include
+p2 .up.> cra #line:black : include
+lrac -down-|> cra #line:black
+mratc -down-|> cra #line:black
+p2 .down.> mm2 #line:black : precedes
+mm2 .right.> mpob2 #line:black : include
+
+
+mm2 .left.> mm1 #line:red : precedes
+mm1 .right.> mm2 #line:black : precedes
+
+
+mpob1 -right-|> ce #line:red
+ce .up.> mm1 #line:red : extend
+ce .up.> mm2 #line:black : extend
+
+@enduml
