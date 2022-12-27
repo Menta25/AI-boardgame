@@ -90,7 +90,7 @@ es1 -[hidden]-> es3
 interface Human
 component HumanPlayer {
     component Move as hm
-    portin HumanPort
+    port HumanPort
     portin MoveRequestPort as mrp2
     portout AnalyseBoardRequestPort as abrp2
 
