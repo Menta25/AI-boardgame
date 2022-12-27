@@ -33,7 +33,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx_rtd_theme',
     'sphinx_qt_documentation',
-    'autoapi.extension'
 ]
 add_module_names = False
 
@@ -64,23 +63,30 @@ html_show_sourcelink = False
 
 # -- Extension configuration -------------------------------------------------
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
+    'python': ('https://docs.python.org/3/', None),
 }
 qt_documentation = 'PyQt6'
 
-extensions.append('autoapi.extension')
-
-autoapi_type = 'python'
-autoapi_dirs = ['../src/aiBoardGame']
-autoapi_ignore = ['_build', '.venv', 'build' , '.vscode', 'AI_boardgame.egg-info']
-autoapi_options = [
-    'members', 'inherited-members', 'show-inheritance', 'show-module-summary', 'show-inheritance-diagram'
-]
-autoapi_member_order = 'groupwise'
-autoapi_python_class_content = 'both'
-autoapi_add_toctree_entry = False
+autosummary_generate = True
+autoclass_content = "both"
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'groupwise',
+    'show-inheritance': True,
+    'class-doc-from': 'both',
+    'ignore-module-all': True
+    # 'imported-members': True
+}
+autodoc_preserve_defaults = True
 
 
 # -- Options for LaTeX output ------------------------------------------------
 
-latex_engine = 'xelatex'
+latex_engine = 'pdflatex'
+latex_documents = [('index', 'api.tex', project, author, 'manual')]
+latex_elements = {
+    'papersize':'a4paper',
+    'pointsize':'12pt',
+    'maketitle': '',
+    'fncychap': '\\usepackage[Conny]{fncychap}',
+}

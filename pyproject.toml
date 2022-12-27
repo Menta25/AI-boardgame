@@ -28,7 +28,6 @@ dev = [
     "Sphinx",
     "sphinx_rtd_theme",
     "sphinx-qt-documentation",
-    "sphinx-autoapi"
 ]
 
 [project.urls]
