@@ -33,6 +33,9 @@ dev = [
 [project.urls]
 GitHub = "https://github.com/Menta25/AI-boardgame"
 
+[project.scripts]
+playAIboardgame = "aiBoardGame.main:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
