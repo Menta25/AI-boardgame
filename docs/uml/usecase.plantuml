@@ -18,6 +18,7 @@ usecase mpob1 as "Move piece on board" #line:red;text:red
 usecase mpob2 as "Move piece on board" #line:black;text:black
 
 rectangle aiBoardGame {
+    usecase lcc as "Load camera calibration" #line:red;text:red
     usecase cc as "Calibrate Camera" #line:red;text:red
     usecase ng as "New game" #line:red;text:red
     usecase p1 as "Prepare" #line:red;text:red
@@ -43,6 +44,7 @@ rp -[hidden]up-> cra
 hp -[hidden]right-> aiBoardGame
 
 
+hp -up- lcc #line:red
 hp -up- cc #line:red 
 hp -right- ng #line:red
 hp -right- p1 #line:red
@@ -58,7 +60,8 @@ rp -left- mm2 #line:black
 rp -down- mpob2 #line:black
 
 
-cc .up.> pcpuc #line:red : include 
+cc <|-left- lcc #line:red
+cc <|-up- pcpuc #line:red
 cc .down.> ng #line:red : precedes
 ng .down.> p1 #line:red : include
 p1 .down..> mm1 #line:red : precedes
