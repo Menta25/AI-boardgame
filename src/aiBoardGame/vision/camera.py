@@ -239,16 +239,20 @@ class RobotCameraInterface(AbstractCameraInterface):
         for hsvRange in BoardImage.hsvRanges:
             hsvMask = cv.inRange(imageHSV, hsvRange[0], hsvRange[1])
             mask = cv.bitwise_or(mask, hsvMask)
-            # cv.imshow("hsv", hsvMask)
+            # cv.imshow("hsv", cv.resize(hsvMask, (960,540)))
             # cv.waitKey(0)
             # cv.destroyAllWindows()
+
+        # cv.imshow("mask", cv.resize(mask, (960,540)))
+        # cv.waitKey(0)
+        # cv.destroyAllWindows()
 
         erosionKernel = np.ones((3,3), np.uint8)
         dilationKernel = np.ones((9,9), np.uint8)
         erosion = cv.erode(mask, erosionKernel, iterations=4)
         dilate = cv.dilate(erosion, dilationKernel, iterations=2)
 
-        # cv.imshow("dilate", dilate)
+        # cv.imshow("dilate", cv.resize(dilate, (960,540)))
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 
@@ -262,7 +266,7 @@ class RobotCameraInterface(AbstractCameraInterface):
 
         # testContours = np.zeros(image.shape[0:2])
         # cv.drawContours(testContours, boardContours, -1, (255), 1)
-        # cv.imshow("testContours", testContours)
+        # cv.imshow("testContours", cv.resize(testContours, (960,540)))
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 
@@ -270,8 +274,8 @@ class RobotCameraInterface(AbstractCameraInterface):
         approxBoardHull = cv.approxPolyDP(boardHull, epsilon=0.01* cv.arcLength(boardHull, True), closed=True).squeeze(1)
 
         # for hullPoint in approxBoardHull:
-        #     cv.circle(image, hullPoint, 1, (255,0,0), 2)
-        # cv.imshow("image", image)
+        #     cv.circle(image, hullPoint, 1, (0,255,0), 5)
+        # cv.imshow("image", cv.resize(image, (960,540)))
         # cv.waitKey(0)
         # cv.destroyAllWindows()
 

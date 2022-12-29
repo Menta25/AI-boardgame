@@ -8,7 +8,7 @@ from collections import defaultdict
 from typing import Dict, Literal, Optional, Tuple, Union, overload, Iterable, List, TypeVar, Callable
 
 from aiBoardGame.logic.engine.auxiliary import Board, Delta, Position, Side
-from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, BASE_ABBREVIATION_TO_PIECE, FEN_ABBREVIATION_TO_PIECE
+from aiBoardGame.logic.engine.pieces import General, Advisor, Elephant, Horse, Chariot, Cannon, Soldier, FEN_ABBREVIATION_TO_PIECE
 
 
 SOLDIER_RANK_OFFSET = 3
@@ -51,11 +51,11 @@ class FontFormat:
     ENDC = "\033[0m"
 
 
-def createXiangqiBoard() -> Tuple[Board, Dict[Side, Tuple[int, int]]]:
+def createXiangqiBoard() -> Tuple[Board, Dict[Side, Position]]:
     """Load an empty Xiangqi board with starting pieces
 
     :return: Xiangqi board and general positions
-    :rtype: Tuple[Board, Dict[Side, Tuple[int, int]]]
+    :rtype: Tuple[Board, Dict[Side, Position]
     """
     board = Board()
 
@@ -86,7 +86,7 @@ _OPERATOR_MAP = {
 }
 
 
-def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
+def fenMoveNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[Position, Position], Tuple[Literal[None], Literal[None]]]:
     """Convert a basic Xiangqi chess notation to a move
 
     :param board: Board to move on
@@ -102,12 +102,12 @@ def baseNotationToMove(board: Board, side: Side, notation: str) -> Union[Tuple[P
         notationRegEx = re.match(r"(?P<tandem>[+-])?(?P<piece>\w)(?P<formerFile>\d)?(?P<direction>[+-=.,])(?P<newFileOrDeltaRank>\d)", notation)
         if notationRegEx is None:
             return None
-        if notationRegEx["piece"] is not None and notationRegEx["piece"].upper() not in BASE_ABBREVIATION_TO_PIECE and not ((side == Side.RED and notationRegEx["piece"].isupper()) or (side == Side.BLACK and notationRegEx["piece"].islower())):
+        if notationRegEx["piece"] is not None and (notationRegEx["piece"].upper() not in FEN_ABBREVIATION_TO_PIECE or not ((side == Side.RED and notationRegEx["piece"].isupper()) or (side == Side.BLACK and notationRegEx["piece"].islower()))):
             return None
 
         start, end = None, None
         if notationRegEx["piece"] is not None:
-            notatedPiece = BASE_ABBREVIATION_TO_PIECE[notationRegEx["piece"].upper()]
+            notatedPiece = FEN_ABBREVIATION_TO_PIECE[notationRegEx["piece"].upper()]
 
             groupByFile = defaultdict(list)
             for position, piece in board[side].items():

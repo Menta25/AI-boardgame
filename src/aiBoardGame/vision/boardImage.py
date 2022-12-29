@@ -44,13 +44,13 @@ class BoardImage:
     pieceThresholdDivisor: ClassVar[float] = 3.1
     """Finds pieces only in the range of fileStep divided by this value"""
 
-    # hsvRanges: ClassVar[Tuple[np.ndarray]] = (
-    #     np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-    #     np.array([164,128,150])[np.newaxis,:] + np.array([[15,128,150], [15,127,100]]) * np.array([[-1],[1]]),
-    #     np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,25], [30,20,25]]) * np.array([[-1],[1]])
-    # )
 
-    hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
+    hsvRanges: ClassVar[Tuple[np.ndarray]] = (
+        np.array([15,128,150])[np.newaxis,:] + np.array([[15,128,150], [30,127,100]]) * np.array([[-1],[1]]),
+        np.array([164,128,150])[np.newaxis,:] + np.array([[30,128,150], [15,127,100]]) * np.array([[-1],[1]]),
+        np.array([130,15,160])[np.newaxis,:] + np.array([[30,20,50], [30,20,90]]) * np.array([[-1],[1]])
+    )
+    # hsvRanges: ClassVar[Tuple[np.ndarray]] = [np.array([[0,61,0], [30,255,255]])]
     """HSV ranges of the board"""
 
 
@@ -82,7 +82,7 @@ class BoardImage:
 
         # for file in self.positions:
         #     for tileCenter in file:
-        #         cv.circle(self.data, tileCenter, 1, (255,0,0), 2)
+        #         cv.circle(self.data, tileCenter, 1, (0,255,255), 2)
 
     @classmethod
     def _fallbackBoardDetection(cls, data: np.ndarray) -> Tuple[int, int, int, int]:
@@ -205,8 +205,8 @@ class BoardImage:
         """
         boardImageCopy = deepcopy(self)
         for _, (*center, radius) in boardImageCopy.pieces:
-            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), int(radius), color=(0,255,0), thickness=3)
-            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), 1, color=(255,0,0), thickness=3)
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), int(radius), color=(0,255,255), thickness=3)
+            cv.circle(boardImageCopy.data, np.asarray(center, dtype=int), 1, color=(0,100,255), thickness=3)
         return boardImageCopy
 
 
@@ -223,14 +223,14 @@ if __name__ == "__main__":
 
     classifier = XiangqiPieceClassifier(device=XiangqiPieceClassifier.getAvailableDevice())
     cameraIntrinsicsPath = Path("/home/Menta/Workspace/Projects/AI-boardgame/camCalibs.npz")
-    # camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=cameraIntrinsicsPath)
-    # imagePath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example2.jpg")
-    # image = camera.undistort(cv.imread(imagePath.as_posix()))
+    camera = RobotCameraInterface(resolution=(1920, 1080), intrinsicsFile=cameraIntrinsicsPath)
+    imgPath = Path("/home/Menta/Workspace/Projects/XiangqiPieceImgs/imgs/board/example1.jpg")
+    img = camera.undistort(cv.imread(imgPath.as_posix()))
 
-    camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
-    camera.activate()
-    time.sleep(1)
-    img = camera.read()
+    # camera = RobotCamera(feedInput=2, resolution=(1920,1080), interval=0.1, intrinsicsFile=cameraIntrinsicsPath)
+    # camera.activate()
+    # time.sleep(1)
+    # img = camera.read()
     try:
         boardImage = camera.detectBoard(img)
 

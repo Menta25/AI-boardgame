@@ -24,10 +24,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pytest",
     "pylint",
     "Sphinx",
     "sphinx_rtd_theme",
-    "sphinx-qt-documentation",
+    "sphinx-qt-documentation"
 ]
 
 [project.urls]

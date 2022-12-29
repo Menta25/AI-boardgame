@@ -9,7 +9,7 @@ from collections import defaultdict
 from aiBoardGame.logic.engine.pieces import General, Cannon, Horse
 from aiBoardGame.logic.engine.move import MoveRecord, InvalidMove
 from aiBoardGame.logic.engine.auxiliary import Board, BoardEntity, Delta, Position, Side
-from aiBoardGame.logic.engine.utility import createXiangqiBoard, baseNotationToMove
+from aiBoardGame.logic.engine.utility import createXiangqiBoard, fenMoveNotationToMove
 
 
 @dataclass(init=False)
@@ -276,7 +276,7 @@ if __name__ == "__main__":
                 logging.info(error)
         elif command.startswith("not"):
             notation = command.split(" ")[1]
-            startPosition, endPosition = baseNotationToMove(game.board, game.currentSide, notation)
+            startPosition, endPosition = fenMoveNotationToMove(game.board, game.currentSide, notation)
             if startPosition is not None and endPosition is not None:
                 logging.info(f"From {*startPosition,} to {*endPosition,}")
             else:
